@@ -5527,7 +5527,9 @@
                         const observacoesQ = it.tipo === 'servico' ? osOriginal?.observacoes : obraOriginal?.observacoes;
                         const btnMapaQ = urlInfoQ ? `<a href="${urlInfoQ.url}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="tgq-btn-mini" title="Navegar (Google Maps)"><i class="fas fa-diamond-turn-right"></i></a>${urlInfoQ?.wazeUrl ? `<a href="${urlInfoQ.wazeUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="tgq-btn-mini" title="Navegar no Waze"><i class="fas fa-w" style="font-family:sans-serif;font-style:normal;font-weight:800;">W</i></a>` : ''}` : '';
                         const btnTelQ = cliente?.telefone ? `<a href="tel:${cliente.telefone.replace(/\s+/g,'')}" onclick="event.stopPropagation();" class="tgq-btn-mini" title="Ligar"><i class="fas fa-phone"></i></a>` : '';
-                        const btnWaQ = cliente?.telefone ? `<a href="${_whatsappUrlOS(cliente.telefone)}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="tgq-btn-mini" style="color:#25D366;" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>` : '';
+                        const _telWaQ = (cliente?.telefone || '').replace(/\D/g, '');
+                        const _telWaQFinal = _telWaQ.length === 9 ? '351' + _telWaQ : _telWaQ;
+                        const btnWaQ = cliente?.telefone ? `<a href="https://wa.me/${_telWaQFinal}" target="_blank" rel="noopener" onclick="event.stopPropagation();" class="tgq-btn-mini" style="color:#25D366;" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>` : '';
                         const btnObsQ = (observacoesQ && observacoesQ.trim()) ? `<button type="button" onclick="event.stopPropagation();alert('Observações:\\n\\n' + ${JSON.stringify(observacoesQ)});" class="tgq-btn-mini" title="Observações"><i class="fas fa-comment-dots"></i></button>` : '';
                         const iconesQ = btnObsQ + btnTelQ + btnWaQ + btnMapaQ;
                         return `
