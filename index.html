@@ -5610,6 +5610,20 @@
             const pessoas = todas.filter(p => s.pessoasIds.includes(p.id));
             const item = s.tipo === 'servico' ? dados.servicos?.find(x => x.id === s.id) : dados.obras?.find(x => x.id === s.id);
             const titulo = s.tipo === 'servico' ? (obterNomeCliente(item?.clienteId) || 'OS') : item?.nome;
+            // Mesmos ícones de contacto/mapa/observações que já aparecem na Agenda do dia — para
+            // ficarem disponíveis também aqui, depois de já se ter escolhido a OS/Obra.
+            const clienteIdG = s.tipo === 'servico' ? item?.clienteId : item?.clienteId;
+            const clienteG = dados.clientes?.find(c => c.id === clienteIdG);
+            const moradaG = s.tipo === 'servico' ? [item?.morada, item?.numeroPorta, item?.codigoPostal, item?.cidade].filter(Boolean).join(', ') : _moradaCompletaObra(item);
+            const urlInfoG = _osMapaInfo(clienteIdG, moradaG || '', item?.localId);
+            const observacoesG = item?.observacoes;
+            const btnMapaG = urlInfoG ? `<a href="${urlInfoG.url}" target="_blank" rel="noopener" class="tgq-btn-mini" title="Navegar (Google Maps)"><i class="fas fa-diamond-turn-right"></i></a>${urlInfoG?.wazeUrl ? `<a href="${urlInfoG.wazeUrl}" target="_blank" rel="noopener" class="tgq-btn-mini" title="Navegar no Waze"><i class="fas fa-w" style="font-family:sans-serif;font-style:normal;font-weight:800;">W</i></a>` : ''}` : '';
+            const btnTelG = clienteG?.telefone ? `<a href="tel:${clienteG.telefone.replace(/\s+/g,'')}" class="tgq-btn-mini" title="Ligar"><i class="fas fa-phone"></i></a>` : '';
+            const _telWaG = (clienteG?.telefone || '').replace(/\D/g, '');
+            const _telWaGFinal = _telWaG.length === 9 ? '351' + _telWaG : _telWaG;
+            const btnWaG = clienteG?.telefone ? `<a href="https://wa.me/${_telWaGFinal}" target="_blank" rel="noopener" class="tgq-btn-mini" style="color:#25D366;" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>` : '';
+            const btnObsG = (observacoesG && observacoesG.trim()) ? `<button type="button" onclick="alert('Observações:\\n\\n' + ${JSON.stringify(observacoesG || '')});" class="tgq-btn-mini" title="Observações"><i class="fas fa-comment-dots"></i></button>` : '';
+            const iconesG = btnObsG + btnTelG + btnWaG + btnMapaG;
             painel.innerHTML = `
                 <div style="text-align:center;color:#152a52;margin-bottom:14px;">
                     <div style="font-weight:700;"><i class="fas fa-${s.tipo === 'servico' ? 'wrench' : 'hard-hat'}"></i> ${escapeHtmlSimples(titulo || '')}</div>
@@ -5623,6 +5637,7 @@
                         </div>
                     `).join('')}
                 </div>
+                ${iconesG ? `<div style="display:flex;gap:8px;justify-content:center;margin-top:18px;">${iconesG}</div>` : ''}
             `;
         }
         function _quiosqueAgendaSairSessao() {
