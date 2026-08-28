@@ -15182,6 +15182,18 @@
             // atualização periódica em segundo plano repor "O Meu Dia" visível por baixo dela —
             // era isso que causava o painel a "ressurgir" sozinho ao trocar de menu.
             if (!forcarDesktop && !dentroDaHomeDesktop && document.querySelector('.section-container.active')) { cont.style.display = 'none'; return; }
+            // "Alertas e Pendências" pode ter sido movido para dentro deste painel (na Home do
+            // desktop) — e esta função reconstrói tudo com cont.innerHTML mais abaixo. Sem isto,
+            // qualquer chamada a esta função (incluindo a atualização periódica em segundo plano,
+            // que não sabe nada disto) destruía esse elemento de vez, fazendo-o desaparecer
+            // sozinho ao fim de alguns segundos. Por isso protege-se aqui mesmo, na origem —
+            // não só no sítio que o move para lá — para cobrir TODAS as chamadas a esta função.
+            if (dentroDaHomeDesktop) {
+                const alertasElProteger = document.getElementById('homeAlertas');
+                if (alertasElProteger && alertasElProteger.parentElement === cont) {
+                    cont.parentElement.insertBefore(alertasElProteger, cont);
+                }
+            }
             const hoje = getDataHoje();
             // Vigilante tem um "O Meu Dia" próprio e mais simples — não faz OS/obras. A execução
             // da ronda em si vive inteiramente no TOTALGEST_RONDAS.html (ficheiro à parte, como o
@@ -15396,6 +15408,32 @@
                 </div>
             `;
             _tgmMostrarTempo();
+            // Reaplica sempre a moldagem da grelha do desktop (Alertas ao lado de "O Meu Dia",
+            // etc.) mesmo quando quem chamou esta função foi a atualização periódica em segundo
+            // plano (que não sabe nada disto) — assim fica protegido em qualquer chamada, não só
+            // na que vem de renderizarHomeDashboard.
+            if (dentroDaHomeDesktop) _tgmAplicarGrelhaDesktop(cont);
+        }
+        function _tgmAplicarGrelhaDesktop(cont) {
+            const alertasEl = document.getElementById('homeAlertas');
+            if (alertasEl && alertasEl.parentElement !== cont) cont.insertBefore(alertasEl, cont.firstChild);
+            const largo = window.innerWidth >= 900;
+            cont.style.display = 'grid';
+            cont.style.gap = '16px';
+            cont.style.alignItems = 'stretch';
+            cont.style.gridTemplateColumns = largo ? '1fr 1fr' : '1fr';
+            cont.style.gridTemplateAreas = largo
+                ? '"dia alertas" "equipa admin" "obras obras"'
+                : '"alertas" "dia" "admin" "equipa" "obras"';
+            const painelDia = cont.querySelector('.tgm-panel--dia');
+            const painelAdmin = cont.querySelector('.tgm-panel--admin');
+            const painelEquipa = cont.querySelector('.tgm-panel--equipa');
+            const painelObras = cont.querySelector('.tgm-panel--obras');
+            if (alertasEl) alertasEl.style.cssText += ';grid-area:alertas;margin:0;height:100%;display:flex;flex-direction:column;box-sizing:border-box;';
+            if (painelDia) painelDia.style.cssText += ';grid-area:dia;margin:0;height:100%;display:flex;flex-direction:column;box-sizing:border-box;';
+            if (painelAdmin) painelAdmin.style.cssText += ';grid-area:admin;margin:0;height:100%;display:flex;flex-direction:column;box-sizing:border-box;';
+            if (painelEquipa) painelEquipa.style.cssText += ';grid-area:equipa;margin:0;height:100%;display:flex;flex-direction:column;box-sizing:border-box;';
+            if (painelObras) painelObras.style.cssText += ';grid-area:obras;margin:0;height:100%;box-sizing:border-box;';
         }
         // Widget de tempo (temperatura, humidade, vento, céu) junto a "O Meu Dia" — só aparece
         // se o dispositivo tiver o GPS ativo e a pessoa tiver dado permissão; se não tiver,
@@ -31423,29 +31461,9 @@ window._relPrefill = function(msg){
                     if (omeudiaEl.parentElement !== wrap) wrap.appendChild(omeudiaEl);
                     omeudiaEl.style.display = 'block';
                     omeudiaEl.style.margin = '0';
-                    // "Alertas e Pendências" passa a viver dentro da mesma grelha, ao lado de "O
-                    // Meu Dia" — assim ficam na mesma linha do CSS Grid e esticam sempre à mesma
-                    // altura um do outro, tal como já acontece com "Equipa Agora"/"Resumo do Dia".
-                    if (alertasEl && alertasEl.parentElement !== omeudiaEl) omeudiaEl.insertBefore(alertasEl, omeudiaEl.firstChild);
-                    // Layout aplicado diretamente aqui (não só via CSS externo) — garante que
-                    // resulta sempre, independentemente de qualquer outra folha de estilos.
-                    const largo = window.innerWidth >= 900;
-                    omeudiaEl.style.display = 'grid';
-                    omeudiaEl.style.gap = '16px';
-                    omeudiaEl.style.alignItems = 'stretch';
-                    omeudiaEl.style.gridTemplateColumns = largo ? '1fr 1fr' : '1fr';
-                    omeudiaEl.style.gridTemplateAreas = largo
-                        ? '"dia alertas" "equipa admin" "obras obras"'
-                        : '"alertas" "dia" "admin" "equipa" "obras"';
-                    const painelDia = omeudiaEl.querySelector('.tgm-panel--dia');
-                    const painelAdmin = omeudiaEl.querySelector('.tgm-panel--admin');
-                    const painelEquipa = omeudiaEl.querySelector('.tgm-panel--equipa');
-                    const painelObras = omeudiaEl.querySelector('.tgm-panel--obras');
-                    if (alertasEl) alertasEl.style.cssText += ';grid-area:alertas;margin:0;height:100%;display:flex;flex-direction:column;box-sizing:border-box;';
-                    if (painelDia) painelDia.style.cssText += ';grid-area:dia;margin:0;height:100%;display:flex;flex-direction:column;box-sizing:border-box;';
-                    if (painelAdmin) painelAdmin.style.cssText += ';grid-area:admin;margin:0;height:100%;display:flex;flex-direction:column;box-sizing:border-box;';
-                    if (painelEquipa) painelEquipa.style.cssText += ';grid-area:equipa;margin:0;height:100%;display:flex;flex-direction:column;box-sizing:border-box;';
-                    if (painelObras) painelObras.style.cssText += ';grid-area:obras;margin:0;height:100%;box-sizing:border-box;';
+                    // A moldagem da grelha (colocar "Alertas e Pendências" lá dentro, aplicar as
+                    // áreas do CSS Grid, etc.) já fica garantida dentro do próprio
+                    // renderizarOMeuDia() — feita ali mesmo, não é preciso repetir aqui.
                 }
                 return;
             }
