@@ -1,4 +1,4 @@
-name: Inspect sync boundaries
+name: Migrate offline cache module
 
 on:
   push:
@@ -7,35 +7,24 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear estado e sincronizacao
+          fetch-depth: 1
+      - run: python3 scripts/migrate-cache.py
+      - run: git diff --check
+      - name: Gravar migração validada
         shell: bash
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          lines = Path('app.html').read_text(encoding='utf-8').splitlines()
-          patterns = (
-              'function _contarAlteracoesPendentes',
-              'function mostrarStatusSync',
-              'function guardarDados',
-              'async function _sincronizar',
-              'function _guardarCacheLocal',
-              'function _carregarCacheLocal',
-              'function _restaurarSnapshotDaCache'
-          )
-          for i, line in enumerate(lines):
-              if any(p in line for p in patterns):
-                  print('HIT', i + 1, repr(line))
-                  for n in range(max(0, i - 8), min(len(lines), i + 30)):
-                      print(n + 1, repr(lines[n]))
-                  print('---')
-          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html
+          git commit -m 'Ativar módulo externo de cache offline'
+          git push origin HEAD:refactor/separar-index-app
