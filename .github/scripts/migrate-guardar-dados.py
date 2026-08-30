@@ -1,3 +1,4 @@
+# Trigger da migração protegida de guardarDados
 from pathlib import Path
 import re
 
