@@ -10,6 +10,7 @@
     ui: './assets/js/app-ui.js',
     dialogs: './assets/js/app-dialogs.js',
     connectivity: './assets/js/app-connectivity.js',
+    syncStatus: './assets/js/app-sync-status.js',
     bootstrap: './assets/js/app-bootstrap.js'
   };
 
@@ -43,6 +44,7 @@
     if (options.ui === true) pedidos.push(MODULOS.ui);
     if (options.dialogs === true) pedidos.push(MODULOS.dialogs);
     if (options.connectivity === true) pedidos.push(MODULOS.connectivity);
+    if (options.syncStatus === true) pedidos.push(MODULOS.syncStatus);
     if (options.bootstrap === true) pedidos.push(MODULOS.bootstrap);
 
     for (const modulo of pedidos) {
