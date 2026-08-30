@@ -1,14 +1,19 @@
 // Service Worker — Total Gest PWA
-const CACHE = 'totalgest-v5';
+const CACHE = 'totalgest-v6';
 const ASSETS = [
+  './index.html',
   './app.html',
   './login.html',
   './styles.css',
   './assets/css/app.css',
+  './assets/css/index.css',
+  './assets/css/social-proof.css',
   './assets/css/login.css',
+  './assets/js/index.js',
   './assets/js/auth-config.js',
   './assets/js/login.js',
   './manifest.json',
+  './logo-totalgest.png',
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png'
@@ -46,6 +51,13 @@ self.addEventListener('fetch', e => {
       return res;
     }).catch(() => {
       if (req.mode === 'navigate') {
+        const path = new URL(req.url).pathname;
+        if (path === '/' || path.endsWith('/index.html')) {
+          return caches.match('./index.html');
+        }
+        if (path.endsWith('/login.html')) {
+          return caches.match('./login.html').then(r => r || caches.match('./index.html'));
+        }
         return caches.match('./app.html').then(r => r || caches.match('./login.html'));
       }
       return caches.match(req);
