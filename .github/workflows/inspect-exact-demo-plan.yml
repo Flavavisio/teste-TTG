@@ -1,4 +1,4 @@
-name: Inspect sync status boundary
+name: Inspect sync toast exact block
 
 on:
   push:
@@ -17,26 +17,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear estado visual de sincronização
+      - name: Mostrar bloco exato do toast de sincronização
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
           lines = Path('app.html').read_text(encoding='utf-8').splitlines()
-          patterns = (
-              'function mostrarStatusSync',
-              'mostrarStatusSync(',
-              'syncStatus',
-              'sync-status',
-              'sincroniza',
-          )
-          hits = []
-          for i, line in enumerate(lines):
-              if any(p in line for p in patterns):
-                  hits.append(i)
-          for i in hits[:80]:
-              print('HIT', i + 1, repr(lines[i]))
-              for n in range(max(0, i - 8), min(len(lines), i + 14)):
+          for n in range(3195, 3265):
+              if n < len(lines):
                   print(n + 1, repr(lines[n]))
-              print('---')
           PY
