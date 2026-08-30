@@ -1,9 +1,9 @@
 {
-  "id": "/",
+  "id": "/app.html",
   "name": "Total Gest",
   "short_name": "Total Gest",
   "description": "Gestão de equipas, obras, ponto e ordens de serviço para empresas de instalação e manutenção técnica.",
-  "start_url": "/index.html",
+  "start_url": "/app.html",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
@@ -21,14 +21,14 @@
       "name": "Registo de Ponto",
       "short_name": "Ponto",
       "description": "Picar entrada ou saída",
-      "url": "/index.html?atalho=ponto",
+      "url": "/app.html?atalho=ponto",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Nova Ordem de Serviço",
       "short_name": "Nova OS",
       "description": "Criar uma nova ordem de serviço",
-      "url": "/index.html?atalho=nova-os",
+      "url": "/app.html?atalho=nova-os",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
