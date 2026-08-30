@@ -1,0 +1,101 @@
+name: Migrate toast module
+
+on:
+  push:
+    branches:
+      - refactor/separar-index-app
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/separar-index-app
+          fetch-depth: 1
+
+      - name: Extrair toast inline
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('app.html')
+          text = path.read_text(encoding='utf-8')
+          original = text
+
+          start_marker = '        // ===== Sistema de notificações Toast (substitui os alert() nativos) ====='
+          end_marker = '        const SUPABASE_URL'
+          if text.count(start_marker) != 1 or text.count(end_marker) != 1:
+              raise SystemExit('fronteiras toast/Supabase inesperadas')
+
+          a = text.index(start_marker)
+          b = text.index(end_marker, a)
+          block = text[a:b]
+          for must in (
+              'const _alertNativo = window.alert.bind(window);',
+              'function _classificarToast(msg)',
+              'const _toastIcones',
+              'function mostrarToast(mensagem, tipoForcado)',
+              'window.alert = mostrarToast;'
+          ):
+              if must not in block:
+                  raise SystemExit('marcador toast em falta: ' + must)
+          if len(block.encode('utf-8')) < 1000:
+              raise SystemExit('bloco toast inesperadamente pequeno')
+
+          text = text[:a] + '        // Toast modularizado em assets/js/app-toast.js\n' + text[b:]
+
+          old_init = 'window.TotalGestApp.init({ pwa: true, dialogs: true, bootstrap: true })'
+          new_init = 'window.TotalGestApp.init({ pwa: true, toast: true, dialogs: true, bootstrap: true })'
+          if text.count(old_init) != 1:
+              raise SystemExit(f'inicialização do shell inesperada: {text.count(old_init)} ocorrencias')
+          text = text.replace(old_init, new_init, 1)
+
+          for forbidden in (
+              'function _classificarToast(msg)',
+              'const _toastIcones',
+              'function mostrarToast(mensagem, tipoForcado)',
+              'window.alert = mostrarToast;'
+          ):
+              if forbidden in text:
+                  raise SystemExit('toast inline ainda presente: ' + forbidden)
+
+          for required in (
+              'const SUPABASE_URL',
+              "mostrarToast('Não foi possível carregar a base de códigos postais",
+              "mostrarToast('✅ Dados preenchidos a partir do NIF.', 'sucesso')",
+              new_init
+          ):
+              if required not in text:
+                  raise SystemExit('marcador privado essencial em falta: ' + required)
+
+          if len(original.encode('utf-8')) - len(text.encode('utf-8')) < 1000:
+              raise SystemExit('redução do ficheiro abaixo do esperado')
+
+          path.write_text(text, encoding='utf-8')
+          print('Toast inline removido e módulo externo ativado.')
+          print('Redução:', len(original.encode('utf-8')) - len(text.encode('utf-8')), 'bytes')
+          PY
+
+          git diff --check
+          git diff --stat
+          git diff -- app.html | sed -n '1,180p'
+
+      - name: Commit da migração
+        shell: bash
+        run: |
+          if git diff --quiet -- app.html; then
+            echo 'Sem alterações para gravar.'
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html
+          git commit -m 'Extrair notificações toast da aplicação'
+          git push origin HEAD:refactor/separar-index-app
