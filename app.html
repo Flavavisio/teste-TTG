@@ -3204,31 +3204,6 @@
             return tentativa;
         }
 
-        function _tabelaInexistente(e) {
-            const m = (e && (e.message || e.msg || '')) + '';
-            const c = (e && e.code || '') + '';
-            return /does not exist|schema cache|find the table|relation .* does not/i.test(m) || ['42P01','PGRST205','PGRST204','PGRST202'].includes(c);
-        }
-        // Coluna em falta (ex.: "km_inicio") — diferente de tabela em falta. Sem isto, uma coluna
-        // nova que ainda não exista na base de dados fazia a app tentar gravar os MESMOS registos
-        // para sempre, a cada ciclo de sincronização (nunca ficavam marcados como sincronizados),
-        // dando a sensação de "sempre a sincronizar" sem nunca terminar. Detetamos o nome da
-        // coluna e voltamos a tentar sem ela — assim que a coluna existir de verdade na base de
-        // dados, volta a ser enviada automaticamente, sem precisar de mexer em mais nada aqui.
-        function _colunaEmFalta(e) {
-            const m = (e && (e.message || e.msg || '')) + '';
-            const c = (e && e.code || '') + '';
-            // Dois formatos possíveis: o do Postgres puro ("column X does not exist") e o do
-            // PostgREST/Supabase ("Could not find the 'X' column of 'Y' in the schema cache",
-            // código PGRST204) — este segundo é o que apanhámos na prática.
-            let match = m.match(/Could not find the ['"]?([a-z0-9_]+)['"]? column/i);
-            if (match) return match[1];
-            if (c === '42703' || /column .* does not exist/i.test(m)) {
-                match = m.match(/column ["']?([a-z0-9_]+)["']?/i);
-                return match ? match[1] : null;
-            }
-            return null;
-        }
         async function _sincronizar() {
             if (!navigator.onLine) {
                 mostrarStatusOffline();
@@ -32123,6 +32098,6 @@ window._relPrefill = function(msg){
 </div>
 
   <script src="./assets/js/app-shell.js"></script>
-  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, bootstrap: true });</script>
+  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, bootstrap: true });</script>
 </body>
 </html>
