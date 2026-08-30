@@ -32789,19 +32789,6 @@ window._relPrefill = function(msg){
             }
         });
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            _aplicarTemaGuardado();
-            _aplicarSidebarEncolhidaGuardada();
-            _aplicarZoomGuardado();
-            await bootstrapSupabase();
-            inicializar();
-            if (_verificarLinkRenovacao()) { if (relogioInterval) clearInterval(relogioInterval); relogioInterval = setInterval(atualizarRelogio, 1000); return; }
-            await restaurarSessaoAuth();
-            _tratarRegressoOAuthTOConline();
-            if (relogioInterval) clearInterval(relogioInterval);
-            relogioInterval = setInterval(atualizarRelogio, 1000);
-        });
-
         // Fecho de modais ao clicar fora foi desativado a pedido — só fecha pelo X ou botão Cancelar,
         // para não perder preenchimento por engano (ex: folha de obra, formulários longos).
 
@@ -33317,6 +33304,6 @@ if (document.getElementById('tg-landing')) {
 (function(){var grp=document.getElementById('tg-billing');if(grp){grp.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;grp.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');var mode=b.dataset.mode;document.querySelectorAll('#tg-landing [data-m][data-a]').forEach(function(el){var v=mode==='anual'?el.dataset.a:el.dataset.m;el.textContent=(v&&v.length)?v:'\u00A0';});});}var ano=document.getElementById('tg-ano');if(ano)ano.textContent=new Date().getFullYear();atualizarLanding();})();
 </script>
   <script src="./assets/js/app-shell.js"></script>
-  <script>window.TotalGestApp.init({ pwa: true, dialogs: true, bootstrap: false });</script>
+  <script>window.TotalGestApp.init({ pwa: true, dialogs: true, bootstrap: true });</script>
 </body>
 </html>
