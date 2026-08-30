@@ -268,9 +268,18 @@
                         <div class="form-group" style="margin:0;min-width:170px;"><label>Cliente</label><select id="mapa_filtro_cliente" onchange="renderizarMapaRondas()"><option value="">Todos</option></select></div>
                         <div class="form-group" style="margin:0;min-width:170px;" id="mapa_filtro_vig_wrap"><label>Vigilante</label><select id="mapa_filtro_vigilante" onchange="renderizarMapaRondas()"><option value="">Todos</option></select></div>
                     </div>
-                    <p class="text-muted" style="margin:0 0 12px;font-size:.85rem;">Pins verdes = Postos. Pins azuis a mover = vigilantes em ronda agora, com a posição atualizada a cada 30s. Toca num pin de posto para ver os Pontos lá dentro e abrir a navegação.</p>
+                    <p class="text-muted" style="margin:0 0 12px;font-size:.85rem;">Cada pin é um Posto. Toca num pin para ver os Pontos lá dentro e abrir a navegação até lá.</p>
                     <div id="mapaRondas" style="height:560px;border-radius:14px;overflow:hidden;border:1px solid var(--border-soft);box-shadow:var(--shadow);"></div>
                     <p id="mapaRondasInfo" class="text-muted" style="margin-top:8px;font-size:.8rem;"></p>
+                </div>
+
+                <div id="secao-mapavigilantes" class="secao-crm">
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:12px;">
+                        <div class="form-group" style="margin:0;min-width:170px;"><label>Vigilante</label><select id="mapavig_filtro_vigilante" onchange="renderizarMapaVigilantes()"><option value="">Todos</option></select></div>
+                    </div>
+                    <p class="text-muted" style="margin:0 0 12px;font-size:.85rem;">Mostra só quem está em ronda agora, com a posição atualizada a cada 30s. Toca num pin para ver há quanto tempo foi atualizado e navegar até lá.</p>
+                    <div id="mapaVigilantes" style="height:560px;border-radius:14px;overflow:hidden;border:1px solid var(--border-soft);box-shadow:var(--shadow);"></div>
+                    <p id="mapaVigilantesInfo" class="text-muted" style="margin-top:8px;font-size:.8rem;"></p>
                 </div>
 
                 <div id="secao-relatorios" class="secao-crm">
@@ -480,8 +489,8 @@
             },
             rondasEscalas: {
                 tabela: 'rondas_escalas',
-                from: r => ({ id: r.id, adminId: r.admin_id, postoId: r.posto_id || null, vigilanteId: r.vigilante_id, data: r.data, horaInicio: r.hora_inicio, horaFim: r.hora_fim, tipo: r.tipo || 'turno', turnoTipoId: r.turno_tipo_id || null, notas: r.notas || null, criadoPor: r.criado_por || null, criadoEm: isoToMs(r.criado_em) }),
-                to:   o => ({ id: o.id, admin_id: o.adminId, posto_id: o.postoId || null, vigilante_id: o.vigilanteId, data: o.data, hora_inicio: o.horaInicio, hora_fim: o.horaFim, tipo: o.tipo || 'turno', turno_tipo_id: o.turnoTipoId || null, notas: o.notas || null, criado_por: o.criadoPor || null, criado_em: msToISO(o.criadoEm) })
+                from: r => ({ id: r.id, adminId: r.admin_id, postoId: r.posto_id || null, rotaId: r.rota_id || null, vigilanteId: r.vigilante_id, data: r.data, horaInicio: r.hora_inicio, horaFim: r.hora_fim, tipo: r.tipo || 'turno', turnoTipoId: r.turno_tipo_id || null, notas: r.notas || null, criadoPor: r.criado_por || null, criadoEm: isoToMs(r.criado_em) }),
+                to:   o => ({ id: o.id, admin_id: o.adminId, posto_id: o.postoId || null, rota_id: o.rotaId || null, vigilante_id: o.vigilanteId, data: o.data, hora_inicio: o.horaInicio, hora_fim: o.horaFim, tipo: o.tipo || 'turno', turno_tipo_id: o.turnoTipoId || null, notas: o.notas || null, criado_por: o.criadoPor || null, criado_em: msToISO(o.criadoEm) })
             },
             rondasTurnosTipo: {
                 tabela: 'rondas_turnos_tipo',
@@ -736,6 +745,7 @@
             if (tab === 'rotas') renderizarRondasRotas();
             if (tab === 'execucao') renderizarRondaExecucao();
             if (tab === 'mapa') renderizarMapaRondas();
+            if (tab === 'mapavigilantes') renderizarMapaVigilantes();
             if (tab === 'relatorios') renderizarRelatoriosRondas();
             if (tab === 'equipa') renderizarEquipaEscalas();
             if (tab === 'minhasescalas') renderizarMinhasEscalas();
@@ -757,7 +767,8 @@
             nav.innerHTML = `
                 <div class="crm-nav-label">Início</div>
                 <div class="crm-nav-item ativo" data-tab="monitor" onclick="mudarTabRondas('monitor','Monitorização','fa-chart-line')"><i class="fas fa-chart-line"></i><span>Monitorização</span></div>
-                <div class="crm-nav-item" data-tab="mapa" onclick="mudarTabRondas('mapa','Mapa dos Postos','fa-map-location-dot')"><i class="fas fa-map-location-dot"></i><span>Mapa</span></div>
+                <div class="crm-nav-item" data-tab="mapa" onclick="mudarTabRondas('mapa','Mapa dos Postos','fa-map-location-dot')"><i class="fas fa-map-location-dot"></i><span>Mapa de Postos</span></div>
+                <div class="crm-nav-item" data-tab="mapavigilantes" onclick="mudarTabRondas('mapavigilantes','Mapa dos Vigilantes','fa-street-view')"><i class="fas fa-street-view"></i><span>Mapa de Vigilantes</span></div>
                 <div class="crm-nav-item" data-tab="relatorios" onclick="mudarTabRondas('relatorios','Relatórios','fa-file-lines')"><i class="fas fa-file-lines"></i><span>Relatórios</span></div>
                 <div class="crm-nav-item" data-tab="equipa" onclick="mudarTabRondas('equipa','Equipa & Escalas','fa-users-gear')"><i class="fas fa-users-gear"></i><span>Equipa & Escalas</span></div>
                 <div class="crm-nav-label">Configuração</div>
@@ -1027,6 +1038,7 @@
         // ===================== Mapa dos Postos =====================
         let _mapaRondas = null;
         let _mapaRondasMarkers = null;
+        function _fecharGenerico() { document.getElementById('modalGenericoOverlay').classList.remove('open'); }
         function _mapaMontarFiltros() {
             const tid = _tenantId();
             const selPosto = document.getElementById('mapa_filtro_posto');
@@ -1069,15 +1081,6 @@
                 if (['admin', 'subadmin', 'supervisor_vigilantes'].includes(usuarioLogado?.role)) {
                     _mapaRondas.on('click', e => abrirModalRondaPosto(null, { lat: e.latlng.lat, lng: e.latlng.lng }));
                 }
-                // Atualiza sozinho a cada 30s (sem recarregar o mapa todo nem outras tabelas —
-                // só a localização, para não interferir com formulários abertos noutro sítio).
-                if (!_mapaRondasAutoRefresh) {
-                    _mapaRondasAutoRefresh = setInterval(async () => {
-                        if (!document.getElementById('secao-mapa')?.classList.contains('ativa')) return;
-                        await _mapaAtualizarSoLocalizacoes();
-                        renderizarMapaRondas();
-                    }, 30000);
-                }
             }
             setTimeout(() => { try { _mapaRondas.invalidateSize(); } catch (e) {} }, 120);
             _mapaRondasMarkers.clearLayers();
@@ -1112,30 +1115,69 @@
                 m.addTo(_mapaRondasMarkers);
                 pts.push([p.latitude, p.longitude]);
             });
-            // Posições em tempo real dos vigilantes (só quem gere vê isto — o próprio vigilante
-            // não precisa de se ver a si mesmo no mapa).
-            let localizacoes = [];
-            if (usuarioLogado?.role !== 'vigilante') {
-                localizacoes = (dados.rondasLocalizacaoAtual || []).filter(l => l.adminId === tid);
-                if (fVig) localizacoes = localizacoes.filter(l => l.vigilanteId === fVig);
-                if (usuarioLogado?.role === 'supervisor_vigilantes') {
-                    const meusIds = _rondasVigilantesDoAdmin().map(v => v.id);
-                    localizacoes = localizacoes.filter(l => meusIds.includes(l.vigilanteId));
-                }
-                localizacoes.forEach(l => {
-                    const vig = dados.funcionarios?.find(f => f.id === l.vigilanteId);
-                    const minsAtras = Math.round((Date.now() - (l.atualizadoEm || 0)) / 60000);
-                    if (minsAtras > 20) return; // posição muito antiga (ronda já deve ter terminado) — não mostra
-                    const iconeVig = L.divIcon({ className: 'tg-map-vig', html: `<div style="width:34px;height:34px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 1px 8px rgba(37,99,235,.6);display:flex;align-items:center;justify-content:center;"><i class="fas fa-person-walking" style="color:#fff;font-size:.9rem;"></i></div>`, iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -20] });
-                    const m2 = L.marker([l.latitude, l.longitude], { icon: iconeVig });
-                    m2.bindPopup(`<strong>${escapeHtmlSimples(vig?.nome || '—')}</strong><br><span style="color:#64748b;">Atualizado há ${minsAtras <= 1 ? 'menos de 1 min' : minsAtras + ' min'}</span>${l.precisaoMetros ? `<br><span style="color:#94a3b8;font-size:.78rem;">Precisão ~${Math.round(l.precisaoMetros)}m</span>` : ''}`);
-                    m2.addTo(_mapaRondasMarkers);
-                    pts.push([l.latitude, l.longitude]);
-                });
-            }
             const info = document.getElementById('mapaRondasInfo');
-            if (info) info.textContent = `${postos.length} posto(s) no mapa` + (localizacoes.length ? ` · ${localizacoes.length} vigilante(s) em ronda agora` : '');
+            if (info) info.textContent = `${postos.length} posto(s) no mapa`;
             if (pts.length) { try { _mapaRondas.fitBounds(pts, { padding: [40, 40], maxZoom: 15 }); } catch (e) {} }
+        }
+
+        // ===================== Mapa de Vigilantes (posição ao vivo, só quem gere) =====================
+        let _mapaVigilantes = null;
+        let _mapaVigilantesMarkers = null;
+        let _mapaVigilantesAutoRefresh = null;
+        function renderizarMapaVigilantes() {
+            if (typeof L === 'undefined') { const i = document.getElementById('mapaVigilantesInfo'); if (i) i.textContent = 'Mapa indisponível (sem ligação à internet).'; return; }
+            const cont = document.getElementById('mapaVigilantes');
+            if (!cont) return;
+            const selVig = document.getElementById('mapavig_filtro_vigilante');
+            if (selVig && !selVig.dataset.montado) {
+                const vigilantes = _rondasVigilantesDoAdmin().sort((a, b) => a.nome.localeCompare(b.nome, 'pt'));
+                selVig.innerHTML = '<option value="">Todos</option>' + vigilantes.map(v => `<option value="${v.id}">${escapeHtmlSimples(v.nome)}</option>`).join('');
+                selVig.dataset.montado = '1';
+            }
+            if (!_mapaVigilantes) {
+                _mapaVigilantes = L.map('mapaVigilantes').setView([39.5, -8.0], 6);
+                const satelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles © Esri' });
+                const ruas = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+                ruas.addTo(_mapaVigilantes);
+                L.control.layers({ 'Ruas': ruas, 'Satélite': satelite }, null, { position: 'topright' }).addTo(_mapaVigilantes);
+                _mapaVigilantesMarkers = L.layerGroup().addTo(_mapaVigilantes);
+                // Atualiza sozinho a cada 30s — só a localização, sem mexer em mais nada.
+                if (!_mapaVigilantesAutoRefresh) {
+                    _mapaVigilantesAutoRefresh = setInterval(async () => {
+                        if (!document.getElementById('secao-mapavigilantes')?.classList.contains('ativa')) return;
+                        await _mapaAtualizarSoLocalizacoes();
+                        renderizarMapaVigilantes();
+                    }, 30000);
+                }
+            }
+            setTimeout(() => { try { _mapaVigilantes.invalidateSize(); } catch (e) {} }, 120);
+            _mapaVigilantesMarkers.clearLayers();
+            const tid = _tenantId();
+            const fVig = document.getElementById('mapavig_filtro_vigilante')?.value || '';
+            let localizacoes = (dados.rondasLocalizacaoAtual || []).filter(l => l.adminId === tid);
+            if (fVig) localizacoes = localizacoes.filter(l => l.vigilanteId === fVig);
+            if (usuarioLogado?.role === 'supervisor_vigilantes') {
+                const meusIds = _rondasVigilantesDoAdmin().map(v => v.id);
+                localizacoes = localizacoes.filter(l => meusIds.includes(l.vigilanteId));
+            }
+            const pts = [];
+            let visiveis = 0;
+            localizacoes.forEach(l => {
+                const vig = dados.funcionarios?.find(f => f.id === l.vigilanteId);
+                const minsAtras = Math.round((Date.now() - (l.atualizadoEm || 0)) / 60000);
+                if (minsAtras > 20) return; // posição muito antiga (ronda já deve ter terminado) — não mostra
+                const exec = _rondaExecucaoEmCurso(l.vigilanteId);
+                const rota = exec ? dados.rondasRotas?.find(r => r.id === exec.rotaId) : null;
+                const iconeVig = L.divIcon({ className: 'tg-map-vig', html: `<div style="width:36px;height:36px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 1px 8px rgba(37,99,235,.6);display:flex;align-items:center;justify-content:center;"><i class="fas fa-person-walking" style="color:#fff;font-size:.95rem;"></i></div>`, iconSize: [36, 36], iconAnchor: [18, 18], popupAnchor: [0, -20] });
+                const m = L.marker([l.latitude, l.longitude], { icon: iconeVig });
+                m.bindPopup(`<strong>${escapeHtmlSimples(vig?.nome || '—')}</strong>${rota ? '<br><span style="color:#64748b;">' + escapeHtmlSimples(rota.nome) + '</span>' : ''}<br><span style="color:#64748b;">Atualizado há ${minsAtras <= 1 ? 'menos de 1 min' : minsAtras + ' min'}</span>${l.precisaoMetros ? `<br><span style="color:#94a3b8;font-size:.78rem;">Precisão ~${Math.round(l.precisaoMetros)}m</span>` : ''}<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">${_botoesNavegar(l.latitude, l.longitude, 'sm')}${exec ? `<button class="btn btn-sm btn-primary" onclick="_fecharGenerico();abrirRondaAoVivo('${l.vigilanteId}')">Ver ronda ao vivo</button>` : ''}</div>`);
+                m.addTo(_mapaVigilantesMarkers);
+                pts.push([l.latitude, l.longitude]);
+                visiveis++;
+            });
+            const info = document.getElementById('mapaVigilantesInfo');
+            if (info) info.textContent = visiveis ? `${visiveis} vigilante(s) em ronda agora` : 'Ninguém em ronda neste momento.';
+            if (pts.length) { try { _mapaVigilantes.fitBounds(pts, { padding: [40, 40], maxZoom: 15 }); } catch (e) {} }
         }
         // ===================== "Ver ronda ao vivo" — supervisor/admin a acompanhar um vigilante =====================
         let _aoVivoVigilanteId = null;
@@ -1195,7 +1237,7 @@
             `;
         }
         function _rondaVigilanteTemAlgumTurnoNoPeriodo(vigId, rota) {
-            return (dados.rondasEscalas || []).some(e => e.vigilanteId === vigId && e.tipo === 'turno' && rota.postosIds.some(pid => { const pt = dados.rondasPontos?.find(x => x.id === pid); return pt && pt.postoId === e.postoId; }));
+            return (dados.rondasEscalas || []).some(e => e.vigilanteId === vigId && e.tipo === 'turno' && (e.rotaId === rota.id || rota.postosIds.some(pid => { const pt = dados.rondasPontos?.find(x => x.id === pid); return pt && pt.postoId === e.postoId; })));
         }
         // Só busca a tabela de localizações (leve, rápida) — não mexe em mais nada, para não
         // atropelar edições que possam estar a decorrer noutro separador aberto.
@@ -1357,7 +1399,7 @@
                     <td>${escapeHtmlSimples(postosNomes)}</td>
                     <td>${r.slaMinimoPct}%</td>
                     <td>${r.ativa ? '<span class="badge badge-ok">Ativa</span>' : '<span class="badge badge-off">Inativa</span>'}</td>
-                    <td><button class="btn btn-sm btn-outline" onclick="abrirModalRondaRota('${r.id}')"><i class="fas fa-pen"></i></button></td>
+                    <td><button class="btn btn-sm btn-outline" onclick="abrirModalRondaRota('${r.id}')"><i class="fas fa-pen"></i></button> <button class="btn btn-sm btn-outline" style="color:#dc2626;border-color:#fecaca;" onclick="excluirRondaRota('${r.id}')" title="Eliminar rota"><i class="fas fa-trash"></i></button></td>
                 </tr>`;
             }).join('');
             document.getElementById('emptyRondasRotas').style.display = rotas.length ? 'none' : 'block';
@@ -1367,13 +1409,17 @@
         // Rotas e Escalas ligam-se aqui: um vigilante vê uma rota se estiver atribuído
         // manualmente a ela (como já era) OU se tiver agora mesmo um turno ativo (Escalas) num
         // dos postos que essa rota percorre — sem precisar de ninguém o marcar à mão na rota.
-        function _vigilanteTemTurnoAtivoNoPosto(vigId, postoId) {
+        function _turnoAtivoAgoraDoVigilante(vigId) {
             const agora = Date.now();
-            return (dados.rondasEscalas || []).some(e => {
-                if (e.tipo !== 'turno' || e.vigilanteId !== vigId || e.postoId !== postoId) return false;
+            return (dados.rondasEscalas || []).find(e => {
+                if (e.tipo !== 'turno' || e.vigilanteId !== vigId) return false;
                 const [inicio, fim] = _turnoParaIntervalo(e.data, e.horaInicio, e.horaFim);
                 return agora >= inicio && agora <= fim;
-            });
+            }) || null;
+        }
+        function _vigilanteTemTurnoAtivoNoPosto(vigId, postoId) {
+            const turno = _turnoAtivoAgoraDoVigilante(vigId);
+            return !!turno && turno.postoId === postoId;
         }
         function _postosDaRota(rota) {
             const ids = new Set();
@@ -1384,15 +1430,17 @@
             return [...ids];
         }
         // A Escala é a única fonte de verdade: um vigilante só vê uma rota se tiver, agora mesmo,
-        // um turno ativo num dos postos que essa rota percorre. A atribuição manual antiga
-        // ("Vigilantes atribuídos" dentro da própria rota) já não concede acesso sozinha — deixa
-        // de fazer sentido ver 10 rotas atribuídas só por estarem marcadas à mão, se só há
-        // cobertura de escala numa delas agora.
+        // um turno ativo num dos postos que essa rota percorre. Se esse turno tiver uma Rota
+        // específica escolhida (útil quando o mesmo posto tem mais que uma rota), só essa é que
+        // aparece — senão, vê qualquer rota ativa que passe por esse posto.
         function _rondasRotasDoVigilante(vigId) {
-            return (dados.rondasRotas || []).filter(r => {
-                if (!r.ativa) return false;
-                return _postosDaRota(r).some(pid => _vigilanteTemTurnoAtivoNoPosto(vigId, pid));
-            });
+            const turno = _turnoAtivoAgoraDoVigilante(vigId);
+            if (!turno) return [];
+            if (turno.rotaId) {
+                const r = (dados.rondasRotas || []).find(x => x.id === turno.rotaId && x.ativa);
+                return r ? [r] : [];
+            }
+            return (dados.rondasRotas || []).filter(r => r.ativa && _postosDaRota(r).includes(turno.postoId));
         }
         function _rondaExecucaoEmCurso(vigId) {
             return (dados.rondasExecucoes || []).find(e => e.vigilanteId === vigId && e.estado === 'em_curso') || null;
@@ -2115,8 +2163,10 @@
             if (base.bloqueia) return base;
             const turnoHoje = (dados.rondasEscalas || []).filter(e => e.vigilanteId === vigId && e.tipo === 'turno' && e.data === dataYMD).sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))[0];
             if (!turnoHoje) return base;
-            const posto = dados.rondasPostos?.find(p => p.id === turnoHoje.postoId);
-            return { label: `Atribuído — ${posto?.nome || '?'}`, cor: '#1e40af', bg: '#dbeafe', bloqueia: false, periodo: `${turnoHoje.horaInicio}–${turnoHoje.horaFim}` };
+            const destino = turnoHoje.postoId
+                ? (dados.rondasPostos?.find(p => p.id === turnoHoje.postoId)?.nome || '?')
+                : (dados.rondasRotas?.find(r => r.id === turnoHoje.rotaId)?.nome ? 'Rota: ' + dados.rondasRotas.find(r => r.id === turnoHoje.rotaId).nome : '?');
+            return { label: `Atribuído — ${destino}`, cor: '#1e40af', bg: '#dbeafe', bloqueia: false, periodo: `${turnoHoje.horaInicio}–${turnoHoje.horaFim}` };
         }
         function _obterConfigRondas() {
             const tid = _tenantId();
@@ -2316,7 +2366,8 @@
                             return `<div draggable="true" ondragstart="_escDragStart(event,'${e.id}')" onclick="abrirModalEscala('${e.id}')" title="Arrasta para outro dia" style="cursor:grab;background:${est.bloqueia ? '#fef2f2' : '#eef2ff'};border:1px solid ${est.bloqueia ? '#fecaca' : '#c7d2fe'};border-radius:7px;padding:5px 7px;font-size:.74rem;">
                                 <div style="font-weight:700;color:var(--navy);">${e.horaInicio}–${e.horaFim}${atravessa ? ' <i class="fas fa-moon" title="Termina no dia seguinte"></i>' : ''}</div>
                                 <div>${escapeHtmlSimples(vig?.nome || '—')}</div>
-                                ${!postoId ? `<div class="text-muted">${escapeHtmlSimples(posto?.nome || '')}</div>` : ''}
+                                ${!postoId && posto ? `<div class="text-muted">${escapeHtmlSimples(posto.nome)}</div>` : ''}
+                                ${e.rotaId ? `<div class="text-muted"><i class="fas fa-route"></i> ${escapeHtmlSimples(dados.rondasRotas?.find(r => r.id === e.rotaId)?.nome || '?')}</div>` : ''}
                                 ${est.bloqueia ? `<div style="color:#dc2626;font-weight:700;"><i class="fas fa-triangle-exclamation"></i> ${est.label}</div>` : ''}
                             </div>`;
                         }).join('')}
@@ -2367,8 +2418,20 @@
                     </div>
                     <input type="hidden" id="esc_tipo" value="${tipoAtual}" />
                 </div>
+                <div id="esc_campo_modo" class="form-group" style="display:${tipoAtual === 'folga' ? 'none' : 'block'};"><label>Atribuir por *</label>
+                    <div style="display:flex;gap:10px;">
+                        <button type="button" class="rd-metodo-btn" id="esc_modo_btn_posto" onclick="_escEscolherModo('posto')"><i class="fas fa-map-pin"></i><span>Posto</span></button>
+                        <button type="button" class="rd-metodo-btn" id="esc_modo_btn_rota" onclick="_escEscolherModo('rota')"><i class="fas fa-route"></i><span>Rota</span></button>
+                    </div>
+                    <input type="hidden" id="esc_modo" value="${e?.rotaId && !e?.postoId ? 'rota' : 'posto'}" />
+                    <div class="help-text">"Posto" é para quando ele fica fixo num local (vê qualquer rota ativa desse posto). "Rota" é para quando ele percorre vários postos numa só ronda (ex: patrulha de carro) — não precisa de um posto "principal".</div>
+                </div>
                 <div id="esc_campo_posto" class="form-group" style="display:${tipoAtual === 'folga' ? 'none' : 'block'};"><label>Posto *</label>
-                    <select id="esc_posto">${postos.map(p => `<option value="${p.id}" ${(e?.postoId || postoPreset) === p.id ? 'selected' : ''}>${escapeHtmlSimples(p.nome)}</option>`).join('')}</select>
+                    <select id="esc_posto" onchange="_escAtualizarOpcoesRota()">${postos.map(p => `<option value="${p.id}" ${(e?.postoId || postoPreset) === p.id ? 'selected' : ''}>${escapeHtmlSimples(p.nome)}</option>`).join('')}</select>
+                </div>
+                <div id="esc_campo_rota" class="form-group" style="display:${tipoAtual === 'folga' ? 'none' : 'block'};"><label id="esc_rota_label">Rota (opcional)</label>
+                    <select id="esc_rota"></select>
+                    <div class="help-text" id="esc_rota_help">Só precisas de escolher se este Posto tiver mais do que uma rota — assim garantes que o vigilante só vê a rota certa neste turno. Se deixares em "Todas", ele vê qualquer rota ativa desse posto.</div>
                 </div>
                 <div class="form-group"><label id="esc_data_label">Data *</label><input type="date" id="esc_data" value="${e?.data || dataPreset || _getDataHojeYMD()}" required onchange="_escAvisoDisponibilidade()" /></div>
                 <div class="form-group"><label>Vigilante *</label>
@@ -2398,6 +2461,8 @@
             `;
             document.getElementById('modalGenericoForm').onsubmit = (ev) => { ev.preventDefault(); salvarEscala(id); };
             document.getElementById('modalGenericoForm').dataset.escalaId = id || '';
+            document.getElementById('esc_rota').dataset.valorInicial = e?.rotaId || '';
+            _escEscolherModo(e?.rotaId && !e?.postoId ? 'rota' : 'posto');
             document.getElementById('modalGenericoOverlay').classList.add('open');
             _escAvisoDisponibilidade();
         }
@@ -2417,10 +2482,47 @@
             }
             _escAvisoDisponibilidade();
         }
+        // Só mostra as rotas que passam mesmo por este posto — atualiza sempre que o posto muda.
+        function _escAtualizarOpcoesRota() {
+            const sel = document.getElementById('esc_rota');
+            if (!sel) return;
+            const tid = _tenantId();
+            const modo = document.getElementById('esc_modo')?.value || 'posto';
+            const valorAtual = sel.dataset.valorInicial || sel.value || '';
+            if (modo === 'rota') {
+                const todasRotas = (dados.rondasRotas || []).filter(r => r.adminId === tid && r.ativa).sort((a, b) => a.nome.localeCompare(b.nome, 'pt'));
+                sel.innerHTML = '<option value="">— Escolher —</option>' + todasRotas.map(r => {
+                    const nomesPostos = _postosDaRota(r).map(pid => dados.rondasPostos?.find(p => p.id === pid)?.nome).filter(Boolean).join(', ');
+                    return `<option value="${r.id}" ${valorAtual === r.id ? 'selected' : ''}>${escapeHtmlSimples(r.nome)}${nomesPostos ? ' — ' + escapeHtmlSimples(nomesPostos) : ''}</option>`;
+                }).join('');
+            } else {
+                const postoId = document.getElementById('esc_posto')?.value;
+                const rotasDoPosto = (dados.rondasRotas || []).filter(r => r.adminId === tid && r.ativa && _postosDaRota(r).includes(postoId));
+                sel.innerHTML = '<option value="">— Todas as rotas deste posto —</option>' + rotasDoPosto.map(r => `<option value="${r.id}" ${valorAtual === r.id ? 'selected' : ''}>${escapeHtmlSimples(r.nome)}</option>`).join('');
+            }
+            sel.dataset.valorInicial = ''; // só usa o valor inicial da 1ª vez que preenche
+        }
+        function _escEscolherModo(modo) {
+            document.getElementById('esc_modo').value = modo;
+            document.getElementById('esc_modo_btn_posto').classList.toggle('ativo', modo === 'posto');
+            document.getElementById('esc_modo_btn_rota').classList.toggle('ativo', modo === 'rota');
+            const ehFolga = document.getElementById('esc_tipo')?.value === 'folga';
+            document.getElementById('esc_campo_posto').style.display = (modo === 'posto' && !ehFolga) ? 'block' : 'none';
+            document.getElementById('esc_posto').required = modo === 'posto' && !ehFolga;
+            document.getElementById('esc_rota_label').textContent = modo === 'rota' ? 'Rota *' : 'Rota (opcional)';
+            document.getElementById('esc_rota_help').textContent = modo === 'rota'
+                ? 'O vigilante vê esta rota completa (todos os postos e pontos dela), sem estar "fixo" a nenhum posto em particular.'
+                : 'Só precisas de escolher se este Posto tiver mais do que uma rota — assim garantes que o vigilante só vê a rota certa neste turno. Se deixares em "Todas", ele vê qualquer rota ativa desse posto.';
+            document.getElementById('esc_rota').required = modo === 'rota' && !ehFolga;
+            _escAtualizarOpcoesRota();
+            _escAvisoDisponibilidade();
+        }
         function _escEscolherTipo(tipo) {
             document.getElementById('esc_tipo').value = tipo;
-            document.querySelectorAll('#modalGenericoCampos .rd-metodo-btn').forEach(b => b.classList.toggle('ativo', b.dataset.tipo === tipo));
-            document.getElementById('esc_campo_posto').style.display = tipo === 'folga' ? 'none' : 'block';
+            document.querySelectorAll('#modalGenericoCampos .rd-metodo-btn[data-tipo]').forEach(b => b.classList.toggle('ativo', b.dataset.tipo === tipo));
+            document.getElementById('esc_campo_modo').style.display = tipo === 'folga' ? 'none' : 'block';
+            document.getElementById('esc_campo_posto').style.display = (tipo === 'folga' || document.getElementById('esc_modo')?.value === 'rota') ? 'none' : 'block';
+            document.getElementById('esc_campo_rota').style.display = tipo === 'folga' ? 'none' : 'block';
             document.getElementById('esc_campo_horas').style.display = tipo === 'folga' ? 'none' : 'block';
             document.getElementById('esc_data_label').textContent = tipo === 'folga' ? 'Data da folga *' : 'Data (dia em que o turno começa) *';
         }
@@ -2450,13 +2552,17 @@
         }
         async function salvarEscala(id) {
             const tipo = document.getElementById('esc_tipo').value || 'turno';
-            const postoId = document.getElementById('esc_posto')?.value || null;
+            const modo = document.getElementById('esc_modo')?.value || 'posto';
+            const postoId = (tipo === 'turno' && modo === 'posto') ? (document.getElementById('esc_posto')?.value || null) : null;
+            const rotaIdEscolhida = document.getElementById('esc_rota')?.value || null;
             const vigilanteId = document.getElementById('esc_vigilante').value;
             const data = document.getElementById('esc_data').value;
             const horaInicio = tipo === 'folga' ? '00:00' : document.getElementById('esc_hora_inicio').value;
             const horaFim = tipo === 'folga' ? '23:59' : document.getElementById('esc_hora_fim').value;
             if (!vigilanteId || !data) { alert('Preenche o vigilante e a data.'); return; }
-            if (tipo === 'turno' && (!postoId || !horaInicio || !horaFim)) { alert('Preenche o posto e as horas do turno.'); return; }
+            if (tipo === 'turno' && (!horaInicio || !horaFim)) { alert('Preenche as horas do turno.'); return; }
+            if (tipo === 'turno' && modo === 'posto' && !postoId) { alert('Escolhe o posto.'); return; }
+            if (tipo === 'turno' && modo === 'rota' && !rotaIdEscolhida) { alert('Escolhe a rota.'); return; }
             // Sobreposição é bloqueio a sério — a mesma pessoa não pode estar em dois turnos ao
             // mesmo tempo (nem estar de folga e escalada no mesmo dia), por isso aqui não se pede
             // confirmação, simplesmente não deixa gravar.
@@ -2485,7 +2591,7 @@
                 dados.rondasEscalas = dados.rondasEscalas || [];
                 dados.rondasEscalas.push(e);
             }
-            e.tipo = tipo; e.postoId = tipo === 'folga' ? null : postoId; e.vigilanteId = vigilanteId; e.data = data; e.horaInicio = horaInicio; e.horaFim = horaFim;
+            e.tipo = tipo; e.postoId = tipo === 'folga' ? null : postoId; e.rotaId = tipo === 'folga' ? null : rotaIdEscolhida; e.vigilanteId = vigilanteId; e.data = data; e.horaInicio = horaInicio; e.horaFim = horaFim;
             e.turnoTipoId = tipo === 'turno' ? (document.getElementById('esc_turno_tipo')?.value || null) : null;
             e.notas = document.getElementById('esc_notas').value.trim() || null;
             try { await guardarDados(dados, ['rondasEscalas']); } catch (err) { alert('⚠️ Ficou no ecrã, mas ainda não foi possível confirmar no servidor.'); }
