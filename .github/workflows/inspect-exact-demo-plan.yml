@@ -1,6 +1,9 @@
-name: Inspect app migration boundary
+name: Inspect sync boundaries
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,23 +11,31 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Mapear estado e sincronizacao
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestApp.init',
-              'function guardarDados()',
-              'function restaurarSessaoAuth()',
-              'function bootstrapSupabase()'
-          ]
-          for item in checks:
-              print(item, text.count(item))
+          lines = Path('app.html').read_text(encoding='utf-8').splitlines()
+          patterns = (
+              'function _contarAlteracoesPendentes',
+              'function mostrarStatusSync',
+              'function guardarDados',
+              'async function _sincronizar',
+              'function _guardarCacheLocal',
+              'function _carregarCacheLocal',
+              'function _restaurarSnapshotDaCache'
+          )
+          for i, line in enumerate(lines):
+              if any(p in line for p in patterns):
+                  print('HIT', i + 1, repr(line))
+                  for n in range(max(0, i - 8), min(len(lines), i + 30)):
+                      print(n + 1, repr(lines[n]))
+                  print('---')
           PY
