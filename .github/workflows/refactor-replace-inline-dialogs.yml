@@ -1,0 +1,109 @@
+name: Replace inline dialogs safely
+
+on:
+  push:
+    branches:
+      - refactor/separar-index-app
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  replace:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/separar-index-app
+          fetch-depth: 1
+
+      - name: Substituir diálogos inline pelo módulo externo
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('app.html')
+          data = path.read_bytes()
+          original_size = len(data)
+
+          start_marker = b'// ===== Alertas / confirma\xc3\xa7\xc3\xb5es globais (mesmo visual do tour) ====='
+          end_marker = b'function perguntarSaidaObra(texto) {'
+          init_old = b'window.TotalGestApp.init({ pwa: true, dialogs: false, bootstrap: false });'
+          init_new = b'window.TotalGestApp.init({ pwa: true, dialogs: true, bootstrap: false });'
+
+          if data.count(start_marker) != 1:
+              raise SystemExit(f'marcador inicial inesperado: {data.count(start_marker)} ocorrencias')
+          if data.count(end_marker) != 1:
+              raise SystemExit(f'marcador final inesperado: {data.count(end_marker)} ocorrencias')
+          if data.count(init_old) != 1:
+              raise SystemExit(f'chamada do shell inesperada: {data.count(init_old)} ocorrencias')
+          if data.count(init_new) != 0:
+              raise SystemExit('dialogs ja parecem estar ativos')
+
+          start = data.index(start_marker)
+          end = data.index(end_marker, start)
+          if end <= start:
+              raise SystemExit('ordem dos marcadores invalida')
+
+          newline = b'\r\n' if b'\r\n' in data else b'\n'
+          line_start = data.rfind(newline, 0, start)
+          if line_start >= 0:
+              line_start += len(newline)
+              if data[line_start:start].strip() == b'':
+                  start = line_start
+
+          end_line_start = data.rfind(newline, 0, end)
+          if end_line_start >= start:
+              end = end_line_start + len(newline)
+
+          bloco = data[start:end]
+          if not (3_000 < len(bloco) < 10_000):
+              raise SystemExit(f'tamanho inesperado do bloco de dialogos: {len(bloco)} bytes')
+
+          # Garante que estamos a remover exatamente as APIs esperadas e o override final do alert.
+          obrigatorios = [
+              b'let _tgAlertFila = [];',
+              b'function _tgAlertProcessarFila()',
+              b'function tgAlert(mensagem, opts)',
+              b'function tgConfirm(mensagem, opts)',
+              b'function tgPrompt(mensagem, opts)',
+              b'function tgEscolher(mensagem, opcoes, opts)',
+              b'window.alert = function (mensagem) { tgAlert(mensagem); };'
+          ]
+          for needle in obrigatorios:
+              if needle not in bloco:
+                  raise SystemExit(f'conteudo esperado em falta: {needle!r}')
+
+          novo = data[:start] + data[end:]
+          novo = novo.replace(init_old, init_new, 1)
+
+          if len(novo) >= original_size:
+              raise SystemExit('o app.html nao ficou menor como esperado')
+          if novo.count(start_marker) != 0:
+              raise SystemExit('o bloco inline ainda existe depois da substituicao')
+          if novo.count(init_new) != 1:
+              raise SystemExit('dialogs nao ficaram ativos exatamente uma vez')
+
+          path.write_bytes(novo)
+          print('app.html:', original_size, '->', len(novo), 'bytes; removidos', len(bloco), 'bytes')
+          PY
+
+          git diff --check
+          git diff --stat
+          git diff -- app.html | sed -n '1,220p'
+
+      - name: Commit da migração
+        shell: bash
+        run: |
+          if git diff --quiet -- app.html; then
+            echo 'Sem alterações para gravar.'
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html
+          git commit -m 'Substituir diálogos inline pelo módulo externo'
+          git push origin HEAD:refactor/separar-index-app
