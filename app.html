@@ -3102,54 +3102,6 @@
             return dados;
         }
 
-        // Cópia local (offline-first): guarda o último estado conhecido para a app conseguir
-        // arrancar mesmo sem rede, e para nunca perder de vista o que já foi carregado.
-        // IMPORTANTE: guarda também o "snapshot" (o que já está confirmado no servidor) —
-        // sem isto, ao recarregar a cópia local, alterações feitas offline pareceriam já
-        // sincronizadas e nunca mais seriam enviadas ao servidor.
-        let _cacheLocalDesativada = false;
-        function _guardarCacheLocal() {
-            if (_cacheLocalDesativada) return; // já sabemos que não cabe — não repete a tentativa a cada gravação
-            try {
-                const snapPlano = {};
-                for (const col of ORDEM) snapPlano[col] = Object.fromEntries(_snap[col] || new Map());
-                localStorage.setItem('tg_cache_dados_v1', JSON.stringify(dados));
-                localStorage.setItem('tg_cache_snap_v1', JSON.stringify({
-                    porColuna: snapPlano,
-                    lic: Object.fromEntries(_snapLic || new Map()),
-                    junc: Object.fromEntries(_snapJunc || new Map())
-                }));
-                localStorage.setItem('tg_cache_dados_v1_quando', String(Date.now()));
-            } catch (e) {
-                if (e && e.name === 'QuotaExceededError') {
-                    _cacheLocalDesativada = true;
-                    console.warn('Cópia local offline desativada: dados demasiado grandes para o armazenamento do browser. A app continua a funcionar normalmente online.');
-                } else {
-                    console.warn('cache local (guardar):', e);
-                }
-            } // não é crítico — é só uma conveniência para arrancar offline
-        }
-        function _carregarCacheLocal() {
-            try {
-                const txt = localStorage.getItem('tg_cache_dados_v1');
-                if (!txt) return null;
-                return JSON.parse(txt);
-            } catch (e) { console.warn('cache local (ler):', e); return null; }
-        }
-        // Restaura o snapshot guardado (o que já estava confirmado no servidor antes de ficar offline),
-        // em vez de _reconstruirSnapshots() — que marcaria tudo como já sincronizado.
-        function _restaurarSnapshotDaCache() {
-            try {
-                const txt = localStorage.getItem('tg_cache_snap_v1');
-                if (!txt) { _reconstruirSnapshots(); return; } // sem snapshot guardado, não há alternativa
-                const s = JSON.parse(txt);
-                _snap = {};
-                for (const col of ORDEM) _snap[col] = new Map(Object.entries(s.porColuna?.[col] || {}));
-                _snapLic = new Map(Object.entries(s.lic || {}));
-                _snapJunc = new Map(Object.entries(s.junc || {}));
-            } catch (e) { console.warn('restaurar snapshot da cache:', e); _reconstruirSnapshots(); }
-        }
-
         // -------- sincronização por diferenças (substitui o antigo guardarDados) --------
         // Campos que podem conter ficheiros em base64 → migram para o Supabase Storage ao gravar
         const FICHEIRO_CAMPOS = {
@@ -32171,6 +32123,6 @@ window._relPrefill = function(msg){
 </div>
 
   <script src="./assets/js/app-shell.js"></script>
-  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, bootstrap: true });</script>
+  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, bootstrap: true });</script>
 </body>
 </html>
