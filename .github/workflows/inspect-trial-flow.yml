@@ -1,0 +1,70 @@
+name: Inspect trial flow
+
+on:
+  push:
+    branches:
+      - refactor/separar-index-app
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/separar-index-app
+      - name: Mapear trial e Edge Functions relacionadas
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          text = Path('app.html').read_text(encoding='utf-8')
+          lines = text.splitlines()
+
+          needles = [
+              'demo_30',
+              'Trial 30',
+              'trial 30',
+              '30 dias',
+              '14 dias',
+              'criar-trial',
+              'confirmar-trial',
+              'registar-trial',
+              'functions.invoke',
+              'abrirModalSignup',
+              'signup',
+              'trial'
+          ]
+
+          shown = set()
+          for needle in needles:
+              hits = [i for i, line in enumerate(lines) if needle.lower() in line.lower()]
+              print(f'\n===== {needle}: {len(hits)} hit(s) =====')
+              for i in hits[:30]:
+                  lo = max(0, i - 10)
+                  hi = min(len(lines), i + 16)
+                  key = (lo, hi)
+                  if key in shown:
+                      continue
+                  shown.add(key)
+                  print(f'--- context lines {lo+1}-{hi} (hit {i+1}) ---')
+                  for n in range(lo, hi):
+                      line = lines[n]
+                      # Redige chaves/tokens longos se aparecerem por acaso.
+                      line = re.sub(r'eyJ[A-Za-z0-9_\-.]{20,}', '[JWT_REDACTED]', line)
+                      print(f'{n+1:06d}: {line}')
+
+          print('\n===== Edge Functions invocadas =====')
+          names = []
+          for m in re.finditer(r"functions\.invoke\(\s*['\"]([^'\"]+)['\"]", text):
+              if m.group(1) not in names:
+                  names.append(m.group(1))
+          for name in names:
+              print(name)
+          PY
