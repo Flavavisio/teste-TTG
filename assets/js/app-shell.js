@@ -12,6 +12,7 @@
     cache: './assets/js/app-cache.js',
     connectivity: './assets/js/app-connectivity.js',
     syncStatus: './assets/js/app-sync-status.js',
+    syncHelpers: './assets/js/app-sync-helpers.js',
     bootstrap: './assets/js/app-bootstrap.js'
   };
 
@@ -47,6 +48,7 @@
     if (options.cache === true) pedidos.push(MODULOS.cache);
     if (options.connectivity === true) pedidos.push(MODULOS.connectivity);
     if (options.syncStatus === true) pedidos.push(MODULOS.syncStatus);
+    if (options.syncHelpers === true) pedidos.push(MODULOS.syncHelpers);
     if (options.bootstrap === true) pedidos.push(MODULOS.bootstrap);
 
     for (const modulo of pedidos) {
