@@ -1,6 +1,18 @@
 // Service Worker — Total Gest PWA
-const CACHE = 'totalgest-v4';
-const ASSETS = ['./app.html', './login.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
+const CACHE = 'totalgest-v5';
+const ASSETS = [
+  './app.html',
+  './login.html',
+  './styles.css',
+  './assets/css/app.css',
+  './assets/css/login.css',
+  './assets/js/auth-config.js',
+  './assets/js/login.js',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
+  './apple-touch-icon.png'
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(() => {})));
