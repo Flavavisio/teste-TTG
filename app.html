@@ -26305,98 +26305,6 @@ async function salvarAdmin(e) {
         //  ORDENS DE SERVIÇO - Conclusão com criação de folha
         // =============================================================
         let _modalSimNaoResolve = null;
-        // ===== Alertas / confirmações globais (mesmo visual do tour) =====
-        let _tgAlertFila = [];
-        let _tgAlertAMostrar = false;
-        function _tgAlertProcessarFila() {
-            if (_tgAlertAMostrar || !_tgAlertFila.length) return;
-            _tgAlertAMostrar = true;
-            const { mensagem, opts, resolve, ehConfirm, ehPrompt, ehEscolha } = _tgAlertFila.shift();
-            const box = document.getElementById('tgAlertIcone');
-            box.className = opts.tipo || (ehConfirm ? 'aviso' : '');
-            box.innerHTML = `<i class="fas ${opts.icone || (ehConfirm ? 'fa-circle-question' : (opts.tipo === 'erro' ? 'fa-circle-exclamation' : opts.tipo === 'aviso' ? 'fa-triangle-exclamation' : opts.tipo === 'sucesso' ? 'fa-circle-check' : 'fa-circle-info'))}"></i>`;
-            document.getElementById('tgAlertTitulo').textContent = opts.titulo || (ehConfirm ? 'Confirmar' : 'Total Gest');
-            document.getElementById('tgAlertTexto').textContent = mensagem;
-            const btnCancelar = document.getElementById('tgAlertBtnCancelar');
-            const btnOk = document.getElementById('tgAlertBtnOk');
-            const campoInput = document.getElementById('tgAlertInput');
-            const campoEscolhas = document.getElementById('tgAlertEscolhas');
-            campoInput.style.display = ehPrompt ? 'block' : 'none';
-            campoInput.value = opts.valorInicial || '';
-            campoEscolhas.style.display = ehEscolha ? 'flex' : 'none';
-            campoEscolhas.innerHTML = '';
-            btnCancelar.style.display = (ehConfirm || ehPrompt) ? 'inline-block' : 'none';
-            btnCancelar.textContent = opts.textoCancelar || 'Cancelar';
-            btnOk.style.display = ehEscolha ? 'none' : 'inline-block';
-            btnOk.textContent = opts.textoOk || (ehConfirm ? 'Confirmar' : 'OK');
-            document.getElementById('tgAlertOverlay').classList.add('aberto');
-            const fechar = (resultado) => {
-                document.getElementById('tgAlertOverlay').classList.remove('aberto');
-                _tgAlertAMostrar = false;
-                resolve(resultado);
-                setTimeout(_tgAlertProcessarFila, 200); // pequena pausa para não parecer que "salta" logo para o próximo
-            };
-            if (ehEscolha) {
-                (opts.opcoes || []).forEach(op => {
-                    const b = document.createElement('button');
-                    b.type = 'button';
-                    b.textContent = op.rotulo;
-                    b.style.cssText = 'width:100%;padding:12px 16px;border-radius:10px;border:1.5px solid #d1d9e6;background:#fafcff;color:#152a52;font-weight:600;cursor:pointer;text-align:left;transition:.15s;';
-                    b.onmouseenter = () => { b.style.borderColor = '#1a5f7a'; b.style.background = '#eef6f8'; };
-                    b.onmouseleave = () => { b.style.borderColor = '#d1d9e6'; b.style.background = '#fafcff'; };
-                    b.onclick = () => fechar(op.valor);
-                    campoEscolhas.appendChild(b);
-                });
-                if (opts.permiteCancelar !== false) {
-                    const bc = document.createElement('button');
-                    bc.type = 'button';
-                    bc.textContent = 'Cancelar';
-                    bc.style.cssText = 'width:100%;padding:10px 16px;border-radius:10px;border:none;background:none;color:#94a3b8;font-weight:600;cursor:pointer;';
-                    bc.onclick = () => fechar(null);
-                    campoEscolhas.appendChild(bc);
-                }
-            } else {
-                btnOk.onclick = () => fechar(ehPrompt ? campoInput.value : true);
-                btnCancelar.onclick = () => fechar(ehPrompt ? null : false);
-            }
-            if (ehPrompt) setTimeout(() => campoInput.focus(), 150);
-        }
-        function tgAlert(mensagem, opts) {
-            opts = opts || {};
-            return new Promise(resolve => {
-                _tgAlertFila.push({ mensagem, opts, resolve, ehConfirm: false });
-                _tgAlertProcessarFila();
-            });
-        }
-        function tgConfirm(mensagem, opts) {
-            opts = opts || {};
-            return new Promise(resolve => {
-                _tgAlertFila.push({ mensagem, opts, resolve, ehConfirm: true });
-                _tgAlertProcessarFila();
-            });
-        }
-        // Substitui o prompt() nativo — pede um texto ao utilizador, com o mesmo visual do tour.
-        function tgPrompt(mensagem, opts) {
-            opts = opts || {};
-            return new Promise(resolve => {
-                _tgAlertFila.push({ mensagem, opts, resolve, ehPrompt: true });
-                _tgAlertProcessarFila();
-            });
-        }
-        // Pede para escolher uma opção, mostrando um botão por opção (em vez de escrever um número).
-        // opcoes: [{ rotulo: 'Texto no botão', valor: qualquerCoisa }, ...]
-        function tgEscolher(mensagem, opcoes, opts) {
-            opts = opts || {};
-            opts.opcoes = opcoes;
-            return new Promise(resolve => {
-                _tgAlertFila.push({ mensagem, opts, resolve, ehEscolha: true });
-                _tgAlertProcessarFila();
-            });
-        }
-        // Substitui o alert() nativo do browser por uma versão com o visual da app, em toda a aplicação.
-        // Seguro globalmente porque nenhum código depende do valor de retorno do alert() nativo (é sempre undefined).
-        // Usa a fila acima, por isso vários alert() seguidos aparecem um de cada vez, nunca sobrepostos.
-        window.alert = function (mensagem) { tgAlert(mensagem); };
         function perguntarSaidaObra(texto) {
             return new Promise(resolve => {
                 _modalSimNaoResolve = resolve;
@@ -33409,6 +33317,6 @@ if (document.getElementById('tg-landing')) {
 (function(){var grp=document.getElementById('tg-billing');if(grp){grp.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;grp.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');var mode=b.dataset.mode;document.querySelectorAll('#tg-landing [data-m][data-a]').forEach(function(el){var v=mode==='anual'?el.dataset.a:el.dataset.m;el.textContent=(v&&v.length)?v:'\u00A0';});});}var ano=document.getElementById('tg-ano');if(ano)ano.textContent=new Date().getFullYear();atualizarLanding();})();
 </script>
   <script src="./assets/js/app-shell.js"></script>
-  <script>window.TotalGestApp.init({ pwa: true, dialogs: false, bootstrap: false });</script>
+  <script>window.TotalGestApp.init({ pwa: true, dialogs: true, bootstrap: false });</script>
 </body>
 </html>
