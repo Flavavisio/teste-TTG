@@ -1,6 +1,9 @@
-name: Inspect app migration boundary
+name: Inspect guardarDados boundary
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,23 +11,26 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Mapear guardarDados e syncChain
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestApp.init',
-              'function guardarDados()',
-              'function restaurarSessaoAuth()',
-              'function bootstrapSupabase()'
-          ]
-          for item in checks:
-              print(item, text.count(item))
+          lines = Path('app.html').read_text(encoding='utf-8').splitlines()
+          pats = ('_syncChain', 'function guardarDados()', 'async function _sincronizar()', 'mostrarStatusSync(', '_guardarCacheLocal()', 'mostrarStatusOffline()')
+          seen = set()
+          for i, line in enumerate(lines):
+              if any(p in line for p in pats):
+                  if i in seen: continue
+                  seen.add(i)
+                  print('HIT', i + 1, repr(line))
+                  for n in range(max(0, i - 6), min(len(lines), i + 16)):
+                      print(n + 1, repr(lines[n]))
+                  print('---')
           PY
