@@ -11,79 +11,88 @@ permissions:
 
 jobs:
   migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
           fetch-depth: 1
+
       - name: Separar landing da aplicação privada
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          p = Path('app.html')
-          text = p.read_text(encoding='utf-8')
-          original = text
+          path = Path('app.html')
+          text = path.read_text(encoding='utf-8')
+          original_size = len(text.encode('utf-8'))
 
-          old_logout = """            renderizarTudo();
-              abrirSecao('contactos');
-              alert('Sessão terminada.');"""
-          new_logout = """            window.location.replace('./login.html');"""
+          old_logout = "            renderizarTudo();\n              abrirSecao('contactos');\n              alert('Sessão terminada.');"
+          new_logout = "            window.location.replace('./login.html');"
           if text.count(old_logout) != 1:
-              raise SystemExit(f'ABORT logout: {text.count(old_logout)} ocorrencias')
+              raise SystemExit(f'bloco final de logout inesperado: {text.count(old_logout)} ocorrencias')
           text = text.replace(old_logout, new_logout, 1)
 
-          brand_start = "// Poupa espaço no ficheiro: o logo só está gravado uma vez (no cabeçalho);"
-          brand_end = "function abrirDetalheAddon(el) {"
+          brand_start = '// Poupa espaço no ficheiro: o logo só está gravado uma vez (no cabeçalho);'
+          brand_end = 'function abrirDetalheAddon(el) {'
           if text.count(brand_start) != 1 or text.count(brand_end) != 1:
-              raise SystemExit('ABORT branding: fronteiras nao unicas')
+              raise SystemExit('fronteiras do branding inesperadas')
           a = text.index(brand_start)
           b = text.index(brand_end, a)
           old_brand = text[a:b]
-          if "document.getElementById('tg-logo-master')" not in old_brand or ".tg-logo-clone" not in old_brand:
-              raise SystemExit('ABORT branding: conteudo inesperado')
-          new_brand = """// Branding da aplicação privada — independente da landing pública.
-(function () {
-    const logoSrc = 'logo-totalgest.png';
-    document.querySelectorAll('.tg-logo-clone').forEach(img => { img.src = logoSrc; });
-})();
-
-"""
+          if "document.getElementById('tg-logo-master')" not in old_brand or '.tg-logo-clone' not in old_brand:
+              raise SystemExit('conteudo do branding inesperado')
+          new_brand = ('// Branding da aplicação privada — independente da landing pública.\n' +
+                       '(function () {\n' +
+                       "    const logoSrc = 'logo-totalgest.png';\n" +
+                       "    document.querySelectorAll('.tg-logo-clone').forEach(img => { img.src = logoSrc; });\n" +
+                       '})();\n\n')
           text = text[:a] + new_brand + text[b:]
 
           landing_start = '<div id="tg-landing">'
           app_start = '    <aside id="tgSidebar">'
           if text.count(landing_start) != 1 or text.count(app_start) != 1:
-              raise SystemExit('ABORT landing: fronteiras nao unicas')
+              raise SystemExit('fronteiras landing/app inesperadas')
           a = text.index(landing_start)
           b = text.index(app_start, a)
           removed = text[a:b]
-          if len(removed) < 20000:
-              raise SystemExit(f'ABORT landing pequena: {len(removed)} bytes')
+          if len(removed.encode('utf-8')) < 20000:
+              raise SystemExit('landing inesperadamente pequena')
           for must in ('id="tg-entrar"', 'id="tg-precos"', '<footer id="tg-contactos">'):
               if must not in removed:
-                  raise SystemExit('ABORT marcador landing em falta: ' + must)
-          text = text[:a] + '<!-- Landing pública removida: ver index.html / login.html / registar.html -->\n\n' + text[b:]
+                  raise SystemExit('marcador esperado da landing em falta: ' + must)
+          replacement = '<!-- Landing pública removida: ver index.html / login.html / registar.html -->\n\n'
+          text = text[:a] + replacement + text[b:]
 
-          if '<div id="tg-landing">' in text:
-              raise SystemExit('ABORT tg-landing ainda existe')
+          final_size = len(text.encode('utf-8'))
+          if landing_start in text:
+              raise SystemExit('tg-landing ainda existe')
           if "window.location.replace('./login.html');" not in text:
-              raise SystemExit('ABORT redirect logout em falta')
-          if "const logoSrc = 'logo-totalgest.png';" not in text:
-              raise SystemExit('ABORT branding novo em falta')
-          if len(original) - len(text) < 20000:
-              raise SystemExit('ABORT reducao abaixo do esperado')
+              raise SystemExit('redirect de logout em falta')
+          if text.count("const logoSrc = 'logo-totalgest.png';") != 1:
+              raise SystemExit('branding independente em falta ou duplicado')
+          if original_size - final_size < 20000:
+              raise SystemExit('reducao do app abaixo do esperado')
 
-          p.write_text(text, encoding='utf-8')
-          print('OK migracao privada')
-          print('antes', len(original), 'depois', len(text), 'reducao', len(original)-len(text))
+          path.write_text(text, encoding='utf-8')
+          print('app.html:', original_size, '->', final_size, 'bytes; removidos', original_size-final_size, 'bytes')
           PY
+
           git diff --check
           git diff --stat
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git diff -- app.html | sed -n '1,220p'
+
+      - name: Commit da migração
+        shell: bash
+        run: |
+          if git diff --quiet -- app.html; then
+            echo 'Sem alterações para gravar.'
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add app.html
-          git commit -m "Separar landing antiga da aplicação privada"
+          git commit -m 'Separar landing antiga da aplicação privada'
           git push origin HEAD:refactor/separar-index-app
