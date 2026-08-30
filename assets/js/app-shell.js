@@ -1,12 +1,12 @@
 /* Total Gest — shell modular da aplicação
  * Ponto de entrada para os módulos extraídos de app.html.
- * Enquanto o bootstrap inline legado existir, este shell só inicia os módulos explicitamente pedidos.
  */
 (function () {
   'use strict';
 
   const MODULOS = {
     pwa: './assets/js/app-pwa.js',
+    toast: './assets/js/app-toast.js',
     dialogs: './assets/js/app-dialogs.js',
     bootstrap: './assets/js/app-bootstrap.js'
   };
@@ -37,6 +37,7 @@
     const pedidos = [];
 
     if (options.pwa === true) pedidos.push(MODULOS.pwa);
+    if (options.toast === true) pedidos.push(MODULOS.toast);
     if (options.dialogs === true) pedidos.push(MODULOS.dialogs);
     if (options.bootstrap === true) pedidos.push(MODULOS.bootstrap);
 
@@ -57,8 +58,6 @@
       window.TotalGestDialogs.init();
     }
 
-    // O bootstrap continua opt-in durante a migração para impedir um segundo arranque
-    // enquanto o DOMContentLoaded legado continuar dentro de app.html.
     if (options.bootstrap === true && window.TotalGestBootstrap && typeof window.TotalGestBootstrap.init === 'function') {
       await window.TotalGestBootstrap.init();
     }
