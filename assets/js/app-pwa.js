@@ -1,14 +1,13 @@
 /* Total Gest — PWA da aplicação
- * Extração incremental do bloco legado de app.html.
+ * Extraído do bloco PWA legado de app.html.
  * Mantém as funções globais necessárias durante a migração.
- * Ainda não substitui o bloco inline de app.html; será ligado apenas após validação.
  */
-
 (function () {
   'use strict';
 
   let avisoNovaVersaoMostrado = false;
   let deferredPrompt = null;
+  let iniciado = false;
 
   function mostrarAvisoNovaVersao() {
     if (avisoNovaVersaoMostrado) return;
@@ -70,34 +69,43 @@
     });
   }
 
-  function registarPwa() {
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.register('sw.js').then(function (reg) {
-          reg.addEventListener('updatefound', function () {
-            const novoWorker = reg.installing;
-            if (!novoWorker) return;
+  function ligarServiceWorker() {
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
+      reg.addEventListener('updatefound', function () {
+        const novoWorker = reg.installing;
+        if (!novoWorker) return;
 
-            novoWorker.addEventListener('statechange', function () {
-              if (novoWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                mostrarAvisoNovaVersao();
-              }
-            });
-          });
-
-          setInterval(function () {
-            reg.update().catch(function () {});
-          }, 30 * 60 * 1000);
-        }).catch(function (err) {
-          console.warn('Service worker não registado (precisa de HTTPS):', err);
-        });
-
-        navigator.serviceWorker.addEventListener('message', function (ev) {
-          if (ev.data && ev.data.type === 'SW_UPDATED') {
+        novoWorker.addEventListener('statechange', function () {
+          if (novoWorker.state === 'installed' && navigator.serviceWorker.controller) {
             mostrarAvisoNovaVersao();
           }
         });
       });
+
+      setInterval(function () {
+        reg.update().catch(function () {});
+      }, 30 * 60 * 1000);
+    }).catch(function (err) {
+      console.warn('Service worker não registado (precisa de HTTPS):', err);
+    });
+
+    navigator.serviceWorker.addEventListener('message', function (ev) {
+      if (ev.data && ev.data.type === 'SW_UPDATED') {
+        mostrarAvisoNovaVersao();
+      }
+    });
+  }
+
+  function registarPwa() {
+    if (iniciado) return;
+    iniciado = true;
+
+    if ('serviceWorker' in navigator) {
+      if (document.readyState === 'complete') {
+        ligarServiceWorker();
+      } else {
+        window.addEventListener('load', ligarServiceWorker, { once: true });
+      }
     }
 
     window.addEventListener('beforeinstallprompt', function (e) {
@@ -123,6 +131,7 @@
 
   window.TotalGestPwa = {
     init: registarPwa,
+    isStarted: function () { return iniciado; },
     mostrarAvisoNovaVersao: mostrarAvisoNovaVersao,
     atualizarParaNovaVersao: atualizarParaNovaVersao,
     instalar: instalarPWA,
