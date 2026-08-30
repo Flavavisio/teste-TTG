@@ -7,6 +7,7 @@
   const MODULOS = {
     pwa: './assets/js/app-pwa.js',
     toast: './assets/js/app-toast.js',
+    ui: './assets/js/app-ui.js',
     dialogs: './assets/js/app-dialogs.js',
     bootstrap: './assets/js/app-bootstrap.js'
   };
@@ -38,6 +39,7 @@
 
     if (options.pwa === true) pedidos.push(MODULOS.pwa);
     if (options.toast === true) pedidos.push(MODULOS.toast);
+    if (options.ui === true) pedidos.push(MODULOS.ui);
     if (options.dialogs === true) pedidos.push(MODULOS.dialogs);
     if (options.bootstrap === true) pedidos.push(MODULOS.bootstrap);
 
