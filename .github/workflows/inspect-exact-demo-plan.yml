@@ -17,90 +17,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-
-      - name: Extrair fila de guardarDados
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          app = Path('app.html')
-          text = app.read_text(encoding='utf-8')
-
-          if 'assets/js/app-save-queue.js' in text:
-              raise SystemExit('app-save-queue.js já está referenciado; abortar para evitar duplicação')
-
-          helper_pat = re.compile(r'(^[ \t]*<script[^>]+src=["\'][^"\']*app-sync-helpers\.js["\'][^>]*></script>)', re.M)
-          text, n = helper_pat.subn(r'\1\n    <script src="assets/js/app-save-queue.js"></script>', text, count=1)
-          if n != 1:
-              raise SystemExit(f'Esperava 1 referência a app-sync-helpers.js, encontrei {n}')
-
-          if text.count('let _syncChain = Promise.resolve();') != 1:
-              raise SystemExit('Fronteira _syncChain inesperada')
-          text = text.replace('        let _syncChain = Promise.resolve();\n', '', 1)
-
-          if text.count('await _syncChain;') != 1:
-              raise SystemExit('Uso de _syncChain em carregarDados inesperado')
-          text = text.replace('await _syncChain;', 'await _guardarDadosQueue.waitForIdle();', 1)
-
-          pat = re.compile(
-              r'        function guardarDados\(\) \{.*?\n        \}\n\n        async function _sincronizar\(\) \{',
-              re.S
-          )
-          replacement = '''        const _guardarDadosQueue = window.TotalGestSaveQueue.create({
-            saveCache: () => _guardarCacheLocal(),
-            isOnline: () => navigator.onLine,
-            showOffline: () => mostrarStatusOffline(),
-            sync: () => _sincronizar(),
-            reportError: (err) => {
-                console.error('sync:', err);
-                mostrarStatusSync(1, 'Ligação: ' + (err && err.message ? err.message : err));
-            }
-        });
-
-        function guardarDados() {
-            return _guardarDadosQueue.save();
-        }
-
-        async function _sincronizar() {'''
-          text, n = pat.subn(replacement, text, count=1)
-          if n != 1:
-              raise SystemExit(f'Esperava substituir 1 guardarDados(), substituí {n}')
-
-          app.write_text(text, encoding='utf-8')
-
-          module = Path('assets/js/app-save-queue.js')
-          module.write_text("""/* Total Gest — fila de gravação/sincronização\n * Mantém as gravações serializadas sem conhecer o modelo de dados nem o Supabase.\n */\n(function () {\n  'use strict';\n\n  function create(options) {\n    const opts = options || {};\n    if (typeof opts.saveCache !== 'function' ||\n        typeof opts.isOnline !== 'function' ||\n        typeof opts.showOffline !== 'function' ||\n        typeof opts.sync !== 'function' ||\n        typeof opts.reportError !== 'function') {\n      throw new Error('TotalGestSaveQueue: dependências inválidas');\n    }\n\n    let chain = Promise.resolve();\n\n    function save() {\n      // Preserva a ordem original: cache local primeiro, feedback offline depois, sync por fim.\n      opts.saveCache();\n      if (!opts.isOnline()) opts.showOffline();\n\n      const attempt = chain.then(opts.sync);\n      // A cadeia interna recupera de falhas para que a próxima gravação continue possível,\n      // enquanto a Promise devolvida por save() mantém o resultado real desta tentativa.\n      chain = attempt.catch(opts.reportError);\n      return attempt;\n    }\n\n    function waitForIdle() {\n      return chain;\n    }\n\n    return { save, waitForIdle };\n  }\n\n  window.TotalGestSaveQueue = { create };\n})();\n""", encoding='utf-8')
-          PY
-
-      - name: Validar extração
-        shell: bash
-        run: |
-          node --check assets/js/app-save-queue.js
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          checks = {
-              'script módulo': text.count('assets/js/app-save-queue.js') == 1,
-              'queue criada': text.count('window.TotalGestSaveQueue.create({') == 1,
-              'wrapper guardarDados': text.count('return _guardarDadosQueue.save();') == 1,
-              'carregar espera queue': text.count('await _guardarDadosQueue.waitForIdle();') == 1,
-              '_syncChain removida': '_syncChain' not in text,
-              '_sincronizar preservada': text.count('async function _sincronizar()') == 1,
-          }
-          for name, ok in checks.items():
-              print(name, 'OK' if ok else 'FALHOU')
-              if not ok:
-                  raise SystemExit(1)
-          PY
-
-      - name: Commit da extração
-        shell: bash
+      - name: Migrar guardarDados
+        run: python3 .github/scripts/migrate-guardar-dados.py
+      - name: Validar modulo
+        run: node --check assets/js/app-save-queue.js
+      - name: Commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app.html assets/js/app-save-queue.js
+          rm .github/scripts/migrate-guardar-dados.py
+          git add app.html assets/js/app-save-queue.js .github/scripts/migrate-guardar-dados.py
           git diff --cached --check
           git commit -m "Extrair fila de guardarDados"
           git push origin HEAD:refactor/separar-index-app
