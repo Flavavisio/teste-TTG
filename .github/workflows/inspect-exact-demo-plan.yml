@@ -1,4 +1,4 @@
-name: Inspect connectivity boundary
+name: Migrate connectivity module
 
 on:
   push:
@@ -7,30 +7,25 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear estado online offline
+          fetch-depth: 1
+      - name: Migrar conectividade para módulo externo
+        run: python3 scripts/migrate-connectivity.py
+      - run: git diff --check
+      - name: Gravar migração validada
         shell: bash
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          lines = Path('app.html').read_text(encoding='utf-8').splitlines()
-          patterns = ('function mostrarStatusOffline', 'function _atualizarIndicadorLigacao', "addEventListener('offline'", "addEventListener('online'", 'setInterval(_atualizarIndicadorLigacao', 'mostrarStatusOffline()')
-          hits = []
-          for i, line in enumerate(lines):
-              if any(p in line for p in patterns):
-                  hits.append(i)
-          for i in hits:
-              print('HIT', i + 1, repr(lines[i]))
-              for n in range(max(0, i - 10), min(len(lines), i + 18)):
-                  print(n + 1, repr(lines[n]))
-              print('---')
-          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html
+          git commit -m 'Ativar módulo externo de conectividade'
+          git push origin HEAD:refactor/separar-index-app
