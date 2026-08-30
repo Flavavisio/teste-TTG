@@ -2427,56 +2427,7 @@
         // aplicada, mude para TRUE: deixa de carregar dados com a chave anónima e desativa o
         // login antigo, passando tudo a depender do RLS + Supabase Auth.
         const RLS_ATIVO = true;
-        function alternarTema() {
-            const ativo = document.body.classList.toggle('dark-mode');
-            try { localStorage.setItem('tg_tema', ativo ? 'escuro' : 'claro'); } catch (e) {}
-            const ic = document.getElementById('iconeTema');
-            if (ic) { ic.classList.toggle('fa-moon', !ativo); ic.classList.toggle('fa-sun', ativo); }
-        }
-        function alternarSidebarEncolhida() {
-            const ativo = document.body.classList.toggle('tg-sidebar-collapsed');
-            try { localStorage.setItem('tg_sidebar_collapsed', ativo ? '1' : '0'); } catch (e) {}
-        }
-        function _aplicarSidebarEncolhidaGuardada() {
-            let guardado = null;
-            try { guardado = localStorage.getItem('tg_sidebar_collapsed'); } catch (e) {}
-            if (guardado === '1') document.body.classList.add('tg-sidebar-collapsed');
-        }
-        const _NIVEIS_ZOOM = [100, 90, 80];
-        function alternarZoom() {
-            let atual = 100;
-            try { atual = parseInt(localStorage.getItem('tg_zoom'), 10) || 100; } catch (e) {}
-            const idxAtual = _NIVEIS_ZOOM.indexOf(atual);
-            const proximo = _NIVEIS_ZOOM[(idxAtual + 1) % _NIVEIS_ZOOM.length];
-            _aplicarZoom(proximo);
-            try { localStorage.setItem('tg_zoom', String(proximo)); } catch (e) {}
-        }
-        function _aplicarZoom(nivel) {
-            document.documentElement.style.zoom = nivel + '%';
-            const lbl = document.getElementById('labelZoom');
-            if (lbl) lbl.textContent = nivel + '%';
-            // Em alguns browsers (sobretudo Android), o "100%"/"100vw" passa a referir-se ao
-            // espaço já reduzido pelo zoom, não ao ecrã físico — isto faz com que, por exemplo,
-            // os relatórios em landscape deixem de ocupar o ecrã todo assim que o zoom não está
-            // a 100%. Esta variável compensa isso, aumentando a % pedida na mesma proporção em
-            // que o zoom encolheu tudo, para o resultado final continuar a preencher o ecrã.
-            const compensado = Math.round((100 / (nivel / 100)) * 100) / 100;
-            document.documentElement.style.setProperty('--tg-zoom-compensa', compensado + '%');
-        }
-        function _aplicarZoomGuardado() {
-            let nivel = 100;
-            try { nivel = parseInt(localStorage.getItem('tg_zoom'), 10) || 100; } catch (e) {}
-            if (nivel !== 100) _aplicarZoom(nivel);
-        }
-        function _aplicarTemaGuardado() {
-            let tema = null;
-            try { tema = localStorage.getItem('tg_tema'); } catch (e) {}
-            if (tema === 'escuro') {
-                document.body.classList.add('dark-mode');
-                const ic = document.getElementById('iconeTema');
-                if (ic) { ic.classList.remove('fa-moon'); ic.classList.add('fa-sun'); }
-            }
-        }
+        // Preferências de interface modularizadas em assets/js/app-ui.js
         const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // Deteta falhas de sessão (ex.: token de sessão que deixou de ser válido) e mostra um
@@ -32324,6 +32275,6 @@ window._relPrefill = function(msg){
 })();
 </script>
   <script src="./assets/js/app-shell.js"></script>
-  <script>window.TotalGestApp.init({ pwa: true, toast: true, dialogs: true, bootstrap: true });</script>
+  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, bootstrap: true });</script>
 </body>
 </html>
