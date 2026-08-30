@@ -69,6 +69,13 @@ jobs:
           if not (2_000 < len(bloco) < 20_000):
               raise SystemExit(f'tamanho inesperado do bloco PWA: {len(bloco)} bytes')
 
+          # Inclui a indentação da linha do <script> no corte, para não deixar whitespace solto.
+          line_start = data.rfind(newline, 0, start)
+          if line_start >= 0:
+              line_start += len(newline)
+              if data[line_start:start].strip() == b'':
+                  start = line_start
+
           # Remove só o script; mantém o HTML do banner de instalação.
           before = data[:start]
           after = data[end:]
