@@ -1,6 +1,6 @@
 // Service Worker — Total Gest PWA
-const CACHE = 'totalgest-v3';
-const ASSETS = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
+const CACHE = 'totalgest-v4';
+const ASSETS = ['./app.html', './login.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(() => {})));
@@ -14,7 +14,6 @@ self.addEventListener('activate', e => {
       .then(() => self.clients.claim())
       .then(() => self.clients.matchAll({ type: 'window' }))
       .then(clientsList => {
-        // avisa as páginas já abertas que há uma nova versão ativa
         clientsList.forEach(client => client.postMessage({ type: 'SW_UPDATED' }));
       })
   );
@@ -34,10 +33,8 @@ self.addEventListener('fetch', e => {
       } catch (err) {}
       return res;
     }).catch(() => {
-      // só usa o fallback de navegação (index.html) para pedidos de navegação (o utilizador a abrir/mudar de página).
-      // Para tudo o resto (imagens, scripts, chamadas à API) tenta a cache desse recurso específico; se não houver, falha normalmente.
       if (req.mode === 'navigate') {
-        return caches.match('./index.html');
+        return caches.match('./app.html').then(r => r || caches.match('./login.html'));
       }
       return caches.match(req);
     })
@@ -54,10 +51,10 @@ self.addEventListener('push', e => {
   const opcoes = {
     body: dados.corpo || dados.body || '',
     icon: iconePersonalizado || './icon-192.png',
-    badge: './icon-192.png', // o badge (Android, monocromático) mantém-se sempre o do TotalGest
+    badge: './icon-192.png',
     tag: dados.tag || 'totalgest-notificacao',
     renotify: true,
-    data: { url: dados.url || './index.html' },
+    data: { url: dados.url || './app.html' },
     vibrate: [120, 60, 120]
   };
 
@@ -66,7 +63,7 @@ self.addEventListener('push', e => {
 
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  const url = (e.notification.data && e.notification.data.url) || './index.html';
+  const url = (e.notification.data && e.notification.data.url) || './app.html';
 
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientsList => {
