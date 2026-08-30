@@ -2418,31 +2418,7 @@
         //  CONFIGURAÇÃO SUPABASE  ── PREENCHER ESTES DOIS VALORES ──
         //  Encontras em: Supabase → Project Settings → API
         // =============================================================
-        // ===== Sistema de notificações Toast (substitui os alert() nativos) =====
-        const _alertNativo = window.alert.bind(window);
-        function _classificarToast(msg) {
-            const m = String(msg || '');
-            if (/✅|sucesso|criad[oa] com sucesso|atualizad[oa] com sucesso|guardad[oa] com sucesso|aprovad[oa]|gravad[oa]/i.test(m)) return 'sucesso';
-            if (/❌|erro|falhou|falha|não foi possível|nao foi possivel|inválid|invalido/i.test(m)) return 'erro';
-            if (/⚠️|atenção|atencao|aviso|cuidado/i.test(m)) return 'aviso';
-            return 'info';
-        }
-        const _toastIcones = { sucesso: 'fa-circle-check', erro: 'fa-circle-exclamation', aviso: 'fa-triangle-exclamation', info: 'fa-circle-info' };
-        function mostrarToast(mensagem, tipoForcado) {
-            const cont = document.getElementById('tgToastContainer');
-            if (!cont) { _alertNativo(mensagem); return; }
-            const tipo = tipoForcado || _classificarToast(mensagem);
-            const el = document.createElement('div');
-            el.className = 'tg-toast tg-' + tipo;
-            el.innerHTML = `<i class="fas ${_toastIcones[tipo]} tg-toast-ic"></i><div class="tg-toast-msg"></div><button type="button" class="tg-toast-fechar" aria-label="Fechar"><i class="fas fa-xmark"></i></button>`;
-            el.querySelector('.tg-toast-msg').textContent = mensagem;
-            const remover = () => { el.classList.add('tg-toast-saindo'); setTimeout(() => el.remove(), 220); };
-            el.querySelector('.tg-toast-fechar').onclick = remover;
-            cont.appendChild(el);
-            setTimeout(remover, tipo === 'erro' ? 7000 : 4500);
-        }
-        window.alert = mostrarToast;
-
+        // Toast modularizado em assets/js/app-toast.js
         const SUPABASE_URL      = 'https://rfniufasivfnrqfntzog.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJmbml1ZmFzaXZmbnJxZm50em9nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NzI2MjcsImV4cCI6MjA5NzQ0ODYyN30.1hJ7JBpCKo-Wp93HM5skXVnYk3ghyC7mo0rubbvCXyI';
         // === SEGURANÇA / RLS ===
@@ -32348,6 +32324,6 @@ window._relPrefill = function(msg){
 })();
 </script>
   <script src="./assets/js/app-shell.js"></script>
-  <script>window.TotalGestApp.init({ pwa: true, dialogs: true, bootstrap: true });</script>
+  <script>window.TotalGestApp.init({ pwa: true, toast: true, dialogs: true, bootstrap: true });</script>
 </body>
 </html>
