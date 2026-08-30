@@ -30,14 +30,12 @@ jobs:
           text = path.read_text(encoding='utf-8')
           original_size = len(text.encode('utf-8'))
 
-          # 1) A chamada interna já não tem efeito desde que a landing foi removida.
           call_pattern = re.compile(r'(?m)^[ \t]*atualizarLanding\(\);[ \t]*$')
           calls = list(call_pattern.finditer(text))
           if len(calls) != 1:
               raise SystemExit(f'chamada interna atualizarLanding inesperada: {len(calls)}')
           text = text[:calls[0].start()] + text[calls[0].end():]
 
-          # 2) Remove apenas os dois overlays comerciais públicos, terminando antes do banner PWA.
           overlays_start = '    <div id="tg-addon-overlay"'
           banner_start = '    <div id="bannerInstalarPWA"'
           if text.count(overlays_start) != 1 or text.count(banner_start) != 1:
@@ -52,7 +50,6 @@ jobs:
               raise SystemExit('ABORT: bloco de overlays invadiu modal privado')
           text = text[:a] + '    <!-- Overlays comerciais públicos removidos; registo em registar.html -->\n\n' + text[b:]
 
-          # 3) Substitui o script público final inteiro por apenas o branding ainda necessário.
           public_script_start = '<script>\nfunction tgCalcularPoupanca(){'
           shell_start = '  <script src="./assets/js/app-shell.js"></script>'
           if text.count(public_script_start) != 1 or text.count(shell_start) != 1:
@@ -76,19 +73,16 @@ jobs:
           if 'window.TotalGestApp.init' in old_script:
               raise SystemExit('ABORT: script público alcançou o app shell')
 
-          branding = '''<script>
-// Branding da aplicação privada — independente da landing pública.
-(function () {
-    const logoSrc = 'logo-totalgest.png';
-    document.querySelectorAll('.tg-logo-clone').forEach(img => { img.src = logoSrc; });
-})();
-</script>
-'''
+          branding = ('<script>\n' +
+                      '// Branding da aplicação privada — independente da landing pública.\n' +
+                      '(function () {\n' +
+                      "    const logoSrc = 'logo-totalgest.png';\n" +
+                      "    document.querySelectorAll('.tg-logo-clone').forEach(img => { img.src = logoSrc; });\n" +
+                      '})();\n' +
+                      '</script>\n')
           text = text[:a] + branding + text[b:]
 
           final_size = len(text.encode('utf-8'))
-
-          # Guardas: todo o pacote público tem de desaparecer; componentes privados têm de ficar.
           forbidden = [
               'id="tg-addon-overlay"',
               'id="tg-signup-overlay"',
