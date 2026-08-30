@@ -1,4 +1,4 @@
-# Trigger da migração protegida de guardarDados
+# Trigger final da migração protegida de guardarDados
 from pathlib import Path
 import re
 
