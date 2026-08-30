@@ -6,7 +6,8 @@
   'use strict';
 
   const MODULOS = [
-    './assets/js/app-pwa.js'
+    './assets/js/app-pwa.js',
+    './assets/js/app-dialogs.js'
   ];
 
   function carregarScript(src) {
