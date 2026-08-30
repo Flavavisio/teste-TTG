@@ -53,6 +53,10 @@
       window.TotalGestPwa.init();
     }
 
+    if (options.dialogs === true && window.TotalGestDialogs && typeof window.TotalGestDialogs.init === 'function') {
+      window.TotalGestDialogs.init();
+    }
+
     // O bootstrap continua opt-in durante a migração para impedir um segundo arranque
     // enquanto o DOMContentLoaded legado continuar dentro de app.html.
     if (options.bootstrap === true && window.TotalGestBootstrap && typeof window.TotalGestBootstrap.init === 'function') {
