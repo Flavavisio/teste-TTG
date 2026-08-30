@@ -1,13 +1,14 @@
 /* Total Gest — diálogos globais da aplicação
- * Extração incremental do sistema legado de app.html.
+ * Extração do sistema legado de app.html.
  * Mantém as APIs globais tgAlert, tgConfirm, tgPrompt e tgEscolher.
- * Este ficheiro só entra em execução quando for carregado pelo app shell.
+ * O override de window.alert só é ativado por TotalGestDialogs.init().
  */
 (function () {
   'use strict';
 
   var fila = [];
   var aMostrar = false;
+  var iniciado = false;
 
   function elementos() {
     return {
@@ -28,7 +29,7 @@
     var els = elementos();
     if (!els.overlay || !els.icone || !els.titulo || !els.texto || !els.cancelar || !els.ok || !els.input || !els.escolhas) {
       var pendente = fila.shift();
-      if (pendente) pendente.resolve(pendente.ehPrompt ? null : false);
+      if (pendente) pendente.resolve(pendente.ehPrompt || pendente.ehEscolha ? null : false);
       setTimeout(processarFila, 0);
       return;
     }
@@ -46,7 +47,6 @@
     els.icone.innerHTML = '<i class="fas ' + (opts.icone || (ehConfirm ? 'fa-circle-question' : (opts.tipo === 'erro' ? 'fa-circle-exclamation' : opts.tipo === 'aviso' ? 'fa-triangle-exclamation' : opts.tipo === 'sucesso' ? 'fa-circle-check' : 'fa-circle-info'))) + '"></i>';
     els.titulo.textContent = opts.titulo || (ehConfirm ? 'Confirmar' : 'Total Gest');
     els.texto.textContent = mensagem;
-
     els.input.style.display = ehPrompt ? 'block' : 'none';
     els.input.value = opts.valorInicial || '';
     els.escolhas.style.display = ehEscolha ? 'flex' : 'none';
@@ -70,34 +70,54 @@
         b.type = 'button';
         b.textContent = op.rotulo;
         b.style.cssText = 'width:100%;padding:12px 16px;border-radius:10px;border:1.5px solid #d1d9e6;background:#fafcff;color:#152a52;font-weight:600;cursor:pointer;text-align:left;transition:.15s;';
-        b.addEventListener('click', function () { fechar(op.valor); });
+        b.onmouseenter = function () {
+          b.style.borderColor = '#1a5f7a';
+          b.style.background = '#eef6f8';
+        };
+        b.onmouseleave = function () {
+          b.style.borderColor = '#d1d9e6';
+          b.style.background = '#fafcff';
+        };
+        b.onclick = function () { fechar(op.valor); };
         els.escolhas.appendChild(b);
       });
-      return;
+
+      if (opts.permiteCancelar !== false) {
+        var bc = document.createElement('button');
+        bc.type = 'button';
+        bc.textContent = 'Cancelar';
+        bc.style.cssText = 'width:100%;padding:10px 16px;border-radius:10px;border:none;background:none;color:#94a3b8;font-weight:600;cursor:pointer;';
+        bc.onclick = function () { fechar(null); };
+        els.escolhas.appendChild(bc);
+      }
+    } else {
+      els.ok.onclick = function () { fechar(ehPrompt ? els.input.value : true); };
+      els.cancelar.onclick = function () { fechar(ehPrompt ? null : false); };
     }
 
-    els.ok.onclick = function () { fechar(ehPrompt ? els.input.value : true); };
-    els.cancelar.onclick = function () { fechar(ehPrompt ? null : false); };
     if (ehPrompt) setTimeout(function () { els.input.focus(); }, 150);
   }
 
   function tgAlert(mensagem, opts) {
+    opts = opts || {};
     return new Promise(function (resolve) {
-      fila.push({ mensagem: mensagem, opts: opts || {}, resolve: resolve, ehConfirm: false });
+      fila.push({ mensagem: mensagem, opts: opts, resolve: resolve, ehConfirm: false });
       processarFila();
     });
   }
 
   function tgConfirm(mensagem, opts) {
+    opts = opts || {};
     return new Promise(function (resolve) {
-      fila.push({ mensagem: mensagem, opts: opts || {}, resolve: resolve, ehConfirm: true });
+      fila.push({ mensagem: mensagem, opts: opts, resolve: resolve, ehConfirm: true });
       processarFila();
     });
   }
 
   function tgPrompt(mensagem, opts) {
+    opts = opts || {};
     return new Promise(function (resolve) {
-      fila.push({ mensagem: mensagem, opts: opts || {}, resolve: resolve, ehPrompt: true });
+      fila.push({ mensagem: mensagem, opts: opts, resolve: resolve, ehPrompt: true });
       processarFila();
     });
   }
@@ -111,11 +131,18 @@
     });
   }
 
+  function init() {
+    if (iniciado) return;
+    iniciado = true;
+    window.alert = function (mensagem) { tgAlert(mensagem); };
+  }
+
   window.tgAlert = tgAlert;
   window.tgConfirm = tgConfirm;
   window.tgPrompt = tgPrompt;
   window.tgEscolher = tgEscolher;
   window.TotalGestDialogs = {
+    init: init,
     alert: tgAlert,
     confirm: tgConfirm,
     prompt: tgPrompt,
