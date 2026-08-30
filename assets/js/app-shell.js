@@ -9,6 +9,7 @@
     toast: './assets/js/app-toast.js',
     ui: './assets/js/app-ui.js',
     dialogs: './assets/js/app-dialogs.js',
+    cache: './assets/js/app-cache.js',
     connectivity: './assets/js/app-connectivity.js',
     syncStatus: './assets/js/app-sync-status.js',
     bootstrap: './assets/js/app-bootstrap.js'
@@ -43,6 +44,7 @@
     if (options.toast === true) pedidos.push(MODULOS.toast);
     if (options.ui === true) pedidos.push(MODULOS.ui);
     if (options.dialogs === true) pedidos.push(MODULOS.dialogs);
+    if (options.cache === true) pedidos.push(MODULOS.cache);
     if (options.connectivity === true) pedidos.push(MODULOS.connectivity);
     if (options.syncStatus === true) pedidos.push(MODULOS.syncStatus);
     if (options.bootstrap === true) pedidos.push(MODULOS.bootstrap);
