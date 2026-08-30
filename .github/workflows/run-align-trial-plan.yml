@@ -1,0 +1,28 @@
+name: Run trial plan alignment
+
+on:
+  push:
+    branches:
+      - refactor/separar-index-app
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  align:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/separar-index-app
+          fetch-depth: 1
+      - run: python3 scripts/align-trial-plan.py
+      - run: git diff --check
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html
+          git commit -m 'Alinhar plano trial interno com 14 dias'
+          git push origin HEAD:refactor/separar-index-app
