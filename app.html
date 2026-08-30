@@ -2998,7 +2998,7 @@
             } catch (e) { return { tenantId: null, superAdmin: false }; }
         }
         async function carregarDados(tenantIdParam, superAdminParam, clienteIdParam) {
-            await _syncChain; // espera que qualquer gravação pendente termine antes de recarregar,
+            await _guardarDadosQueue.waitForIdle(); // espera que qualquer gravação pendente termine antes de recarregar,
                                // para nunca apagar alterações locais ainda não sincronizadas
 
             if (!navigator.onLine) {
@@ -3154,7 +3154,6 @@
             }
         }
 
-        let _syncChain = Promise.resolve();
 
         function registarHistoricoLicenca(adminId, tipo, descricao, valor) {
             try {
@@ -3190,18 +3189,19 @@
             return n;
         }
 
+        const _guardarDadosQueue = window.TotalGestSaveQueue.create({
+            saveCache: () => _guardarCacheLocal(),
+            isOnline: () => navigator.onLine,
+            showOffline: () => mostrarStatusOffline(),
+            sync: () => _sincronizar(),
+            reportError: (err) => {
+                console.error('sync:', err);
+                mostrarStatusSync(1, 'Ligação: ' + (err && err.message ? err.message : err));
+            }
+        });
+
         function guardarDados() {
-            // serializa as gravações para evitar corridas; UI já foi atualizada em memória
-            _guardarCacheLocal(); // guarda sempre uma cópia local primeiro — mesmo offline, nada fica só na memória
-            if (!navigator.onLine) mostrarStatusOffline(); // feedback imediato, sem esperar pela cadeia de sync
-            // IMPORTANTE: a cadeia interna (_syncChain) nunca pode ficar "presa" por uma falha — por isso
-            // tem sempre o seu próprio .catch() e continua viva para as próximas chamadas.
-            // Mas quem chamou ESTA guardarDados() precisa de saber se ESTA gravação em concreto
-            // teve sucesso (ex: antes de criar uma conta de login associada a um registo) — por isso
-            // devolvemos uma promise separada, que reflete o resultado real desta chamada específica.
-            const tentativa = _syncChain.then(_sincronizar);
-            _syncChain = tentativa.catch(err => { console.error('sync:', err); mostrarStatusSync(1, 'Ligação: ' + (err && err.message ? err.message : err)); });
-            return tentativa;
+            return _guardarDadosQueue.save();
         }
 
         async function _sincronizar() {
@@ -32098,6 +32098,6 @@ window._relPrefill = function(msg){
 </div>
 
   <script src="./assets/js/app-shell.js"></script>
-  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, bootstrap: true });</script>
+  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
