@@ -1,5 +1,5 @@
 /* Total Gest — preferências da interface
- * Tema, sidebar e zoom. Mantém os nomes globais usados pelo HTML e pelo bootstrap legado.
+ * Tema, sidebar, zoom e branding interno. Mantém os nomes globais usados pelo HTML e pelo bootstrap legado.
  */
 (function () {
   'use strict';
@@ -65,6 +65,13 @@
     }
   }
 
+  function aplicarBranding() {
+    const logoSrc = 'logo-totalgest.png';
+    document.querySelectorAll('.tg-logo-clone').forEach(function (img) {
+      img.src = logoSrc;
+    });
+  }
+
   window.alternarTema = alternarTema;
   window.alternarSidebarEncolhida = alternarSidebarEncolhida;
   window._aplicarSidebarEncolhidaGuardada = aplicarSidebarEncolhidaGuardada;
@@ -72,6 +79,7 @@
   window._aplicarZoom = aplicarZoom;
   window._aplicarZoomGuardado = aplicarZoomGuardado;
   window._aplicarTemaGuardado = aplicarTemaGuardado;
+  window._aplicarBrandingTotalGest = aplicarBranding;
 
   window.TotalGestUi = {
     toggleTheme: alternarTema,
@@ -79,6 +87,10 @@
     toggleZoom: alternarZoom,
     applyStoredTheme: aplicarTemaGuardado,
     applyStoredSidebar: aplicarSidebarEncolhidaGuardada,
-    applyStoredZoom: aplicarZoomGuardado
+    applyStoredZoom: aplicarZoomGuardado,
+    applyBranding: aplicarBranding
   };
+
+  // O módulo é carregado no fim do body, quando os clones do logótipo já existem.
+  aplicarBranding();
 })();
