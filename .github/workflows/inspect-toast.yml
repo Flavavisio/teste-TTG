@@ -1,0 +1,48 @@
+name: Inspect toast system
+
+on:
+  push:
+    branches:
+      - refactor/separar-index-app
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/separar-index-app
+      - name: Mapear toast e overrides de alert
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          lines = Path('app.html').read_text(encoding='utf-8').splitlines()
+          needles = [
+              'function _classificarToast',
+              'function mostrarToast',
+              'const _alertNativo',
+              'let _alertNativo',
+              'window.alert = mostrarToast',
+              'window.alert =',
+              'mostrarToast(',
+              '_classificarToast('
+          ]
+          for needle in needles:
+              hits = [i for i, line in enumerate(lines) if needle in line]
+              print(f'\n===== {needle}: {len(hits)} hit(s) =====')
+              for i in hits[:60]:
+                  lo = max(0, i - 18)
+                  hi = min(len(lines), i + 45)
+                  print(f'--- {lo+1}-{hi} / hit {i+1} ---')
+                  for n in range(lo, hi):
+                      line = re.sub(r'eyJ[A-Za-z0-9_.-]{20,}', '[JWT_REDACTED]', lines[n])
+                      print(f'{n+1:06d}: {line}')
+          PY
