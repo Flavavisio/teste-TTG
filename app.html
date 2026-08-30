@@ -237,6 +237,7 @@
         box-shadow: 0 6px 18px rgba(124,92,255,.35) !important;
     }
 </style>
+  <meta name="robots" content="noindex,nofollow">
 </head>
 <body>
 <div id="tg-landing">
@@ -33498,5 +33499,6 @@ if (document.getElementById('tg-landing')) {
 }
 (function(){var grp=document.getElementById('tg-billing');if(grp){grp.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;grp.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');var mode=b.dataset.mode;document.querySelectorAll('#tg-landing [data-m][data-a]').forEach(function(el){var v=mode==='anual'?el.dataset.a:el.dataset.m;el.textContent=(v&&v.length)?v:'\u00A0';});});}var ano=document.getElementById('tg-ano');if(ano)ano.textContent=new Date().getFullYear();atualizarLanding();})();
 </script>
+  <script src="./assets/js/app-shell.js"></script>
 </body>
 </html>
