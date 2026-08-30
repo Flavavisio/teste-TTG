@@ -17,41 +17,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear componentes comerciais públicos restantes
+      - name: Mostrar fronteiras exatas dos blocos públicos
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import re
 
-          text = Path('app.html').read_text(encoding='utf-8')
-          lines = text.splitlines()
-          needles = [
-              'tg-addon-overlay',
-              'abrirDetalheAddon',
-              'fecharDetalheAddon',
-              'tg-signup-overlay',
-              'abrirModalSignup',
-              'submeterSignup',
-              'tg-calc-wizard-overlay',
-              'abrirWizardCalc',
-              'fecharWizardCalc',
-              'tgCalcularPoupanca',
-              'tgc_func',
-              'TCW_ADDONS',
-              'TCW_ESCALOES',
-              '_tcwPasso',
-              'registar-visita',
-              'atualizarLanding()'
-          ]
-          for needle in needles:
-              hits = [i for i, line in enumerate(lines) if needle.lower() in line.lower()]
-              print(f'\n===== {needle}: {len(hits)} hit(s) =====')
-              for i in hits[:40]:
-                  lo = max(0, i - 12)
-                  hi = min(len(lines), i + 24)
-                  print(f'--- {lo+1}-{hi} / hit {i+1} ---')
-                  for n in range(lo, hi):
-                      line = re.sub(r'eyJ[A-Za-z0-9_.-]{20,}', '[JWT_REDACTED]', lines[n])
-                      print(f'{n+1:06d}: {line}')
+          lines = Path('app.html').read_text(encoding='utf-8').splitlines()
+          for start, end in [(32215, 32425), (32580, 32740)]:
+              print(f'\n===== LINES {start}-{end} =====')
+              for n in range(start - 1, min(end, len(lines))):
+                  line = re.sub(r'eyJ[A-Za-z0-9_.-]{20,}', '[JWT_REDACTED]', lines[n])
+                  print(f'{n+1:06d}: {line}')
           PY
