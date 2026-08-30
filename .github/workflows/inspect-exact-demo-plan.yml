@@ -1,30 +1,30 @@
-name: Migrate inline branding
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-          fetch-depth: 1
-      - run: python3 scripts/migrate-branding.py
-      - run: git diff --check
-      - name: Gravar remoção validada
+      - name: Estado dos módulos principais
         shell: bash
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app.html
-          git commit -m 'Remover branding inline da aplicação'
-          git push origin HEAD:refactor/separar-index-app
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('app.html').read_text(encoding='utf-8')
+          checks = [
+              'window.TotalGestApp.init',
+              'function guardarDados()',
+              'function restaurarSessaoAuth()',
+              'function bootstrapSupabase()'
+          ]
+          for item in checks:
+              print(item, text.count(item))
+          PY
