@@ -1,0 +1,96 @@
+name: Migrate private app shell
+
+on:
+  push:
+    branches:
+      - refactor/separar-index-app
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/separar-index-app
+          fetch-depth: 1
+      - name: Separar landing da aplicação privada
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('app.html')
+          text = p.read_text(encoding='utf-8')
+          original = text
+
+          # 1) Logout: a app privada deixa de depender da landing antiga para voltar ao login.
+          old_logout = """            renderizarTudo();
+              abrirSecao('contactos');
+              alert('Sessão terminada.');"""
+          new_logout = """            window.location.replace('./login.html');"""
+          if text.count(old_logout) != 1:
+              raise SystemExit(f'ABORT: esperado 1 bloco final de logout, encontrei {text.count(old_logout)}')
+          text = text.replace(old_logout, new_logout, 1)
+
+          # 2) Branding: as imagens internas deixam de copiar o logo a partir da landing pública.
+          brand_start = """// Poupa espaço no ficheiro: o logo só está gravado uma vez (no cabeçalho);"""
+          brand_end = """function abrirDetalheAddon(el) {"""
+          if text.count(brand_start) != 1 or text.count(brand_end) != 1:
+              raise SystemExit('ABORT: fronteiras do bloco de branding não são únicas')
+          a = text.index(brand_start)
+          b = text.index(brand_end, a)
+          old_brand = text[a:b]
+          if "document.getElementById('tg-logo-master')" not in old_brand or ".tg-logo-clone" not in old_brand:
+              raise SystemExit('ABORT: bloco de branding não corresponde ao esperado')
+          new_brand = """// Branding da aplicação privada — independente da landing pública.
+(function () {
+    const logoSrc = 'logo-totalgest.png';
+    document.querySelectorAll('.tg-logo-clone').forEach(img => { img.src = logoSrc; });
+})();
+
+"""
+          text = text[:a] + new_brand + text[b:]
+
+          # 3) Remove apenas o HTML da landing pública antiga. A app começa no aside tgSidebar.
+          landing_start = '<div id="tg-landing">'
+          app_start = '    <aside id="tgSidebar">'
+          if text.count(landing_start) != 1 or text.count(app_start) != 1:
+              raise SystemExit('ABORT: fronteiras landing/app não são únicas')
+          a = text.index(landing_start)
+          b = text.index(app_start, a)
+          removed = text[a:b]
+          if len(removed) < 20000:
+              raise SystemExit(f'ABORT: landing inesperadamente pequena ({len(removed)} bytes)')
+          for must in ['id="tg-entrar"', 'id="tg-precos"', '<footer id="tg-contactos">']:
+              if must not in removed:
+                  raise SystemExit(f'ABORT: marcador esperado não encontrado na landing: {must}')
+          text = text[:a] + '<!-- Landing pública removida: ver index.html / login.html / registar.html -->\n\n' + text[b:]
+
+          # Guardas finais.
+          if '<div id="tg-landing">' in text:
+              raise SystemExit('ABORT: tg-landing ainda existe')
+          if "window.location.replace('./login.html');" not in text:
+              raise SystemExit('ABORT: redirect de logout não ficou aplicado')
+          if "const logoSrc = 'logo-totalgest.png';" not in text:
+              raise SystemExit('ABORT: branding independente não ficou aplicado')
+          if len(original) - len(text) < 20000:
+              raise SystemExit('ABORT: redução do ficheiro abaixo do esperado')
+
+          p.write_text(text, encoding='utf-8')
+          print('OK: landing pública removida; logout e branding desacoplados.')
+          print('Tamanho antes:', len(original), 'depois:', len(text), 'redução:', len(original)-len(text))
+          PY
+
+          git diff --check
+          git diff --stat
+          git status --short
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.html
+          git commit -m "Separar landing antiga da aplicação privada"
+          git push origin HEAD:refactor/separar-index-app
