@@ -1,6 +1,9 @@
-name: Inspect exact demo plan
+name: Inspect app bootstrap boundary
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,21 +11,26 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mostrar apenas linhas demo_30
+      - name: Mapear arranque modular e legado
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
           lines = Path('app.html').read_text(encoding='utf-8').splitlines()
+          patterns = ('TotalGestApp.init', 'DOMContentLoaded', 'bootstrapSupabase()', 'restaurarSessaoAuth()', 'app-shell.js')
+          hits = set()
           for i, line in enumerate(lines):
-              if 'demo_30' in line or ("'mensal'" in line and 'dias' in line):
-                  print('HIT', i + 1, repr(line))
-                  for n in range(max(0, i - 2), min(len(lines), i + 3)):
-                      print(n + 1, repr(lines[n]))
-                  print('---')
+              if any(p in line for p in patterns):
+                  hits.add(i)
+          for i in sorted(hits):
+              print('HIT', i + 1, repr(lines[i]))
+              for n in range(max(0, i - 8), min(len(lines), i + 12)):
+                  print(n + 1, repr(lines[n]))
+              print('---')
           PY
