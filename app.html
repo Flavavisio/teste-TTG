@@ -23754,29 +23754,16 @@ async function salvarAdmin(e) {
                 if (!_clienteResultado.ok) return;
                 obj = _clienteResultado.value;
             } else if (ent === 'servico') {
-                if (!isEdit && usuarioLogado?.role === 'funcionario') {
-                    alert('Os funcionários não podem criar ordens de serviço. Só podem alterar o estado (pendente / em andamento / concluído).');
-                    return;
-                }
-                const _sDescricao = document.getElementById('s_descricao')?.value.trim();
-                if (!_sDescricao || _sDescricao.length < 3) {
-                    mostrarErro('Descreve o trabalho a realizar nesta Ordem de Serviço (pelo menos 3 caracteres).');
-                    document.getElementById('s_descricao')?.focus();
-                    return;
-                }
-                // Se esta OS estiver a passar para "concluído" agora (não estava já), exige
-                // primeiro o checklist de saída, tal como já acontece nas obras.
-                const _sStatusNovo = document.getElementById('s_status')?.value;
-                if (_sStatusNovo === 'concluído' && (!isEdit || item?.status !== 'concluído')) {
-                    const _sAdminChk = dados.administradores?.find(a => a.id === (usuarioLogado.role === 'admin' ? usuarioLogado.id : usuarioLogado.adminId));
-                    const _sItensChk = (_sAdminChk?.obrasChecklistItens || []).filter(it => it.ativo !== false);
-                    const _sConclChk = item?.checklist || {};
-                    const _sPorMarcarChk = _sItensChk.filter(it => !_sConclChk[it.id]);
-                    if (_sPorMarcarChk.length) {
-                        alert('Não é possível concluir esta OS: falta marcar ' + _sPorMarcarChk.length + ' ponto(s) do checklist de saída:\n\n' + _sPorMarcarChk.map(it => '• ' + it.texto).join('\n') + '\n\nAbre "Checklist de Saída em OS / Obra" para os marcar.');
-                        return;
-                    }
-                }
+                const _servicoValidacao = window.TotalGestSaveFormServicoValidation.validate({
+                    document: document,
+                    data: dados,
+                    user: usuarioLogado,
+                    isEdit: isEdit,
+                    item: item,
+                    showAlert: alert,
+                    showError: mostrarErro
+                });
+                if (!_servicoValidacao.ok) return;
                 let funcionarioId = document.getElementById('s_funcionario').value || null;
                 if (funcionarioId === '') funcionarioId = null;
                 const _funcCheckCont = document.getElementById('s_func_checkboxes');
@@ -30840,6 +30827,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>

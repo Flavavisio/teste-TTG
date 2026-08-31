@@ -45,6 +45,7 @@
     saveFormFuncionario: './assets/js/app-save-form-funcionario.js',
     saveFormFuncionarioEncarregado: './assets/js/app-save-form-funcionario-encarregado.js',
     saveFormFuncionarioOrchestrator: './assets/js/app-save-form-funcionario-orchestrator.js',
+    saveFormServicoValidation: './assets/js/app-save-form-servico-validation.js',
     syncPrepare: './assets/js/app-sync-prepare.js',
     syncFiles: './assets/js/app-sync-files.js',
     syncCollections: './assets/js/app-sync-collections.js',
@@ -123,6 +124,7 @@
     if (options.saveFormFuncionario === true) pedidos.push(MODULOS.saveFormFuncionario);
     if (options.saveFormFuncionarioEncarregado === true) pedidos.push(MODULOS.saveFormFuncionarioEncarregado);
     if (options.saveFormFuncionarioOrchestrator === true) pedidos.push(MODULOS.saveFormFuncionarioOrchestrator);
+    if (options.saveFormServicoValidation === true) pedidos.push(MODULOS.saveFormServicoValidation);
     if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncFiles === true) pedidos.push(MODULOS.syncFiles);
     if (options.syncCollections === true) pedidos.push(MODULOS.syncCollections);
