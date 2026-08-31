@@ -1,6 +1,9 @@
-name: Inspect app migration boundary
+name: Inspect funcionario modal block
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,26 +11,25 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Mapear bloco funcionario de abrirModal
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestApp.init',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'function bootstrapSupabase()',
-              'async function carregarDados(',
-              'const FICHEIRO_CAMPOS = {',
-              'async function uploadDataURL(dataUrl, pasta)',
-              'function registarHistoricoLicenca('
-          ]
-          for item in checks:
-              print(item, text.count(item))
+          lines = text.splitlines()
+          start = next(i for i,l in enumerate(lines) if "if (entidade === 'funcionario') {" in l and i > 22000)
+          end = next(i for i,l in enumerate(lines[start+1:], start+1) if "} else if (entidade === 'cliente') {" in l)
+          print(f'funcionario abrirModal: {start+1}-{end} ({end-start} linhas)')
+          for i in range(start, end):
+              print(f'{i+1}: {lines[i]}')
+          block='\n'.join(lines[start:end])
+          print('\n=== TOKENS/DEPENDENCIAS ===')
+          for term in ['dados.', 'usuarioLogado', 'adminAtual(', 'idEditando', 'isEdit', 'item', 'modalTitle', 'formFields', 'document.', 'onclick=', 'onchange=', 'oninput=', 'PLANOS', 'escapeHtml', 'formatar', 'getElementById']:
+              print(term, block.count(term))
           PY
