@@ -18324,11 +18324,17 @@
                             <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Receita do módulo</span><span>${receitaFrota.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span></div>
                         </div>`;
                 // Licenças de Armazém
-                const comArmazem = admins.filter(a => a.id !== 'superadmin' && moduloArmazemAtivo(a));
-                const armMensais = comArmazem.filter(a => a.armazemPlano === 'mensal').length;
-                const armAnuais = comArmazem.filter(a => a.armazemPlano === 'anual').length;
-                const armDemos = comArmazem.filter(a => a.armazemPlano === 'demo').length;
-                const receitaArmazem = armMensais * PRECO_ARMAZEM_MENSAL + armAnuais * PRECO_ARMAZEM_ANUAL;
+                const _warehouseMetrics = window.TotalGestReportsModuleMetrics.calculateWarehouse({
+                    admins: admins,
+                    isActive: moduloArmazemAtivo,
+                    monthlyPrice: PRECO_ARMAZEM_MENSAL,
+                    annualPrice: PRECO_ARMAZEM_ANUAL
+                });
+                const comArmazem = _warehouseMetrics.active;
+                const armMensais = _warehouseMetrics.monthly;
+                const armAnuais = _warehouseMetrics.annual;
+                const armDemos = _warehouseMetrics.demos;
+                const receitaArmazem = _warehouseMetrics.revenue;
                 html += `<div class="report-card">
                             <h4><i class="fas fa-boxes"></i> Licenças de Armazém</h4>
                             <div class="report-item"><span>Empresas com módulo ativo</span><span>${comArmazem.length}</span></div>

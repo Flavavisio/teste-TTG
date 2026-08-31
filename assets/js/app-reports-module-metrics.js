@@ -33,8 +33,27 @@
     };
   }
 
+
+  function calculateWarehouse(options) {
+    const opts = options || {};
+    const admins = opts.admins || [];
+    const isActive = opts.isActive;
+    const active = admins.filter(a => a.id !== 'superadmin' && isActive(a));
+    const monthly = active.filter(a => a.armazemPlano === 'mensal').length;
+    const annual = active.filter(a => a.armazemPlano === 'anual').length;
+    const demos = active.filter(a => a.armazemPlano === 'demo').length;
+    return {
+      active: active,
+      monthly: monthly,
+      annual: annual,
+      demos: demos,
+      revenue: monthly * opts.monthlyPrice + annual * opts.annualPrice
+    };
+  }
+
   window.TotalGestReportsModuleMetrics = {
     calculateContracts: calculateContracts,
-    calculateFleet: calculateFleet
+    calculateFleet: calculateFleet,
+    calculateWarehouse: calculateWarehouse
   };
 })();
