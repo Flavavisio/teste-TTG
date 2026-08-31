@@ -72,6 +72,7 @@
     profileSaveAdmin: './assets/js/app-profile-save-admin.js',
     profileSaveWorker: './assets/js/app-profile-save-worker.js',
     profileSave: './assets/js/app-profile-save.js',
+    cardVisibility: './assets/js/app-card-visibility.js',
     syncPrepare: './assets/js/app-sync-prepare.js',
     syncFiles: './assets/js/app-sync-files.js',
     syncCollections: './assets/js/app-sync-collections.js',
@@ -177,6 +178,7 @@
     if (options.profileSaveAdmin === true) pedidos.push(MODULOS.profileSaveAdmin);
     if (options.profileSaveWorker === true) pedidos.push(MODULOS.profileSaveWorker);
     if (options.profileSave === true) pedidos.push(MODULOS.profileSave);
+    if (options.cardVisibility === true) pedidos.push(MODULOS.cardVisibility);
     if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncFiles === true) pedidos.push(MODULOS.syncFiles);
     if (options.syncCollections === true) pedidos.push(MODULOS.syncCollections);
