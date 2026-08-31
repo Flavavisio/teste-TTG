@@ -77,6 +77,7 @@
     myDay: './assets/js/app-my-day.js',
     reportsSuperadminMetrics: './assets/js/app-reports-superadmin-metrics.js',
     reportsModuleMetrics: './assets/js/app-reports-module-metrics.js',
+    reportsDistributorMetrics: './assets/js/app-reports-distributor-metrics.js',
     syncPrepare: './assets/js/app-sync-prepare.js',
     syncFiles: './assets/js/app-sync-files.js',
     syncCollections: './assets/js/app-sync-collections.js',
@@ -187,6 +188,7 @@
     if (options.myDay === true) pedidos.push(MODULOS.myDay);
     if (options.reportsSuperadminMetrics === true) pedidos.push(MODULOS.reportsSuperadminMetrics);
     if (options.reportsModuleMetrics === true) pedidos.push(MODULOS.reportsModuleMetrics);
+    if (options.reportsDistributorMetrics === true) pedidos.push(MODULOS.reportsDistributorMetrics);
     if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncFiles === true) pedidos.push(MODULOS.syncFiles);
     if (options.syncCollections === true) pedidos.push(MODULOS.syncCollections);

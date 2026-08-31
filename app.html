@@ -18422,9 +18422,14 @@
                 // deste distribuidor e mostrando o que ELE cobra a cada um (não o valor grossista
                 // que paga à Total Gest — isso já está no dashboard "Início").
                 const admin = adminAtual();
-                const meusClientes = (dados.administradores || []).filter(a => a.distribuidorId === admin.id);
+                const _distributorOverview = window.TotalGestReportsDistributorMetrics.calculateOverview({
+                    admins: dados.administradores || [],
+                    distributorId: admin.id,
+                    isLicenseValid: isLicencaValida
+                });
+                const meusClientes = _distributorOverview.clients;
                 const _kpi = (lbl, val, cor, ic) => `<div style="border:1px solid #e6eaf2;border-left:4px solid ${cor};border-radius:10px;padding:12px 14px;background:#fff;"><div style="font-size:.78rem;color:#64748b;"><i class="fas ${ic}" style="color:${cor};"></i> ${lbl}</div><div style="font-size:1.2rem;font-weight:800;color:#0f172a;margin-top:4px;">${val}</div></div>`;
-                const ativos = meusClientes.filter(c => c.licenca && c.ativo !== false && isLicencaValida(c.licenca.dataExpiracao));
+                const ativos = _distributorOverview.active;
                 let html = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:16px;">
                     ${_kpi('Clientes', meusClientes.length + ` <span style=\"font-size:.7rem;color:#16a34a;\">(${ativos.length} ativos)</span>`, '#7c3aed', 'fa-user-tie')}
                 </div>`;
@@ -18436,11 +18441,29 @@
                                 <thead><tr><th>Empresa</th><th>Administrador</th><th>Plano</th><th>Expiração</th><th>Funcionários</th><th>Contratos</th><th>Frota</th><th>Armazém</th><th>CRM+Assist</th><th>Cobras (€)</th></tr></thead><tbody>`;
                     let totalCobradoGlobal = 0;
                     meusClientes.forEach(c => {
-                        const funcs = (dados.funcionarios || []).filter(f => f.adminId === c.id && f.role !== 'admin' && f.role !== 'superadmin').length;
-                        const temContratos = moduloContratosAtivo(c), temFrota = moduloFrotaAtivo(c), temArmazem = moduloArmazemAtivo(c), temCrm = moduloCrmAtivo(c);
-                        const valorBase = c.precoDistribuidorCobrado != null ? c.precoDistribuidorCobrado : (c.licenca ? parseFloat(getValorPlano(c.licenca.plano)) : 0);
-                        const valorAddons = (temContratos ? (c.contratosPlano === 'anual' ? PRECO_CONTRATOS_ANUAL / 12 : PRECO_CONTRATOS_MENSAL) : 0) + (temFrota ? (c.frotaPlano === 'anual' ? PRECO_FROTA_ANUAL / 12 : PRECO_FROTA_MENSAL) : 0) + (temArmazem ? (c.armazemPlano === 'anual' ? PRECO_ARMAZEM_ANUAL / 12 : PRECO_ARMAZEM_MENSAL) : 0) + (temCrm ? (c.crmPlano === 'anual' ? PRECO_CRM_ANUAL / 12 : PRECO_CRM_MENSAL) : 0);
-                        const valorCliente = valorBase + valorAddons;
+                        const _clientMetrics = window.TotalGestReportsDistributorMetrics.calculateClient({
+                            client: c,
+                            data: dados,
+                            contractsActive: moduloContratosAtivo,
+                            fleetActive: moduloFrotaAtivo,
+                            warehouseActive: moduloArmazemAtivo,
+                            crmActive: moduloCrmAtivo,
+                            getPlanValue: getValorPlano,
+                            contractsAnnualPrice: PRECO_CONTRATOS_ANUAL,
+                            contractsMonthlyPrice: PRECO_CONTRATOS_MENSAL,
+                            fleetAnnualPrice: PRECO_FROTA_ANUAL,
+                            fleetMonthlyPrice: PRECO_FROTA_MENSAL,
+                            warehouseAnnualPrice: PRECO_ARMAZEM_ANUAL,
+                            warehouseMonthlyPrice: PRECO_ARMAZEM_MENSAL,
+                            crmAnnualPrice: PRECO_CRM_ANUAL,
+                            crmMonthlyPrice: PRECO_CRM_MENSAL
+                        });
+                        const funcs = _clientMetrics.funcionarios;
+                        const temContratos = _clientMetrics.temContratos;
+                        const temFrota = _clientMetrics.temFrota;
+                        const temArmazem = _clientMetrics.temArmazem;
+                        const temCrm = _clientMetrics.temCrm;
+                        const valorCliente = _clientMetrics.valorCliente;
                         totalCobradoGlobal += valorCliente;
                         const dataExp = c.licenca ? new Date(c.licenca.dataExpiracao).toLocaleDateString('pt-PT') : '-';
                         const planoLabel = c.licenca ? PLANOS[c.licenca.plano]?.label || c.licenca.plano : 'Sem licença';
@@ -29333,6 +29356,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
