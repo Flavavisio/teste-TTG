@@ -1,4 +1,4 @@
-name: Inspect carregarDados boundary
+name: Migrate load context
 
 on:
   push:
@@ -7,37 +7,30 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear carregarDados
+      - name: Extrair contexto de carregamento
+        run: python3 .github/scripts/migrate-load-context.py
+      - name: Validar JavaScript
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          lines = Path('app.html').read_text(encoding='utf-8').splitlines()
-          start = next(i for i,l in enumerate(lines) if 'async function carregarDados(' in l)
-          depth = 0
-          seen = False
-          end = None
-          for i in range(start, len(lines)):
-              line = lines[i]
-              depth += line.count('{') - line.count('}')
-              if '{' in line: seen = True
-              if seen and depth == 0:
-                  end = i
-                  break
-          print('carregarDados:', start+1, end+1 if end is not None else None, 'linhas', (end-start+1) if end is not None else None)
-          for i in range(start, min(len(lines), (end or start)+1)):
-              print(f'{i+1}: {lines[i]}')
-          print('\n=== ocorrencias helpers/contexto ===')
-          for term in ['_obterTenantDoUser', '_carregarCacheLocal', '_restaurarSnapshotDaCache', '_guardarCacheLocal', '_reconstruirSnapshots', 'dadosVazios()', 'Promise.all(', 'tabelas = ORDEM']:
-              hits=[i+1 for i,l in enumerate(lines) if term in l]
-              print(term, hits)
-          PY
+          node --check assets/js/app-load-context.js
+          node --check assets/js/app-shell.js
+          node --check sw.js
+      - name: Validar e gravar
+        run: |
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/scripts/migrate-load-context.py
+          git add app.html assets/js/app-load-context.js assets/js/app-shell.js sw.js .github/scripts/migrate-load-context.py
+          git diff --cached --check
+          git commit -m "Extrair contexto do carregamento inicial"
+          git push origin HEAD:refactor/separar-index-app
