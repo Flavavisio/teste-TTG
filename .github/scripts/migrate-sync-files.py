@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 APP = Path('app.html')
 SHELL = Path('assets/js/app-shell.js')
@@ -12,7 +13,6 @@ sw = SW.read_text(encoding='utf-8')
 old_function = """        async function migrarFicheirosPendentes() {\n            for (const col of Object.keys(FICHEIRO_CAMPOS)) {\n                for (const o of (dados[col] || [])) {\n                    for (const campo of FICHEIRO_CAMPOS[col]) {\n                        const v = o[campo];\n                        if (typeof v === 'string' && v.startsWith('data:')) {\n                            try { o[campo] = await uploadDataURL(v, col); }\n                            catch (e) { console.error('upload ' + col + '.' + campo + ':', e.message || e); } // mantém base64 como fallback\n                        }\n                    }\n                }\n            }\n        }\n"""
 
 new_call = """            await window.TotalGestSyncFiles.migratePending({\n                data: dados,\n                fields: FICHEIRO_CAMPOS,\n                uploadDataURL: uploadDataURL\n            });"""
-
 old_call = "            await migrarFicheirosPendentes();"
 
 if app.count(old_function) != 1:
@@ -24,7 +24,14 @@ if app.count('syncPrepare: true') != 1:
 
 app = app.replace(old_function, '', 1)
 app = app.replace(old_call, new_call, 1)
-app = app.replace('                    syncPrepare: true,', '                    syncPrepare: true,\n                    syncFiles: true,', 1)
+app, n = re.subn(
+    r'(?m)^(\s*)syncPrepare:\s*true,\s*$',
+    lambda m: m.group(1) + 'syncPrepare: true,\n' + m.group(1) + 'syncFiles: true,',
+    app,
+    count=1
+)
+if n != 1:
+    raise SystemExit('Não foi possível inserir syncFiles: true após syncPrepare')
 
 module_text = """/* Total Gest — migração de ficheiros pendentes antes da sincronização\n * Percorre campos configurados, delega o upload e mantém data URLs como fallback em caso de erro.\n */\n(function () {\n  'use strict';\n\n  async function migratePending(options) {\n    const opts = options || {};\n    const data = opts.data || {};\n    const fields = opts.fields || {};\n    const uploadDataURL = opts.uploadDataURL;\n\n    if (typeof uploadDataURL !== 'function') {\n      throw new Error('TotalGestSyncFiles: uploadDataURL invalido');\n    }\n\n    for (const collection of Object.keys(fields)) {\n      for (const item of (data[collection] || [])) {\n        for (const field of fields[collection]) {\n          const value = item[field];\n          if (typeof value === 'string' && value.startsWith('data:')) {\n            try {\n              item[field] = await uploadDataURL(value, collection);\n            } catch (error) {\n              console.error('upload ' + collection + '.' + field + ':', error.message || error);\n              // Mantém o data URL original como fallback, tal como no comportamento legado.\n            }\n          }\n        }\n      }\n    }\n  }\n\n  window.TotalGestSyncFiles = { migratePending: migratePending };\n})();\n"""
 
@@ -58,7 +65,6 @@ sw = sw.replace(
     1
 )
 
-# Validações estruturais antes de gravar.
 if 'function migrarFicheirosPendentes' in app or 'async function migrarFicheirosPendentes' in app:
     raise SystemExit('A função inline ainda existe')
 if app.count('window.TotalGestSyncFiles.migratePending') != 1:
