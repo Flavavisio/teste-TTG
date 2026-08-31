@@ -1,6 +1,8 @@
-name: Inspect app migration boundary
+name: Inspect reports module metrics
 
 on:
+  push:
+    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
@@ -8,31 +10,57 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Mapear métricas dos módulos
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestSaveFormServico.run({',
-              'window.TotalGestProfileModal.render({',
-              'window.TotalGestProfileSave.run({',
-              'window.TotalGestCardVisibility.run({',
-              'window.TotalGestHomeDashboard.run({',
-              'window.TotalGestMyDay.run({',
-              'window.TotalGestReportsSuperadminMetrics.calculate({',
-              'function renderizarOMeuDia(',
-              'function renderizarReports(',
-              'function _salvarFormularioInterno(',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'async function carregarDados('
-          ]
-          for item in checks:
-              print(item, text.count(item))
+          text=Path('app.html').read_text(encoding='utf-8')
+          marker='function renderizarReports('
+          assert text.count(marker)==1
+          start=text.index(marker); brace=text.index('{',start)
+          depth=0; mode='normal'; esc=False; stack=[]; td=[]; i=brace
+          while i < len(text):
+              c=text[i]; n=text[i+1] if i+1<len(text) else ''
+              if mode=='line':
+                  if c=='\n': mode=stack.pop() if stack else 'normal'
+              elif mode=='block':
+                  if c=='*' and n=='/': mode=stack.pop() if stack else 'normal'; i+=1
+              elif mode in ('single','double'):
+                  if esc: esc=False
+                  elif c=='\\': esc=True
+                  elif (mode=='single' and c=="'") or (mode=='double' and c=='"'): mode=stack.pop() if stack else 'normal'
+              elif mode=='template':
+                  if esc: esc=False
+                  elif c=='\\': esc=True
+                  elif c=='`': mode=stack.pop() if stack else 'normal'
+                  elif c=='$' and n=='{': stack.append('template'); mode='texpr'; td.append(1); depth+=1; i+=1
+              else:
+                  cur=mode
+                  if c=='/' and n=='/': stack.append(cur); mode='line'; i+=1
+                  elif c=='/' and n=='*': stack.append(cur); mode='block'; i+=1
+                  elif c=="'": stack.append(cur); mode='single'
+                  elif c=='"': stack.append(cur); mode='double'
+                  elif c=='`': stack.append(cur); mode='template'
+                  elif c=='{': depth+=1; td[-1:]=[td[-1]+1] if cur=='texpr' and td else td[-1:]
+                  elif c=='}':
+                      depth-=1
+                      if cur=='texpr':
+                          td[-1]-=1
+                          if td[-1]==0: td.pop(); mode=stack.pop()
+                      elif depth==0: end=i+1; break
+              i+=1
+          block=text[start:end]
+          print('LINES',len(block.splitlines()),'CHARS',len(block))
+          needles=['moduloContratosAtivo','moduloFrotaAtivo','moduloArmazemAtivo','moduloNotificacoesAtivo','moduloCrmAtivo','moduloAssistAtivo','moduloErpAtivo','moduloRondasAtivo','PRECO_CONTRATOS_','PRECO_FROTA_','PRECO_ARMAZEM_','PRECO_CRM_','PRECO_ERP_','_recT','_addons']
+          for x in needles: print(x, block.count(x))
+          for ln,line in enumerate(block.splitlines(),1):
+              low=line.lower()
+              if any(k in low for k in ['contrat','frota','armaz','notifica','crm','assist','erp','ronda']):
+                  print(f'{ln:04d}: {line[:260]}')
           PY
