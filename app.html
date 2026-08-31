@@ -3008,18 +3008,15 @@
             // Se não for passado explicitamente, usa a sessão atual (chamadas de refresh
             // já autenticadas); só fica sem filtro mesmo para superadmin ou no arranque
             // muito inicial (antes de existir qualquer sessão).
-            let tenantId = tenantIdParam;
-            let ehSuperAdmin = superAdminParam;
-            let clienteId = clienteIdParam;
-            if (tenantId === undefined) {
-                if (usuarioLogado) {
-                    ehSuperAdmin = usuarioLogado.role === 'superadmin';
-                    tenantId = ehSuperAdmin ? null : (usuarioLogado.role === 'admin' ? usuarioLogado.id : usuarioLogado.adminId);
-                    clienteId = usuarioLogado.role === 'cliente' ? usuarioLogado.id : null;
-                } else {
-                    tenantId = null; ehSuperAdmin = true;
-                }
-            }
+            const loadContext = window.TotalGestLoadContext.resolve({
+                tenantIdParam: tenantIdParam,
+                superAdminParam: superAdminParam,
+                clienteIdParam: clienteIdParam,
+                user: usuarioLogado
+            });
+            let tenantId = loadContext.tenantId;
+            let ehSuperAdmin = loadContext.superAdmin;
+            let clienteId = loadContext.clienteId;
             // Portal do cliente: só precisa de uma fração dos dados da empresa (as suas próprias
             // obras/contratos/OS/relatórios) — poupa bastante egress não pedir o resto (stock,
             // frota, funcionários, despesas, etc. que o portal nunca mostra).
@@ -31949,6 +31946,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
