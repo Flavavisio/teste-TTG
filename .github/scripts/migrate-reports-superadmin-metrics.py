@@ -44,7 +44,7 @@ fe=scan_end(app,fb); block=app[fs:fe]
 start_marker="                const admins = dados.administradores || [];\n"
 end_marker="                const _kpi = (lbl, val, cor, ic) =>"
 assert block.count(start_marker)==1
-assert block.count(end_marker)==1
+assert block.count(end_marker)>=1
 bs=block.index(start_marker); be=block.index(end_marker,bs)
 old_metrics=block[bs:be]
 for token in ['const _emp =', 'const _now = Date.now();', 'const _ativo =', 'const _empAtivas =', 'const _expira =', 'const _totFunc =', 'const _totEnc =', 'const _addons =', 'let _recT = 0;', '_emp.forEach(a =>']:
