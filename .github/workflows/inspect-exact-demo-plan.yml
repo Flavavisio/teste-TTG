@@ -1,29 +1,85 @@
-name: Inspect app migration boundary
+name: Audit final app modularization
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  inspect:
+  audit:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Auditar app e módulos
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestApp.init',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'function bootstrapSupabase()'
-          ]
-          for item in checks:
-              print(item, text.count(item))
+          import re
+
+          app = Path('app.html').read_text(encoding='utf-8')
+          shell = Path('assets/js/app-shell.js').read_text(encoding='utf-8')
+          sw = Path('sw.js').read_text(encoding='utf-8')
+
+          checks = {
+              'guardarDados inline': app.count('function guardarDados()'),
+              '_sincronizar inline': app.count('async function _sincronizar()'),
+              'migrarFicheirosPendentes inline': app.count('function migrarFicheirosPendentes()'),
+              '_syncChain legacy': app.count('_syncChain'),
+              'orchestrator call': app.count('window.TotalGestSyncOrchestrator.run({'),
+              'collections direct call in app': app.count('window.TotalGestSyncCollections.run({'),
+              'delete direct call in app': app.count('window.TotalGestSyncDelete.run({'),
+              'finalize direct call in app': app.count('window.TotalGestSyncFinalize.run({'),
+              'syncOrchestrator init flag': app.count('syncOrchestrator: true'),
+          }
+          print('=== APP COUNTS ===')
+          for k,v in checks.items(): print(f'{k}: {v}')
+
+          modules = re.findall(r"\w+:\s*'([^']+\.js)'", shell)
+          print('\n=== SHELL MODULES ===')
+          for module in modules:
+              exists = Path(module.removeprefix('./')).exists()
+              in_sw = module in sw
+              print(f'{module} | exists={exists} | sw={in_sw}')
+
+          sync_files = sorted(Path('assets/js').glob('app-sync-*.js'))
+          print('\n=== SYNC FILES ===')
+          for p in sync_files:
+              rel = './' + p.as_posix()
+              print(f'{rel} | shell={rel in shell} | sw={rel in sw}')
+
+          print('\n=== LEGACY TOKENS ===')
+          for token in [
+              'migrarFicheirosPendentes(',
+              'for (const col of ORDEM)',
+              'mostrarStatusSync(erros, primeiroErro)',
+              'TotalGestSyncPrepare.repairInvalidEquipmentLocations(dados)',
+              'TotalGestSyncFiles.migratePending({',
+          ]:
+              print(f'{token}: {app.count(token)}')
+
+          print('\n=== BASIC ASSERTIONS ===')
+          assert app.count('async function _sincronizar()') == 1
+          assert app.count('window.TotalGestSyncOrchestrator.run({') == 1
+          assert app.count('syncOrchestrator: true') == 1
+          assert app.count('function migrarFicheirosPendentes()') == 0
+          assert app.count('window.TotalGestSyncCollections.run({') == 0
+          assert app.count('window.TotalGestSyncDelete.run({') == 0
+          assert app.count('window.TotalGestSyncFinalize.run({') == 0
+          for p in sync_files:
+              rel = './' + p.as_posix()
+              assert rel in shell, f'{rel} não registado no shell'
+              assert rel in sw, f'{rel} não incluído no service worker'
+          print('OK')
           PY
+      - name: Validar JavaScript modular
+        run: |
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
