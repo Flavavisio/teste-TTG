@@ -1,4 +1,4 @@
-name: Migrate load context
+name: Migrate load queries
 
 on:
   push:
@@ -17,11 +17,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Extrair contexto de carregamento
-        run: python3 .github/scripts/migrate-load-context.py
+      - name: Extrair queries de carregamento
+        run: python3 .github/scripts/migrate-load-queries.py
       - name: Validar JavaScript
         run: |
-          node --check assets/js/app-load-context.js
+          node --check assets/js/app-load-queries.js
           node --check assets/js/app-shell.js
           node --check sw.js
       - name: Validar e gravar
@@ -29,8 +29,8 @@ jobs:
           git diff --check
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          rm .github/scripts/migrate-load-context.py
-          git add app.html assets/js/app-load-context.js assets/js/app-shell.js sw.js .github/scripts/migrate-load-context.py
+          rm .github/scripts/migrate-load-queries.py
+          git add app.html assets/js/app-load-queries.js assets/js/app-shell.js sw.js .github/scripts/migrate-load-queries.py
           git diff --cached --check
-          git commit -m "Extrair contexto do carregamento inicial"
+          git commit -m "Extrair queries do carregamento inicial"
           git push origin HEAD:refactor/separar-index-app
