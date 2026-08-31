@@ -1,8 +1,6 @@
-name: Inspect final servico save branch
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
@@ -10,34 +8,38 @@ permissions:
 
 jobs:
   inspect:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Auditar ramo final do serviço
+      - name: Estado dos módulos principais
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
-          start = text.index("            } else if (ent === 'servico') {")
-          end = text.index("            } else if (ent === 'folha') {", start)
-          block = text[start:end]
-          print(block)
-          print('\n=== linhas ===', len(block.splitlines()))
-          print('=== contagens ===')
-          for token in [
-              'TotalGestSaveFormServicoValidation.validate({',
-              'TotalGestSaveFormServicoContext.prepare({',
-              'TotalGestSaveFormServicoObject.prepare({',
-              'TotalGestSaveFormServicoConflicts.validate({',
-              'TotalGestSaveFormServicoRegistration.apply({',
-              'document.getElementById(', 'dados.', 'alert(', 'confirm(',
-              '_tenantId(', 'gerarId(', '_horaMin(', 'obterNomeFuncionario(',
-              'gerarNumeroRegistoServidor(', 'guardarDados(', 'renderizarTudo(',
-              'fecharModal(', 'setTimeout(', 'await '
-          ]:
-              print(token, block.count(token))
+          checks = [
+              'window.TotalGestApp.init',
+              'function abrirModal(',
+              'function _salvarFormularioInterno(',
+              'window.TotalGestSaveFormFornecedor.run({',
+              'window.TotalGestSaveFormArtigo.run({',
+              'window.TotalGestSaveFormRequisicao.run({',
+              'window.TotalGestSaveFormObra.run({',
+              'window.TotalGestSaveFormFolha.run({',
+              'window.TotalGestSaveFormCliente.prepare({',
+              'window.TotalGestSaveFormFuncionarioOrchestrator.run({',
+              'window.TotalGestSaveFormServicoValidation.validate({',
+              'window.TotalGestSaveFormServicoContext.prepare({',
+              'window.TotalGestSaveFormServicoObject.prepare({',
+              'window.TotalGestSaveFormServicoConflicts.validate({',
+              'window.TotalGestSaveFormServicoRegistration.apply({',
+              'window.TotalGestSaveFormServico.run({',
+              'function guardarDados()',
+              'async function _sincronizar()',
+              'function bootstrapSupabase()',
+              'async function carregarDados('
+          ]
+          for item in checks:
+              print(item, text.count(item))
           PY
-          echo 'auditoria-final-servico'
