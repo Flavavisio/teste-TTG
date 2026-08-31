@@ -1,4 +1,4 @@
-name: Inspect snapshot usages
+name: Migrate sync snapshots
 
 on:
   push:
@@ -7,26 +7,30 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mostrar contextos adicionais dos snapshots
+      - name: Extrair reconstrução de snapshots
+        run: python3 .github/scripts/migrate-sync-snapshots.py
+      - name: Validar JavaScript
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          lines = Path('app.html').read_text(encoding='utf-8').splitlines()
-          for start,end,title in [
-              (3155,3185,'contador/estado pendente'),
-              (11945,11980,'escrita adicional em snapshot')
-          ]:
-              print(f'\n=== {title} ===')
-              for i in range(start-1, min(len(lines), end)):
-                  print(f'{i+1}: {lines[i]}')
-          PY
+          node --check assets/js/app-sync-snapshots.js
+          node --check assets/js/app-shell.js
+          node --check sw.js
+      - name: Validar e gravar
+        run: |
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/scripts/migrate-sync-snapshots.py
+          git add app.html assets/js/app-sync-snapshots.js assets/js/app-shell.js sw.js .github/scripts/migrate-sync-snapshots.py
+          git diff --cached --check
+          git commit -m "Extrair reconstrução de snapshots locais"
+          git push origin HEAD:refactor/separar-index-app
