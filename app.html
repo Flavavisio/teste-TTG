@@ -23936,31 +23936,17 @@ async function salvarAdmin(e) {
                 closeModal: fecharModal,
                 renderAll: renderizarTudo
             });
-            const _tornouSeSubadmin = ent === 'funcionario' && obj.role === 'subadmin' && (!isEdit || (_funcAntesDeEditar && _funcAntesDeEditar.role !== 'subadmin'));
-            if (ent === 'funcionario' && (!isEdit || _tornouSeSubadmin) && obj.email && obj.senha) {
-                try {
-                    await guardarDados(dados); // garante que o funcionário já está gravado antes de criar a conta de login
-                } catch (e) {
-                    alert(`⚠️ O funcionário ${obj.nome} foi criado no ecrã, mas ainda não foi possível confirmar a gravação no servidor (${e && e.message ? e.message : e}).\n\nNão foi criada a conta de login para evitar inconsistências (ficaria uma conta "fantasma" sem funcionário associado) — verifica a ligação e tenta novamente mais tarde.`);
-                    return;
-                }
-                const _papelConta = obj.role === 'subadmin' ? 'subadmin' : (obj.role === 'vigilante' || obj.role === 'supervisor_vigilantes') ? obj.role : 'funcionario';
-                criarUtilizadorAuth(obj.email, obj.senha, _papelConta, obj.adminId, obj.id, obj.nome).then(r => {
-                    if (!r.ok) alert('✅ Funcionário guardado.\n⚠️ A conta de login não foi criada/atualizada automaticamente: ' + r.erro + '\n\nSe o email já tiver sido usado antes (ex.: um funcionário apagado há mais tempo), a conta pode ter ficado "presa" de uma eliminação antiga que falhou. Contacta o suporte técnico para a removerem de vez, ou tenta apagar este registo e voltar a criar (a partir de agora, a app avisa logo se uma eliminação de conta falhar).');
-                });
-            }
-            if (ent === 'cliente' && obj.portalAtivo && obj.nif && obj.nif !== '999999990' && obj.senha) {
-                try {
-                    await guardarDados(dados);
-                } catch (e) {
-                    alert(`⚠️ O cliente ${obj.nome} foi criado no ecrã, mas ainda não foi possível confirmar a gravação no servidor (${e && e.message ? e.message : e}).\n\nNão foi criada a conta do portal para evitar inconsistências — tenta novamente mais tarde.`);
-                    return;
-                }
-                const _emailContaCliente = _emailFantasmaCliente(obj.nif, obj.adminId);
-                criarUtilizadorAuth(_emailContaCliente, obj.senha, 'cliente', obj.adminId, obj.id, obj.nome).then(r => {
-                    if (!r.ok) alert('✅ Cliente criado.\n⚠️ A conta do portal não foi criada automaticamente: ' + r.erro + '\n\nSe o NIF já tiver sido usado antes (ex.: um cliente apagado há mais tempo), a conta pode ter ficado "presa" de uma eliminação antiga que falhou. Contacta o suporte técnico para a removerem de vez, ou tenta apagar este registo e voltar a criar (a partir de agora, a app avisa logo se uma eliminação de conta falhar).');
-                });
-            }
+            await window.TotalGestSaveFormAuth.run({
+                entity: ent,
+                data: dados,
+                value: obj,
+                isEdit: isEdit,
+                oldEmployee: _funcAntesDeEditar,
+                saveData: guardarDados,
+                showAlert: alert,
+                createAuth: criarUtilizadorAuth,
+                clientTechnicalEmail: _emailFantasmaCliente
+            });
         }
         // Os clientes entram no Portal com o NIF, não com email (a maioria não tem email
         // registado, já que só o NIF é obrigatório). Por trás dos panos, a autenticação
@@ -30671,6 +30657,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>

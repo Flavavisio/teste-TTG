@@ -57,6 +57,7 @@
     saveFormFolhaOsPending: './assets/js/app-save-form-folha-os-pending.js',
     saveFormFolhaObraPending: './assets/js/app-save-form-folha-obra-pending.js',
     saveFormFinalize: './assets/js/app-save-form-finalize.js',
+    saveFormAuth: './assets/js/app-save-form-auth.js',
     syncPrepare: './assets/js/app-sync-prepare.js',
     syncFiles: './assets/js/app-sync-files.js',
     syncCollections: './assets/js/app-sync-collections.js',
@@ -147,6 +148,7 @@
     if (options.saveFormFolhaOsPending === true) pedidos.push(MODULOS.saveFormFolhaOsPending);
     if (options.saveFormFolhaObraPending === true) pedidos.push(MODULOS.saveFormFolhaObraPending);
     if (options.saveFormFinalize === true) pedidos.push(MODULOS.saveFormFinalize);
+    if (options.saveFormAuth === true) pedidos.push(MODULOS.saveFormAuth);
     if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncFiles === true) pedidos.push(MODULOS.syncFiles);
     if (options.syncCollections === true) pedidos.push(MODULOS.syncCollections);
