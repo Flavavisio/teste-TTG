@@ -3246,18 +3246,15 @@
 
                 // licenças (a seguir aos administradores)
                 if (col === 'administradores') {
-                    const licUp = [];
-                    const licUpJson = [];
-                    for (const a of lista) {
-                        if (!a.licenca) continue;
-                        const row = licToRow(a.id, a.licenca);
-                        const json = JSON.stringify(row);
-                        if (_snapLic.get(a.id) !== json) { licUp.push(row); licUpJson.push({ id: a.id, json }); }
-                    }
-                    if (licUp.length) {
-                        const { error } = await supa.from('licencas').upsert(licUp, { onConflict: 'admin_id' });
-                        if (error) { console.error('upsert licencas:', error.message); if (!_tabelaInexistente(error)) { erros++; if (!primeiroErro) primeiroErro = 'licencas — ' + (error.message || error.code || 'erro'); } }
-                        else { licUpJson.forEach(u => _snapLic.set(u.id, u.json)); }
+                    const licResult = await window.TotalGestSyncLicenses.run({
+                        supabase: supa,
+                        admins: lista,
+                        snapshot: _snapLic,
+                        toRow: licToRow
+                    });
+                    if (licResult.error && !_tabelaInexistente(licResult.error)) {
+                        erros++;
+                        if (!primeiroErro) primeiroErro = 'licencas — ' + (licResult.error.message || licResult.error.code || 'erro');
                     }
                 }
 
@@ -32054,6 +32051,6 @@ window._relPrefill = function(msg){
 </div>
 
   <script src="./assets/js/app-shell.js"></script>
-  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true, syncUpsert: true, saveQueue: true, bootstrap: true });</script>
+  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true, syncUpsert: true, syncLicenses: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>

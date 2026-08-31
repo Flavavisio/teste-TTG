@@ -15,6 +15,7 @@
     syncHelpers: './assets/js/app-sync-helpers.js',
     syncDiff: './assets/js/app-sync-diff.js',
     syncUpsert: './assets/js/app-sync-upsert.js',
+    syncLicenses: './assets/js/app-sync-licenses.js',
     saveQueue: './assets/js/app-save-queue.js',
     bootstrap: './assets/js/app-bootstrap.js'
   };
@@ -54,6 +55,7 @@
     if (options.syncHelpers === true) pedidos.push(MODULOS.syncHelpers);
     if (options.syncDiff === true) pedidos.push(MODULOS.syncDiff);
     if (options.syncUpsert === true) pedidos.push(MODULOS.syncUpsert);
+    if (options.syncLicenses === true) pedidos.push(MODULOS.syncLicenses);
     if (options.saveQueue === true) pedidos.push(MODULOS.saveQueue);
     if (options.bootstrap === true) pedidos.push(MODULOS.bootstrap);
 
