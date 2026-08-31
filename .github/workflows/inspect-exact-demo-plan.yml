@@ -28,3 +28,4 @@ jobs:
           git add app.html assets/js/app-shell.js sw.js
           git commit -m 'Extrair perfil de superadmin'
           git push origin HEAD:refactor/separar-index-app
+      - run: echo 'perfil-superadmin-migration'
