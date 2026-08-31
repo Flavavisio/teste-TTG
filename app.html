@@ -23781,32 +23781,18 @@ async function salvarAdmin(e) {
                 const adminId = _servicoContexto.adminId;
                 const _osExist = _servicoContexto.existingOrder;
                 const _sLocalIdResolvido = _servicoContexto.localId;
-                obj = {
-                    clienteId: document.getElementById('s_cliente').value,
-                    funcionarioId: funcionarioId,
-                    funcionariosIds: funcionariosIds,
-                    relatorioResponsavelId: document.getElementById('s_relatorio_responsavel') ? (document.getElementById('s_relatorio_responsavel').value || null) : (_osExist ? _osExist.relatorioResponsavelId : null),
-                    obraId: _osExist ? (_osExist.obraId || null) : (_novaOSObraId || null),
-                    valor: document.getElementById('s_valor') ? (document.getElementById('s_valor').value === '' ? null : Number(document.getElementById('s_valor').value)) : (_osExist ? _osExist.valor : null),
-                    pagamentoLocal: document.getElementById('s_pagamento_local') ? document.getElementById('s_pagamento_local').checked : (_osExist ? !!_osExist.pagamentoLocal : false),
-                    duracao: document.getElementById('s_duracao') ? (document.getElementById('s_duracao').value === '' ? null : parseInt(document.getElementById('s_duracao').value, 10)) : (_osExist ? _osExist.duracao : null),
-                    duracaoDias: document.getElementById('s_duracao_dias') ? (document.getElementById('s_duracao_dias').value === '' ? null : parseInt(document.getElementById('s_duracao_dias').value, 10)) : (_osExist ? _osExist.duracaoDias : null),
-                    morada: document.getElementById('s_morada') ? (document.getElementById('s_morada').value.trim() || null) : (_osExist ? _osExist.morada : null),
-                    localId: _sLocalIdResolvido || null,
-                    numeroPorta: document.getElementById('s_numero_porta') ? (document.getElementById('s_numero_porta').value.trim() || null) : (_osExist ? _osExist.numeroPorta : null),
-                    codigoPostal: document.getElementById('s_codigo_postal') ? (document.getElementById('s_codigo_postal').value.trim() || null) : (_osExist ? _osExist.codigoPostal : null),
-                    cidade: document.getElementById('s_cidade') ? (document.getElementById('s_cidade').value.trim() || null) : (_osExist ? _osExist.cidade : null),
-                    freguesia: document.getElementById('s_freguesia') ? (document.getElementById('s_freguesia').value.trim() || null) : (_osExist ? _osExist.freguesia : null),
-                    data: document.getElementById('s_data').value,
-                    hora: document.getElementById('s_hora').value,
-                    descricao: document.getElementById('s_descricao').value.trim(),
-                    observacoes: document.getElementById('s_observacoes')?.value.trim() || null,
-                    status: document.getElementById('s_status').value,
-                    tiposTrabalho: _sTiposTrabalhoSelecionados(),
-                    adminId: adminId
-                };
-                obj._eraAprovacaoAssistencia = !!(_aprovandoAssistenciaId && idEditando === _aprovandoAssistenciaId && (obj.status === 'por aprovar' || !obj.status));
-                if (obj._eraAprovacaoAssistencia) { obj.status = 'pendente'; }
+                obj = window.TotalGestSaveFormServicoObject.prepare({
+                    document: document,
+                    employeeId: funcionarioId,
+                    employeeIds: funcionariosIds,
+                    existingOrder: _osExist,
+                    newWorkId: _novaOSObraId,
+                    localId: _sLocalIdResolvido,
+                    adminId: adminId,
+                    selectedWorkTypes: _sTiposTrabalhoSelecionados,
+                    approvingAssistanceId: _aprovandoAssistenciaId,
+                    editingId: idEditando
+                });
                 if (_bloquearSeAusenteEmOS([...(obj.funcionariosIds || []), obj.funcionarioId].filter(Boolean), obj.data)) return;
                 if (!obj.clienteId) { alert('Selecione um cliente.'); return; }
                 // Aviso (não bloqueia) se já existir outra OS do mesmo cliente + mesmo local + mesmo
@@ -30790,6 +30776,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
