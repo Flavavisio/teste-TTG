@@ -1,4 +1,4 @@
-name: Inspect profile modal orchestration
+name: Migrate profile modal orchestrator
 
 on:
   push:
@@ -6,38 +6,25 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Auditar abrirEditarPerfil
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          start = text.index('function abrirEditarPerfil() {')
-          end = text.index('\n        function fecharModalPerfil()', start)
-          block = text[start:end]
-          print('LINES', len(block.splitlines()))
-          print(block)
-          print('\nTOKENS')
-          for token in [
-              'document.getElementById(',
-              'usuarioLogado',
-              'dados.',
-              'window.TotalGestProfileModalSuperadmin.render({',
-              'window.TotalGestProfileModalDistributor.render({',
-              'window.TotalGestProfileModalAdmin.render({',
-              'window.TotalGestProfileModalWorker.render({',
-              "overlay.classList.add('open')",
-              'campos.innerHTML =',
-              'return;'
-          ]:
-              print(token, block.count(token))
-          PY
+      - run: python3 .github/scripts/migrate-profile-orchestrator.py
+      - run: |
+          node --check assets/js/app-profile-modal.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-shell.js sw.js
+          git commit -m 'Extrair orquestração do modal de perfil'
+          git push origin HEAD:refactor/separar-index-app
