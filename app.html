@@ -23922,15 +23922,20 @@ async function salvarAdmin(e) {
                     showAlert: alert
                 });
             }
-            try {
-                await guardarDados(dados);
-            } catch (err) {
-                alert(`⚠️ Ficou no ecrã, mas ainda não foi possível confirmar a gravação no servidor (${err && err.message ? err.message : err}).\n\nVerifica a ligação à internet — se o erro persistir, este registo pode desaparecer ao recarregar a página. Tenta guardar de novo.`);
-            }
-            registarAuditoria(isEdit ? 'editar' : 'criar', ent, isEdit ? idEditando : obj.id, (obj.nome || obj.descricao || obj.numero || obj.obraDescricao || ''));
-            if (ent === 'servico' && _novaOSObraId) window._osObraCriadaComSucesso = true;
-            fecharModal();
-            renderizarTudo();
+            await window.TotalGestSaveFormFinalize.run({
+                data: dados,
+                value: obj,
+                entity: ent,
+                isEdit: isEdit,
+                editingId: idEditando,
+                newWorkId: _novaOSObraId,
+                saveData: guardarDados,
+                showAlert: alert,
+                audit: registarAuditoria,
+                markServiceWorkCreated: () => { window._osObraCriadaComSucesso = true; },
+                closeModal: fecharModal,
+                renderAll: renderizarTudo
+            });
             const _tornouSeSubadmin = ent === 'funcionario' && obj.role === 'subadmin' && (!isEdit || (_funcAntesDeEditar && _funcAntesDeEditar.role !== 'subadmin'));
             if (ent === 'funcionario' && (!isEdit || _tornouSeSubadmin) && obj.email && obj.senha) {
                 try {
@@ -30666,6 +30671,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
