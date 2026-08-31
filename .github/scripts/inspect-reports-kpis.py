@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 text=Path('app.html').read_text(encoding='utf-8')
 marker='function renderizarReports('
@@ -41,8 +42,6 @@ def scan_end(text, brace):
         i+=1
     raise AssertionError('unclosed')
 end=scan_end(text,brace); block=text[start:end]
-lines=block.splitlines()
-print('LINES',len(lines),'CHARS',len(block))
-for i,line in enumerate(lines,1):
-    if i<=170:
-        print(f'{i:03d}: {line}')
+print('LINES',len(block.splitlines()),'CHARS',len(block))
+for token in ['_emp','_now','_ativo','_empAtivas','_expira','_totFunc','_totEnc','_addons','_recT','_kpi']:
+    print(token, len(re.findall(r'(?<![\\w$])'+re.escape(token)+r'(?![\\w$])', block)))
