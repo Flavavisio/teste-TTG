@@ -1,6 +1,8 @@
-name: Inspect app migration boundary
+name: Audit save-form dispatcher
 
 on:
+  push:
+    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
@@ -8,40 +10,41 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Auditar _salvarFormularioInterno
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestApp.init',
-              'function abrirModal(',
-              'function _salvarFormularioInterno(',
-              'window.TotalGestSaveFormFornecedor.run({',
-              'window.TotalGestSaveFormArtigo.run({',
-              'window.TotalGestSaveFormRequisicao.run({',
-              'window.TotalGestSaveFormObra.run({',
-              'window.TotalGestSaveFormFolha.run({',
-              'window.TotalGestSaveFormCliente.prepare({',
-              'window.TotalGestSaveFormFuncionarioOrchestrator.run({',
-              'window.TotalGestSaveFormServico.run({',
-              'window.TotalGestSaveFormPersist.apply({',
-              'window.TotalGestSaveFormServicoNotifications.run({',
-              'window.TotalGestSaveFormFolhaUsage.apply({',
-              'window.TotalGestSaveFormFolhaOsPending.apply({',
-              'window.TotalGestSaveFormFolhaObraPending.apply({',
-              'window.TotalGestSaveFormFinalize.run({',
-              'window.TotalGestSaveFormAuth.run({',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'function bootstrapSupabase()',
-              'async function carregarDados('
-          ]
-          for item in checks:
-              print(item, text.count(item))
+          marker = 'async function _salvarFormularioInterno(e)'
+          start = text.index(marker)
+          next_marker = '\n        // Os clientes entram no Portal'
+          end = text.index(next_marker, start)
+          block = text[start:end]
+          print(block)
+          print('\n=== resumo ===')
+          print('linhas', block.count('\n') + 1)
+          for token in [
+              'codigoPostalValido(', 'telefoneValido(',
+              'TotalGestSaveFormFuncionarioOrchestrator.run({',
+              'TotalGestSaveFormCliente.prepare({',
+              'TotalGestSaveFormServico.run({',
+              'TotalGestSaveFormFolha.run({',
+              'TotalGestSaveFormPersist.apply({',
+              'TotalGestSaveFormServicoNotifications.run({',
+              'TotalGestSaveFormFolhaUsage.apply({',
+              'TotalGestSaveFormFolhaOsPending.apply({',
+              'TotalGestSaveFormFolhaObraPending.apply({',
+              'TotalGestSaveFormFinalize.run({',
+              'TotalGestSaveFormAuth.run({',
+              'guardarDados(', 'criarUtilizadorAuth(', 'dados.ponto', 'dados.obraPontoLonga',
+              "ent === 'funcionario'", "ent === 'cliente'", "ent === 'servico'", "ent === 'folha'"
+          ]:
+              print(token, block.count(token))
           PY
+          echo 'auditoria-dispatcher-save-form'
