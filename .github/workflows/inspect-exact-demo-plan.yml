@@ -1,8 +1,6 @@
-name: Audit profile modal
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
@@ -10,35 +8,24 @@ permissions:
 
 jobs:
   inspect:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear abrirEditarPerfil
+      - name: Estado dos módulos principais
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
           text = Path('app.html').read_text(encoding='utf-8')
-          start = text.index('        function abrirEditarPerfil() {')
-          end = text.index('\n        function ', start + 20)
-          block = text[start:end]
-          print('linhas', block.count('\n') + 1)
-          print('\n=== ramos por role ===')
-          for n,line in enumerate(block.splitlines(),1):
-              if 'usuarioLogado.role' in line or 'usuarioLogado?.role' in line or "role ===" in line or 'else {' in line:
-                  print(n, line.strip())
-          print('\n=== chamadas ===')
-          calls = {}
-          for name in re.findall(r'(?<![.\w])([A-Za-z_$][\w$]*)\s*\(', block):
-              calls[name] = calls.get(name,0)+1
-          for name,count in sorted(calls.items()):
-              print(name, count)
-          print('\n=== globals conhecidos ===')
-          for token in ['obterConfig(', 'obterDadosBancarios(', 'adminAtual(', '_tenantId(', 'modulo', 'dados.', 'usuarioLogado', 'escapeHtmlSimples(', 'getFuncionariosByAdmin(', 'opcoesVeiculos(', 'overlay.style', 'campos.innerHTML']:
-              print(token, block.count(token))
-          print('\n=== final da função ===')
-          print('\n'.join(block.splitlines()[-70:]))
+          checks = [
+              'window.TotalGestSaveFormServico.run({',
+              'function abrirEditarPerfil()',
+              'function _salvarFormularioInterno(',
+              'function guardarDados()',
+              'async function _sincronizar()',
+              'async function carregarDados('
+          ]
+          for item in checks:
+              print(item, text.count(item))
           PY
