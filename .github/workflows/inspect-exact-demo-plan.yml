@@ -1,4 +1,4 @@
-name: Inspect cliente modal block
+name: Migrate cliente modal
 
 on:
   push:
@@ -7,28 +7,28 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear bloco cliente de abrirModal
+      - name: Extrair modal de cliente
+        run: python3 .github/scripts/migrate-modal-cliente.py
+      - name: Validar
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8')
-          lines=text.splitlines()
-          start=next(i for i,l in enumerate(lines) if "} else if (entidade === 'cliente') {" in l and i>22000)
-          end=next(i for i,l in enumerate(lines[start+1:],start+1) if "} else if (entidade === 'servico') {" in l)
-          print(f'cliente abrirModal: {start+1}-{end} ({end-start} linhas)')
-          for i in range(start,end): print(f'{i+1}: {lines[i]}')
-          block='\n'.join(lines[start:end])
-          print('\n=== DEPENDENCIAS ===')
-          for term in ['dados.','usuarioLogado','adminAtual(','_tenantId(','escapeHtml','opcoes','document.','item','isEdit','gerarId(','supa.','guardarDados(']:
-              print(term,block.count(term))
-          PY
+          node --check assets/js/app-modal-cliente.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
+      - name: Gravar migração
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-shell.js assets/js/app-modal-cliente.js sw.js
+          git commit -m 'Extrair formulário do modal de cliente'
+          git push origin HEAD:refactor/separar-index-app
