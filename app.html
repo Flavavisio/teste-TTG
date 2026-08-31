@@ -2898,21 +2898,20 @@
         // Nada é apagado da base de dados — isto só limita o que a app pede ao entrar.
         let _pontoCarregadoDesde = null;
         function _dataCorteMeses(meses) {
-            const d = new Date();
-            d.setMonth(d.getMonth() - meses);
-            return d.toISOString().slice(0, 10);
+            return window.TotalGestPeriodLoading.cutoffMonths(meses);
         }
 
         // Vai buscar ponto mais antigo que o já carregado, se for preciso (ex: relatório de
         // assiduidade com uma data de início anterior ao que já está em memória).
         async function garantirPontoCarregado(desdeStr) {
-            if (!desdeStr || !_pontoCarregadoDesde || desdeStr >= _pontoCarregadoDesde) return; // já temos tudo
-            const { data, error } = await supa.from('ponto').select('*').gte('data', desdeStr).lt('data', _pontoCarregadoDesde);
-            if (error) { console.error('carregar ponto mais antigo:', error.message); return; }
-            const novos = (data || []).map(M.ponto.from);
-            const idsJaTinha = new Set((dados.ponto || []).map(p => p.id));
-            dados.ponto = [...(dados.ponto || []), ...novos.filter(p => !idsJaTinha.has(p.id))];
-            _pontoCarregadoDesde = desdeStr;
+            return window.TotalGestPeriodLoading.ensurePoint({
+                desde: desdeStr,
+                currentSince: _pontoCarregadoDesde,
+                supabase: supa,
+                data: dados,
+                fromRow: M.ponto.from,
+                setSince: value => { _pontoCarregadoDesde = value; }
+            });
         }
 
         // Fase 2: Ordens de Serviço CONCLUÍDAS só carregam dos últimos 6 meses por defeito.
@@ -2942,9 +2941,7 @@
             }
         }
         function _mesesDesdeCorteAtual(corteStr) {
-            if (!corteStr) return 0;
-            const hoje = new Date(), corte = new Date(corteStr + 'T00:00:00');
-            return Math.max(0, Math.round((hoje - corte) / (30.44 * 24 * 60 * 60 * 1000)));
+            return window.TotalGestPeriodLoading.monthsSinceCutoff(corteStr);
         }
 
         // Fase 3: Folhas de Obra JÁ ASSINADAS só carregam dos últimos 3 meses por defeito.
@@ -2953,33 +2950,25 @@
         let _folhasCarregadoDesde = null;
 
         async function garantirFolhasCarregadas(desdeStr) {
-            if (!desdeStr || !_folhasCarregadoDesde || desdeStr >= _folhasCarregadoDesde) return 0; // já temos tudo
-            const { data, error } = await supa.from('folhas_obra').select('*')
-                .not('assinatura', 'is', null)
-                .gte('data', desdeStr)
-                .lt('data', _folhasCarregadoDesde);
-            if (error) { console.error('carregar folhas mais antigas:', error.message); _folhasCarregadoDesde = desdeStr; return 0; }
-            const novos = (data || []).map(M.folhasObra.from);
-            const idsJaTinha = new Set((dados.folhasObra || []).map(f => f.id));
-            const aAdicionar = novos.filter(f => !idsJaTinha.has(f.id));
-            dados.folhasObra = [...(dados.folhasObra || []), ...aAdicionar];
-            _folhasCarregadoDesde = desdeStr;
-            return aAdicionar.length;
+            return window.TotalGestPeriodLoading.ensureSheets({
+                desde: desdeStr,
+                currentSince: _folhasCarregadoDesde,
+                supabase: supa,
+                data: dados,
+                fromRow: M.folhasObra.from,
+                setSince: value => { _folhasCarregadoDesde = value; }
+            });
         }
 
         async function garantirServicosCarregados(desdeStr) {
-            if (!desdeStr || !_servicosCarregadoDesde || desdeStr >= _servicosCarregadoDesde) return 0; // já temos tudo
-            const { data, error } = await supa.from('servicos').select('*')
-                .eq('status', 'concluído')
-                .gte('data', desdeStr)
-                .lt('data', _servicosCarregadoDesde);
-            if (error) { console.error('carregar OS mais antigas:', error.message); _servicosCarregadoDesde = desdeStr; return 0; }
-            const novos = (data || []).map(M.servicos.from);
-            const idsJaTinha = new Set((dados.servicos || []).map(s => s.id));
-            const aAdicionar = novos.filter(s => !idsJaTinha.has(s.id));
-            dados.servicos = [...(dados.servicos || []), ...aAdicionar];
-            _servicosCarregadoDesde = desdeStr;
-            return aAdicionar.length;
+            return window.TotalGestPeriodLoading.ensureServices({
+                desde: desdeStr,
+                currentSince: _servicosCarregadoDesde,
+                supabase: supa,
+                data: dados,
+                fromRow: M.servicos.from,
+                setSince: value => { _servicosCarregadoDesde = value; }
+            });
         }
 
         async function _obterTenantDoUser(userId) {
@@ -31960,6 +31949,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
