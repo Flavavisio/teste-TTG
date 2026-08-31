@@ -24205,56 +24205,19 @@ async function salvarAdmin(e) {
                 });
                 return;
             } else if (ent === 'obra') {
-                const nome = document.getElementById('ob_nome').value.trim();
-                if (!nome) { alert('Indique o nome da obra.'); return; }
-                const _obDescricao = document.getElementById('ob_obs')?.value.trim();
-                if (!_obDescricao || _obDescricao.length < 3) {
-                    mostrarErro('Descreve a obra (pelo menos 3 caracteres).');
-                    document.getElementById('ob_obs')?.focus();
-                    return;
-                }
-                const novoEstado = document.getElementById('ob_estado').value;
-                let estadoAnterior = null;
-                if (isEdit) { const ex = dados.obras?.find(o => o.id === idEditando); estadoAnterior = ex ? ex.estado : null; }
-                const obraId = idEditando;
-                const _obClienteId = document.getElementById('ob_cliente').value || null;
-                const _obCliente = _obClienteId ? dados.clientes?.find(c => c.id === _obClienteId) : null;
-                const _obAdminId = (usuarioLogado.role === 'admin' ? usuarioLogado.id : usuarioLogado.adminId);
-                let _obLocalId = document.getElementById('ob_local')?.value || '';
-                let _obMorada = '', _obCp = '', _obCidade = '', _obNumero = '', _obFreguesia = '';
-                if (_obLocalId === '__novo__') {
-                    const nomeNovoLocal = (document.getElementById('ob_local_nome')?.value || '').trim();
-                    if (!nomeNovoLocal) { alert('Indique o nome do novo local.'); return; }
-                    _obMorada = document.getElementById('ob_morada')?.value.trim() || '';
-                    _obNumero = document.getElementById('ob_local_numero')?.value.trim() || '';
-                    _obCp = document.getElementById('ob_cp')?.value.trim() || '';
-                    _obCidade = document.getElementById('ob_cidade')?.value.trim() || '';
-                    _obFreguesia = document.getElementById('ob_local_freguesia')?.value.trim() || '';
-                    _obLocalId = gerarId();
-                    dados.locais = dados.locais || [];
-                    dados.locais.push({ id: _obLocalId, adminId: _obAdminId, clienteId: _obClienteId, nome: nomeNovoLocal, morada: _obMorada, numeroPorta: _obNumero, codigoPostal: _obCp, cidade: _obCidade, freguesia: _obFreguesia, pinMapa: document.getElementById('ob_local_pin_mapa')?.value.trim() || null, dataCriacao: Date.now() });
-                } else if (_obLocalId) {
-                    const localSelecionado = dados.locais?.find(l => l.id === _obLocalId);
-                    _obMorada = localSelecionado?.morada || ''; _obCp = localSelecionado?.codigoPostal || ''; _obCidade = localSelecionado?.cidade || '';
-                } else {
-                    _obLocalId = null;
-                    _obMorada = _obCliente?.morada || _obCliente?.endereco || ''; _obCp = _obCliente?.codigoPostal || ''; _obCidade = _obCliente?.cidade || '';
-                }
-                const _obIdsAtribuidos = [...document.querySelectorAll('.ob-func-check:checked')].map(c => c.value);
-                obj = { nome, clienteId: _obClienteId, localId: _obLocalId, morada: _obMorada, codigoPostal: _obCp || null, cidade: _obCidade || null, estado: novoEstado, observacoes: document.getElementById('ob_obs').value.trim(), longaDuracao: document.getElementById('ob_longa_duracao')?.checked === true, responsavelId: _obIdsAtribuidos[0] || null, responsaveisIds: _obIdsAtribuidos, relatorioResponsavelId: document.getElementById('ob_relatorio_responsavel') ? (document.getElementById('ob_relatorio_responsavel').value || null) : null, dataInicioPrevista: document.getElementById('ob_data_inicio_prevista')?.value || null, dataFimPrevista: document.getElementById('ob_data_fim_prevista')?.value || null, valor: document.getElementById('ob_valor')?.value !== '' ? parseFloat(document.getElementById('ob_valor').value) : null, custoHora: document.getElementById('ob_custo_hora')?.value !== '' ? parseFloat(document.getElementById('ob_custo_hora').value) : null, temAutosMedicao: document.getElementById('ob_tem_autos_medicao')?.checked === true, adminId: _obAdminId };
-                _guardarArmazem('obras', obj, isEdit);
-                if (isEdit && estadoAnterior === 'preparacao' && novoEstado === 'ativa') {
-                    setTimeout(() => {
-                        tgConfirm('A obra passou a Ativa. Criar uma Ordem de Serviço com os materiais necessários?', { titulo: 'Obra ativada', tipo: 'sucesso', icone: 'fa-hard-hat', textoOk: 'Criar OS' })
-                            .then(sim => { if (sim) criarOSdaObra(obraId); });
-                    }, 120);
-                } else if (!isEdit && novoEstado === 'ativa') {
-                    const novoObraId = obj.id;
-                    setTimeout(() => {
-                        tgConfirm('A obra foi criada já como Ativa. Criar uma Ordem de Serviço com os materiais necessários?', { titulo: 'Obra ativada', tipo: 'sucesso', icone: 'fa-hard-hat', textoOk: 'Criar OS' })
-                            .then(sim => { if (sim) criarOSdaObra(novoObraId, true); });
-                    }, 120);
-                }
+                window.TotalGestSaveFormObra.run({
+                    document: document,
+                    data: dados,
+                    user: usuarioLogado,
+                    isEdit: isEdit,
+                    editingId: idEditando,
+                    generateId: gerarId,
+                    showError: mostrarErro,
+                    showAlert: alert,
+                    saveWarehouse: _guardarArmazem,
+                    confirm: tgConfirm,
+                    createServiceOrder: criarOSdaObra
+                });
                 return;
             } else {
                 fecharModal();
@@ -31128,6 +31091,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
