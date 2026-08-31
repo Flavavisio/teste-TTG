@@ -1,4 +1,4 @@
-name: Inspect pending file migration
+name: Migrate sync files
 
 on:
   push:
@@ -7,42 +7,30 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear migrarFicheirosPendentes
+      - name: Extrair migração de ficheiros pendentes
+        run: python3 .github/scripts/migrate-sync-files.py
+      - name: Validar módulos JavaScript
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          lines = Path('app.html').read_text(encoding='utf-8').splitlines()
-          targets = ['async function migrarFicheirosPendentes', 'function migrarFicheirosPendentes']
-          start = next(i for i,l in enumerate(lines) if any(t in l for t in targets))
-          depth = 0
-          begun = False
-          end = None
-          for i in range(start, len(lines)):
-              line = lines[i]
-              for ch in line:
-                  if ch == '{':
-                      depth += 1
-                      begun = True
-                  elif ch == '}':
-                      depth -= 1
-              if begun and depth == 0:
-                  end = i + 1
-                  break
-          print('=== FUNCAO ===')
-          for i in range(start, end):
-              print(f'{i+1}: {lines[i]}')
-          print('=== REFERENCIAS ===')
-          text = '\n'.join(lines)
-          for term in ['migrarFicheirosPendentes()', 'upload', 'storage', 'base64', 'data:', 'ficheiro', 'anexo']:
-              print(term, text.count(term))
-          PY
+          node --check assets/js/app-sync-files.js
+          node --check assets/js/app-shell.js
+          node --check sw.js
+      - name: Validar e gravar
+        run: |
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/scripts/migrate-sync-files.py
+          git add app.html assets/js/app-sync-files.js assets/js/app-shell.js sw.js .github/scripts/migrate-sync-files.py
+          git diff --cached --check
+          git commit -m "Extrair migração de ficheiros pendentes"
+          git push origin HEAD:refactor/separar-index-app
