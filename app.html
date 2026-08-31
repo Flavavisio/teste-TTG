@@ -3271,16 +3271,13 @@
             });
             erros += deleteResult.errors;
             if (!primeiroErro && deleteResult.firstError) primeiroErro = deleteResult.firstError;
-            mostrarStatusSync(erros, primeiroErro);
-            _guardarCacheLocal(); // mantém a cópia local a par do que já foi confirmado no servidor
-            mostrarStatusOffline(erros > 0); // atualiza sempre o aviso (limpa se já sincronizado, ou mostra o erro real se falhou)
-            // IMPORTANTE: sem isto, quem chama guardarDados(dados) e usa try/catch para saber se a
-            // gravação foi mesmo confirmada (ex: antes de mostrar "sucesso" a alguém) nunca ficava a
-            // saber que algo falhou — esta função só registava o erro num contador interno e seguia
-            // em frente sem avisar ninguém. Agora, se alguma tabela falhou a sério nesta chamada,
-            // a promise devolvida por guardarDados() falha também, e quem estiver à espera dela
-            // (com await + try/catch) fica mesmo a saber, em vez de pensar que ficou tudo guardado.
-            if (erros > 0) throw new Error(primeiroErro || 'Não foi possível confirmar a gravação no servidor.');
+            window.TotalGestSyncFinalize.run({
+                errors: erros,
+                firstError: primeiroErro,
+                showSyncStatus: mostrarStatusSync,
+                saveCache: _guardarCacheLocal,
+                showOfflineStatus: mostrarStatusOffline
+            });
         }
 
         // -------- bootstrap --------
@@ -32029,6 +32026,6 @@ window._relPrefill = function(msg){
 </div>
 
   <script src="./assets/js/app-shell.js"></script>
-  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true, syncPrepare: true, syncFiles: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true, syncPrepare: true, syncFiles: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
