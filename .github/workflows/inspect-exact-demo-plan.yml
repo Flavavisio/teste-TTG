@@ -1,34 +1,38 @@
-name: Migrate artigo modal
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Extrair modal de artigo
-        run: python3 .github/scripts/migrate-modal-artigo.py
-      - name: Validar
+      - name: Estado dos módulos principais
         run: |
-          node --check assets/js/app-modal-artigo.js
-          for f in assets/js/app-*.js; do node --check "$f"; done
-          node --check sw.js
-          git diff --check
-      - name: Gravar migração
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app.html assets/js/app-shell.js assets/js/app-modal-artigo.js sw.js
-          git commit -m 'Extrair formulário do modal de artigo'
-          git push origin HEAD:refactor/separar-index-app
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('app.html').read_text(encoding='utf-8')
+          checks = [
+              'window.TotalGestApp.init',
+              'function guardarDados()',
+              'async function _sincronizar()',
+              'function bootstrapSupabase()',
+              'async function carregarDados(',
+              'const FICHEIRO_CAMPOS = {',
+              'async function uploadDataURL(dataUrl, pasta)',
+              'function registarHistoricoLicenca(',
+              'window.TotalGestModalFuncionario.render({',
+              'window.TotalGestModalCliente.render({',
+              'window.TotalGestModalFornecedor.render({',
+              'window.TotalGestModalRequisicao.render({',
+              'window.TotalGestModalArtigo.render({'
+          ]
+          for item in checks:
+              print(item, text.count(item))
+          PY
