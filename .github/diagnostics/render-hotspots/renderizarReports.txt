@@ -1,0 +1,353 @@
+function renderizarReports() {
+            const container = document.getElementById('reportsContent');
+            if (usuarioLogado?.role === 'superadmin') {
+                const admins = dados.administradores || [];
+                const _emp = admins.filter(a => a.id !== 'superadmin');
+                const _now = Date.now();
+                const _ativo = a => !!(a.licenca && a.ativo !== false && a.licenca.dataExpiracao && a.licenca.dataExpiracao > _now);
+                const _empAtivas = _emp.filter(_ativo).length;
+                const _expira = _emp.filter(a => a.licenca && a.licenca.dataExpiracao > _now && (a.licenca.dataExpiracao - _now) <= 10 * 86400000).length;
+                const _totFunc = (dados.funcionarios || []).filter(f => f.role !== 'admin' && f.role !== 'superadmin').length;
+                const _totEnc = (dados.encarregados || []).length;
+                const _addons = _emp.filter(a => moduloContratosAtivo(a)).length + _emp.filter(a => moduloFrotaAtivo(a)).length + _emp.filter(a => moduloArmazemAtivo(a)).length + _emp.filter(a => moduloCrmAtivo(a)).length + _emp.filter(a => moduloErpAtivo(a)).length;
+                let _recT = 0;
+                _emp.forEach(a => { if (_ativo(a)) _recT += valorBaseCobradoDe(a); if (moduloContratosAtivo(a)) _recT += (a.contratosPlano === 'anual' ? PRECO_CONTRATOS_ANUAL : PRECO_CONTRATOS_MENSAL); if (moduloFrotaAtivo(a)) _recT += (a.frotaPlano === 'anual' ? PRECO_FROTA_ANUAL : PRECO_FROTA_MENSAL); if (moduloArmazemAtivo(a)) _recT += (a.armazemPlano === 'anual' ? PRECO_ARMAZEM_ANUAL : PRECO_ARMAZEM_MENSAL); if (moduloCrmAtivo(a)) _recT += (a.crmPlano === 'anual' ? PRECO_CRM_ANUAL : PRECO_CRM_MENSAL); /* Assist incluído no CRM — não soma à parte */ if (moduloErpAtivo(a)) _recT += (a.erpPlano === 'anual' ? PRECO_ERP_ANUAL : PRECO_ERP_MENSAL); });
+                const _kpi = (lbl, val, cor, ic) => `<div style="border:1px solid #e6eaf2;border-left:4px solid ${cor};border-radius:10px;padding:12px 14px;background:#fff;"><div style="font-size:.78rem;color:#64748b;"><i class="fas ${ic}" style="color:${cor};"></i> ${lbl}</div><div style="font-size:1.2rem;font-weight:800;color:#0f172a;margin-top:4px;">${val}</div></div>`;
+                let html = `<div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button class="btn btn-outline" onclick="relSuperAdminPDF()"><i class="fas fa-file-pdf"></i> Exportar PDF</button></div>`;
+                html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:16px;">
+                    ${_kpi('Empresas', _emp.length + ` <span style=\"font-size:.7rem;color:#16a34a;\">(${_empAtivas} ativas)</span>`, '#2563eb', 'fa-building')}
+                    ${_kpi('Utilizadores', String(_totFunc + _totEnc), '#0e7490', 'fa-users')}
+                    ${_kpi('Add-ons ativos', String(_addons), '#b45309', 'fa-puzzle-piece')}
+                    ${_kpi('A expirar (≤10d)', String(_expira), _expira ? '#dc2626' : '#16a34a', 'fa-hourglass-half')}
+                    ${_kpi('Receita recorrente', _recT.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €', '#16a34a', 'fa-euro-sign')}
+                </div>`;
+                html += `<div class="report-card"><h4><i class="fas fa-chart-line"></i> Resumo por Empresa</h4>`;
+                if (admins.length === 0) {
+                    html += `<p class="text-muted">Nenhuma empresa registada.</p>`;
+                } else {
+                    html += `<div class="table-wrapper"><table>
+                                <thead><tr><th>Empresa</th><th>Administrador</th><th>Plano</th><th>Expiração</th><th>Funcionários</th><th>Encarregados</th><th>Contratos</th><th>Frota</th><th>Armazém</th><th>CRM + Assist</th><th>ERP</th><th>Rondas</th><th>Receita (€)</th></tr></thead><tbody>`;
+                    let totalReceitaGlobal = 0;
+                    let totalFuncGlobal = 0;
+                    let totalEncarregadosGlobal = 0;
+                    let totalContratosGlobal = 0;
+                    let totalFrotaGlobal = 0;
+                    let totalArmazemGlobal = 0;
+                    let totalCrmGlobal = 0;
+                    let totalErpGlobal = 0;
+                    let totalRondasGlobal = 0;
+                    admins.forEach(admin => {
+                        const funcs = dados.funcionarios ? dados.funcionarios.filter(f => f.adminId === admin.id && f
+                            .role !== 'admin' && f.role !== 'superadmin').length : 0;
+                        const encarregados = dados.encarregados ? dados.encarregados.filter(e => e.adminId === admin.id)
+                            .length : 0;
+                        const valor = admin.licenca && admin.ativo ? valorBaseCobradoDe(admin) : 0;
+                        const temContratos = moduloContratosAtivo(admin);
+                        const temFrota = moduloFrotaAtivo(admin);
+                        const valorContratos = temContratos ? (admin.contratosPlano === 'anual' ? PRECO_CONTRATOS_ANUAL : PRECO_CONTRATOS_MENSAL) : 0;
+                        const valorFrota = temFrota ? (admin.frotaPlano === 'anual' ? PRECO_FROTA_ANUAL : PRECO_FROTA_MENSAL) : 0;
+                        const temArmazem = moduloArmazemAtivo(admin);
+                        const valorArmazem = temArmazem ? (admin.armazemPlano === 'anual' ? PRECO_ARMAZEM_ANUAL : PRECO_ARMAZEM_MENSAL) : 0;
+                        const temCrm = moduloCrmAtivo(admin);
+                        const valorCrm = temCrm ? (admin.crmPlano === 'anual' ? PRECO_CRM_ANUAL : PRECO_CRM_MENSAL) : 0;
+                        const temErp = moduloErpAtivo(admin);
+                        const valorErp = temErp ? (admin.erpPlano === 'anual' ? PRECO_ERP_ANUAL : PRECO_ERP_MENSAL) : 0;
+                        // Rondas: grátis por agora (fase de lançamento) — a soma já está pronta para
+                        // quando passar a ter preço, só é preciso mudar PRECO_RONDAS_MENSAL/ANUAL.
+                        const temRondas = moduloRondasAtivo(admin);
+                        const valorRondas = temRondas ? (admin.rondasPlano === 'anual' ? PRECO_RONDAS_ANUAL : PRECO_RONDAS_MENSAL) : 0;
+                        const valorEmpresa = valor + valorContratos + valorFrota + valorArmazem + valorCrm + valorErp + valorRondas;
+                        const dataExp = admin.licenca ? new Date(admin.licenca.dataExpiracao).toLocaleDateString(
+                            'pt-PT') : '-';
+                        const planoLabel = admin.licenca ? PLANOS[admin.licenca.plano]?.label || admin.licenca.plano :
+                            'Sem licença';
+                        const maxFunc = admin.licenca ? admin.licenca.maxFuncionarios : 0;
+                        const atingiuLimite = funcs >= maxFunc && maxFunc > 0;
+                        const rowClass = atingiuLimite ? 'tr-limite-atingido' : '';
+                        totalReceitaGlobal += valorEmpresa;
+                        totalFuncGlobal += funcs;
+                        totalEncarregadosGlobal += encarregados;
+                        if (temContratos) totalContratosGlobal++;
+                        if (temFrota) totalFrotaGlobal++;
+                        if (temArmazem) totalArmazemGlobal++;
+                        if (temCrm) totalCrmGlobal++;
+                        if (temErp) totalErpGlobal++;
+                        if (temRondas) totalRondasGlobal++;
+                        html += `<tr class="${rowClass}">
+                                    <td>${admin.empresa || 'Sem empresa'}</td>
+                                    <td>${admin.nome}</td>
+                                    <td>${planoLabel}</td>
+                                    <td>${dataExp}</td>
+                                    <td>${funcs}${atingiuLimite ? ' ⚠️' : ''}</td>
+                                    <td>${encarregados}</td>
+                                    <td style="text-align:center; color:${temContratos ? '#16a34a' : '#cbd5e1'};">${temContratos ? '✓' : '—'}</td>
+                                    <td style="text-align:center; color:${temFrota ? '#16a34a' : '#cbd5e1'};">${temFrota ? '✓' : '—'}</td>
+                                    <td style="text-align:center; color:${temArmazem ? '#16a34a' : '#cbd5e1'};">${temArmazem ? '✓' : '—'}</td>
+                                    <td style="text-align:center; color:${temCrm ? '#16a34a' : '#cbd5e1'};">${temCrm ? '✓' : '—'}</td>
+                                    <td style="text-align:center; color:${temErp ? '#16a34a' : '#cbd5e1'};">${temErp ? '✓' : '—'}</td>
+                                    <td style="text-align:center; color:${temRondas ? '#16a34a' : '#cbd5e1'};">${temRondas ? '✓' : '—'}</td>
+                                    <td>${valorEmpresa.toFixed(2)}</td>
+                                </tr>`;
+                    });
+                    html += `<tr style="font-weight:bold; background:#f1f5f9;">
+                                <td colspan="4">Total Geral</td>
+                                <td>${totalFuncGlobal}</td>
+                                <td>${totalEncarregadosGlobal}</td>
+                                <td style="text-align:center;">${totalContratosGlobal}</td>
+                                <td style="text-align:center;">${totalFrotaGlobal}</td>
+                                <td style="text-align:center;">${totalArmazemGlobal}</td>
+                                <td style="text-align:center;">${totalCrmGlobal}</td>
+                                <td style="text-align:center;">${totalErpGlobal}</td>
+                                <td style="text-align:center;">${totalRondasGlobal}</td>
+                                <td>${totalReceitaGlobal.toFixed(2)}</td>
+                            </tr>`;
+                    html += `</tbody></table></div>`;
+                }
+                html += `</div>`;
+                // Licenças de Manutenção (módulo Contratos)
+                const comContratos = admins.filter(a => a.contratosPlano && a.contratosExpiracao && a.contratosExpiracao > Date.now());
+                const mensais = comContratos.filter(a => a.contratosPlano === 'mensal').length;
+                const anuais = comContratos.filter(a => a.contratosPlano === 'anual').length;
+                const receitaManut = mensais * PRECO_CONTRATOS_MENSAL + anuais * PRECO_CONTRATOS_ANUAL;
+                html += `<div class="report-card">
+                            <h4><i class="fas fa-file-signature"></i> Licenças de Contratos de Manutenção</h4>
+                            <div class="report-item"><span>Empresas com módulo ativo</span><span>${comContratos.length}</span></div>
+                            <div class="report-item"><span>Plano Mensal</span><span>${mensais}</span></div>
+                            <div class="report-item"><span>Plano Anual</span><span>${anuais}</span></div>
+                            <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Receita do módulo</span><span>${receitaManut.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span></div>
+                        </div>`;
+                // Licenças de Frota
+                const comFrota = admins.filter(a => a.frotaPlano && a.frotaExpiracao && a.frotaExpiracao > Date.now());
+                const frotaMensais = comFrota.filter(a => a.frotaPlano === 'mensal').length;
+                const frotaAnuais = comFrota.filter(a => a.frotaPlano === 'anual').length;
+                const receitaFrota = frotaMensais * PRECO_FROTA_MENSAL + frotaAnuais * PRECO_FROTA_ANUAL;
+                html += `<div class="report-card">
+                            <h4><i class="fas fa-car"></i> Licenças de Frota</h4>
+                            <div class="report-item"><span>Empresas com módulo ativo</span><span>${comFrota.length}</span></div>
+                            <div class="report-item"><span>Plano Mensal</span><span>${frotaMensais}</span></div>
+                            <div class="report-item"><span>Plano Anual</span><span>${frotaAnuais}</span></div>
+                            <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Receita do módulo</span><span>${receitaFrota.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span></div>
+                        </div>`;
+                // Licenças de Armazém
+                const comArmazem = admins.filter(a => a.id !== 'superadmin' && moduloArmazemAtivo(a));
+                const armMensais = comArmazem.filter(a => a.armazemPlano === 'mensal').length;
+                const armAnuais = comArmazem.filter(a => a.armazemPlano === 'anual').length;
+                const armDemos = comArmazem.filter(a => a.armazemPlano === 'demo').length;
+                const receitaArmazem = armMensais * PRECO_ARMAZEM_MENSAL + armAnuais * PRECO_ARMAZEM_ANUAL;
+                html += `<div class="report-card">
+                            <h4><i class="fas fa-boxes"></i> Licenças de Armazém</h4>
+                            <div class="report-item"><span>Empresas com módulo ativo</span><span>${comArmazem.length}</span></div>
+                            <div class="report-item"><span>Plano Mensal</span><span>${armMensais}</span></div>
+                            <div class="report-item"><span>Plano Anual</span><span>${armAnuais}</span></div>
+                            ${armDemos ? `<div class="report-item"><span>Demo</span><span>${armDemos}</span></div>` : ''}
+                            <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Receita do módulo</span><span>${receitaArmazem.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span></div>
+                        </div>`;
+                // Licenças de Notificações
+                const comNotif = admins.filter(a => a.id !== 'superadmin' && moduloNotificacoesAtivo(a));
+                const notifMensais = comNotif.filter(a => a.notificacoesPlano === 'mensal').length;
+                const notifAnuais = comNotif.filter(a => a.notificacoesPlano === 'anual').length;
+                const notifDemos = comNotif.filter(a => a.notificacoesPlano === 'demo').length;
+                const receitaNotif = notifMensais * PRECO_NOTIFICACOES_MENSAL + notifAnuais * PRECO_NOTIFICACOES_ANUAL;
+                html += `<div class="report-card">
+                            <h4><i class="fas fa-bell"></i> Licenças de Notificações</h4>
+                            <div class="report-item"><span>Empresas com módulo ativo</span><span>${comNotif.length}</span></div>
+                            <div class="report-item"><span>Plano Mensal</span><span>${notifMensais}</span></div>
+                            <div class="report-item"><span>Plano Anual</span><span>${notifAnuais}</span></div>
+                            ${notifDemos ? `<div class="report-item"><span>Demo</span><span>${notifDemos}</span></div>` : ''}
+                            <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Receita do módulo</span><span>${receitaNotif.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span></div>
+                        </div>`;
+                // Licenças de CRM Comercial + Assist
+                const comCrm = admins.filter(a => a.id !== 'superadmin' && moduloCrmAtivo(a));
+                const crmMensais = comCrm.filter(a => a.crmPlano === 'mensal').length;
+                const crmAnuais = comCrm.filter(a => a.crmPlano === 'anual').length;
+                const crmDemos = comCrm.filter(a => a.crmPlano === 'demo').length;
+                const receitaCrm = crmMensais * PRECO_CRM_MENSAL + crmAnuais * PRECO_CRM_ANUAL;
+                html += `<div class="report-card">
+                            <h4><i class="fas fa-bullseye"></i> Licenças de CRM Comercial + Assist</h4>
+                            <div class="report-item"><span>Empresas com módulo ativo</span><span>${comCrm.length}</span></div>
+                            <div class="report-item"><span>Plano Mensal</span><span>${crmMensais}</span></div>
+                            <div class="report-item"><span>Plano Anual</span><span>${crmAnuais}</span></div>
+                            ${crmDemos ? `<div class="report-item"><span>Demo</span><span>${crmDemos}</span></div>` : ''}
+                            <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Receita do módulo</span><span>${receitaCrm.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span></div>
+                        </div>`;
+                // Nota: o Total Gest Assist deixou de ter card/receita própria — vem sempre incluído
+                // na licença de CRM Comercial (mesma subscrição, mesmo valor, já contabilizado acima).
+                // Receita por módulo (barra)
+                const _adm = admins.filter(a => a.id !== 'superadmin');
+                let recBase = 0; _adm.forEach(a => { if (a.licenca && a.ativo !== false && a.licenca.dataExpiracao > Date.now()) recBase += valorBaseCobradoDe(a); });
+                const mods = [{ l: 'Licenças base', v: recBase, c: '#2563eb' }, { l: 'Contratos', v: receitaManut, c: '#16a34a' }, { l: 'Frota', v: receitaFrota, c: '#0ea5e9' }, { l: 'Armazém', v: receitaArmazem, c: '#b45309' }, { l: 'Notificações', v: receitaNotif, c: '#e11d48' }, { l: 'CRM + Assist', v: receitaCrm, c: '#7c3aed' }];
+                const maxMod = Math.max(1, ...mods.map(m => m.v));
+                const recTot = recBase + receitaManut + receitaFrota + receitaArmazem + receitaNotif + receitaCrm;
+                let barras = '';
+                mods.forEach(m => { barras += `<div style="margin:8px 0;"><div style="display:flex;justify-content:space-between;font-size:.85rem;"><span>${m.l}</span><strong>${m.v.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</strong></div><div style="background:#eef2f7;border-radius:6px;height:10px;overflow:hidden;margin-top:3px;"><div style="height:100%;width:${Math.round(m.v / maxMod * 100)}%;background:${m.c};"></div></div></div>`; });
+                html += `<div class="report-card"><h4><i class="fas fa-coins"></i> Receita por módulo</h4>${barras}<div class="report-item" style="font-weight:bold;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:6px;"><span>Total</span><span>${recTot.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span></div></div>`;
+                container.innerHTML = html;
+                return;
+            }
+
+            if (usuarioLogado?.role === 'admin' && adminAtual()?.ehDistribuidor) {
+                // Resumo por Empresa, igual em espírito ao do Super Admin, mas só com os clientes
+                // deste distribuidor e mostrando o que ELE cobra a cada um (não o valor grossista
+                // que paga à Total Gest — isso já está no dashboard "Início").
+                const admin = adminAtual();
+                const meusClientes = (dados.administradores || []).filter(a => a.distribuidorId === admin.id);
+                const _kpi = (lbl, val, cor, ic) => `<div style="border:1px solid #e6eaf2;border-left:4px solid ${cor};border-radius:10px;padding:12px 14px;background:#fff;"><div style="font-size:.78rem;color:#64748b;"><i class="fas ${ic}" style="color:${cor};"></i> ${lbl}</div><div style="font-size:1.2rem;font-weight:800;color:#0f172a;margin-top:4px;">${val}</div></div>`;
+                const ativos = meusClientes.filter(c => c.licenca && c.ativo !== false && isLicencaValida(c.licenca.dataExpiracao));
+                let html = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:16px;">
+                    ${_kpi('Clientes', meusClientes.length + ` <span style=\"font-size:.7rem;color:#16a34a;\">(${ativos.length} ativos)</span>`, '#7c3aed', 'fa-user-tie')}
+                </div>`;
+                html += `<div class="report-card"><h4><i class="fas fa-chart-line"></i> Resumo por Cliente</h4>`;
+                if (!meusClientes.length) {
+                    html += `<p class="text-muted">Ainda não criaste nenhum cliente.</p>`;
+                } else {
+                    html += `<div class="table-wrapper"><table>
+                                <thead><tr><th>Empresa</th><th>Administrador</th><th>Plano</th><th>Expiração</th><th>Funcionários</th><th>Contratos</th><th>Frota</th><th>Armazém</th><th>CRM+Assist</th><th>Cobras (€)</th></tr></thead><tbody>`;
+                    let totalCobradoGlobal = 0;
+                    meusClientes.forEach(c => {
+                        const funcs = (dados.funcionarios || []).filter(f => f.adminId === c.id && f.role !== 'admin' && f.role !== 'superadmin').length;
+                        const temContratos = moduloContratosAtivo(c), temFrota = moduloFrotaAtivo(c), temArmazem = moduloArmazemAtivo(c), temCrm = moduloCrmAtivo(c);
+                        const valorBase = c.precoDistribuidorCobrado != null ? c.precoDistribuidorCobrado : (c.licenca ? parseFloat(getValorPlano(c.licenca.plano)) : 0);
+                        const valorAddons = (temContratos ? (c.contratosPlano === 'anual' ? PRECO_CONTRATOS_ANUAL / 12 : PRECO_CONTRATOS_MENSAL) : 0) + (temFrota ? (c.frotaPlano === 'anual' ? PRECO_FROTA_ANUAL / 12 : PRECO_FROTA_MENSAL) : 0) + (temArmazem ? (c.armazemPlano === 'anual' ? PRECO_ARMAZEM_ANUAL / 12 : PRECO_ARMAZEM_MENSAL) : 0) + (temCrm ? (c.crmPlano === 'anual' ? PRECO_CRM_ANUAL / 12 : PRECO_CRM_MENSAL) : 0);
+                        const valorCliente = valorBase + valorAddons;
+                        totalCobradoGlobal += valorCliente;
+                        const dataExp = c.licenca ? new Date(c.licenca.dataExpiracao).toLocaleDateString('pt-PT') : '-';
+                        const planoLabel = c.licenca ? PLANOS[c.licenca.plano]?.label || c.licenca.plano : 'Sem licença';
+                        html += `<tr>
+                            <td>${c.empresa || '-'}</td><td>${c.nome}</td><td>${planoLabel}</td><td>${dataExp}</td><td>${funcs}</td>
+                            <td style="text-align:center;color:${temContratos ? '#16a34a' : '#cbd5e1'};">${temContratos ? '✓' : '—'}</td>
+                            <td style="text-align:center;color:${temFrota ? '#16a34a' : '#cbd5e1'};">${temFrota ? '✓' : '—'}</td>
+                            <td style="text-align:center;color:${temArmazem ? '#16a34a' : '#cbd5e1'};">${temArmazem ? '✓' : '—'}</td>
+                            <td style="text-align:center;color:${temCrm ? '#16a34a' : '#cbd5e1'};">${temCrm ? '✓' : '—'}</td>
+                            <td>${valorCliente.toFixed(2)}</td>
+                        </tr>`;
+                    });
+                    html += `<tr style="font-weight:bold;background:#f1f5f9;"><td colspan="10">Total Geral</td><td>${totalCobradoGlobal.toFixed(2)}</td></tr>`;
+                    html += `</tbody></table></div>`;
+                }
+                html += `</div>`;
+                container.innerHTML = html;
+                return;
+            }
+
+            if (!usuarioLogado || usuarioLogado.role !== 'admin' && usuarioLogado.role !== 'subadmin') {
+                container.innerHTML = '<p class="text-muted text-center">Acesso restrito a administradores.</p>';
+                return;
+            }
+            const admin = adminAtual();
+            if (!admin) {
+                container.innerHTML = '<p class="text-muted text-center">Administrador não encontrado.</p>';
+                return;
+            }
+            const totalFunc = dados.funcionarios ? dados.funcionarios.filter(f => f.adminId === admin.id && f.role !== 'admin')
+                .length : 0;
+            const totalCli = dados.clientes ? dados.clientes.filter(c => c.adminId === admin.id).length : 0;
+            const totalOS = dados.servicos ? dados.servicos.filter(s => s.adminId === admin.id).length : 0;
+            const osPend = dados.servicos ? dados.servicos.filter(s => s.adminId === admin.id && s.status === 'pendente')
+                .length : 0;
+            const totalPonto = dados.ponto ? dados.ponto.filter(p => p.adminId === admin.id).length : 0;
+            const totalPedidos = dados.pedidos ? dados.pedidos.filter(p => p.adminId === admin.id).length : 0;
+            const pedPend = dados.pedidos ? dados.pedidos.filter(p => p.adminId === admin.id && p.status === 'pendente_aprov')
+                .length : 0;
+            const totalFolhas = dados.folhasObra ? dados.folhasObra.filter(f => f.adminId === admin.id).length : 0;
+            const totalReqs = dados.requisicoes ? dados.requisicoes.filter(r => r.adminId === admin.id).length : 0;
+            const reqPend = dados.requisicoes ? dados.requisicoes.filter(r =>
+                r.adminId === admin.id && r.status === 'pendente_aprov'
+            ).length : 0;
+            const totalEncarregados = dados.encarregados ? dados.encarregados.filter(e => e.adminId === admin.id).length : 0;
+            const numOrd = (v) => (v === '' || v == null) ? 0 : (Number(v) || 0);
+            const gastoFunc = (dados.funcionarios || [])
+                .filter(f => f.adminId === admin.id && f.role === 'funcionario')
+                .reduce((s, f) => s + numOrd(f.ordenadoBruto), 0);
+            const gastoEnc = (dados.encarregados || [])
+                .filter(e => e.adminId === admin.id)
+                .reduce((s, e) => s + numOrd(e.ordenadoBruto), 0);
+            const gastoTotal = gastoFunc + gastoEnc;
+            const osList = (dados.servicos || []).filter(s => s.adminId === admin.id);
+            const osPendentes = osList.filter(s => s.status === 'pendente').length;
+            const osAndamento = osList.filter(s => s.status === 'em andamento' || s.status === 'em_andamento').length;
+            const osConcluidas = osList.filter(s => (s.status || '').toLowerCase().includes('conclu')).length;
+            const eur = (n) => n.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+            const contratosAdmin = (dados.contratos || []).filter(c => c.adminId === admin.id);
+            let ctEmDia = 0, ctAVencer = 0, ctVencidos = 0, ctValor = 0;
+            contratosAdmin.forEach(c => {
+                const ch = estadoManutencao(calcularProximaManutencao(c)).chave;
+                if (ch === 'vencido') ctVencidos++; else if (ch === 'a_vencer') ctAVencer++; else if (ch === 'em_dia') ctEmDia++;
+                ctValor += numOrd(c.valor);
+            });
+            const totalLocais = (dados.locais || []).filter(l => l.adminId === admin.id).length;
+            const totalEquip = (dados.equipamentos || []).filter(e => e.adminId === admin.id).length;
+            const totalRegistos = (dados.registosManutencao || []).filter(r => r.adminId === admin.id).length;
+            const moduloAtivoTxt = moduloContratosAtivo(admin) ? ('Ativo (' + (admin.contratosPlano === 'demo' ? 'Demo' : admin.contratosPlano === 'anual' ? 'Anual' : 'Mensal') + ')') : 'Inativo';
+            const folhasOT = (dados.folhasObra || []).filter(f => f.adminId === admin.id && f.contratoId).length;
+            const frotaStats = contarFrota((dados.veiculos || []).filter(v => v.adminId === admin.id));
+            const totalIntervencoes = (dados.veiculoIntervencoes || []).filter(i => i.adminId === admin.id).length;
+            const gastoVeiculos = (dados.veiculoIntervencoes || []).filter(i => i.adminId === admin.id).reduce((s, i) => s + (Number(i.custo) || 0), 0);
+            const totalSinistros = (dados.veiculoSinistros || []).filter(s => s.adminId === admin.id).length;
+            const ajudasAdmin = (dados.ajudas || []).filter(a => a.adminId === admin.id);
+            const ajPend = ajudasAdmin.filter(a => a.status === 'pendente').length;
+            const ajConcl = ajudasAdmin.filter(a => (a.status || '').toLowerCase().includes('conclu')).length;
+            container.innerHTML = `
+                    <div class="report-card">
+                        <h4><i class="fas fa-users"></i> Recursos Humanos</h4>
+                        <div class="report-item"><span>Total de Funcionários</span><span>${totalFunc}</span></div>
+                        <div class="report-item"><span>Total de Encarregados</span><span>${totalEncarregados}</span></div>
+                        <div class="report-item"><span>Total de Clientes</span><span>${totalCli}</span></div>
+                        <div class="report-item"><span>Gasto com Funcionários (bruto)</span><span>${eur(gastoFunc)}</span></div>
+                        <div class="report-item"><span>Gasto com Encarregados (bruto)</span><span>${eur(gastoEnc)}</span></div>
+                        <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Gasto Total com Pessoal</span><span>${eur(gastoTotal)}</span></div>
+                    </div>
+                    <div class="report-card">
+                        <h4><i class="fas fa-tools"></i> Ordens de Serviço</h4>
+                        <div class="report-item"><span>Total</span><span>${totalOS}</span></div>
+                        <div class="report-item"><span>Pendentes</span><span>${osPendentes}</span></div>
+                        <div class="report-item"><span>Em andamento</span><span>${osAndamento}</span></div>
+                        <div class="report-item"><span>Concluídas</span><span>${osConcluidas}</span></div>
+                    </div>
+                    <div class="report-card">
+                        <h4><i class="fas fa-clock"></i> Assiduidade</h4>
+                        <div class="report-item"><span>Total de registos de ponto</span><span>${totalPonto}</span></div>
+                    </div>
+                    <div class="report-card">
+                        <h4><i class="fas fa-calendar-check"></i> Férias / Faltas</h4>
+                        <div class="report-item"><span>Total de pedidos</span><span>${totalPedidos}</span></div>
+                        <div class="report-item"><span>Pendentes</span><span>${pedPend}</span></div>
+                    </div>
+                    <div class="report-card">
+                        <h4><i class="fas fa-clipboard-list"></i> Folhas de Obra</h4>
+                        <div class="report-item"><span>Total</span><span>${totalFolhas}</span></div>
+                        <div class="report-item"><span>Ordens de trabalho de manutenção</span><span>${folhasOT}</span></div>
+                    </div>
+                    <div class="report-card">
+                        <h4><i class="fas fa-boxes"></i> Requisições</h4>
+                        <div class="report-item"><span>Total</span><span>${totalReqs}</span></div>
+                        <div class="report-item"><span>Pendentes</span><span>${reqPend}</span></div>
+                    </div>
+                    <div class="report-card">
+                        <h4><i class="fas fa-file-signature"></i> Contratos de Manutenção</h4>
+                        <div class="report-item"><span>Módulo</span><span>${moduloAtivoTxt}</span></div>
+                        <div class="report-item"><span>Total de contratos</span><span>${contratosAdmin.length}</span></div>
+                        <div class="report-item"><span>Em dia</span><span style="color:#16a34a;">${ctEmDia}</span></div>
+                        <div class="report-item"><span>A vencer (≤30d)</span><span style="color:#f59e0b;">${ctAVencer}</span></div>
+                        <div class="report-item"><span>Vencidos</span><span style="color:#dc2626;">${ctVencidos}</span></div>
+                        <div class="report-item"><span>Locais / Equipamentos</span><span>${totalLocais} / ${totalEquip}</span></div>
+                        <div class="report-item"><span>Manutenções realizadas</span><span>${totalRegistos}</span></div>
+                        <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Valor anual contratado</span><span>${eur(ctValor)}</span></div>
+                    </div>
+                    <div class="report-card">
+                        <h4><i class="fas fa-car"></i> Frota</h4>
+                        <div class="report-item"><span>Total de veículos</span><span>${frotaStats.total}</span></div>
+                        <div class="report-item"><span>Em dia</span><span style="color:#16a34a;">${frotaStats.emDia}</span></div>
+                        <div class="report-item"><span>A vencer</span><span style="color:#f59e0b;">${frotaStats.aVencer}</span></div>
+                        <div class="report-item"><span>Vencidos</span><span style="color:#dc2626;">${frotaStats.vencido}</span></div>
+                        <div class="report-item"><span>Intervenções registadas</span><span>${totalIntervencoes}</span></div>
+                        <div class="report-item"><span>Sinistros</span><span>${totalSinistros}</span></div>
+                        <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Valor gasto (manutenção/inspeção)</span><span>${eur(gastoVeiculos)}</span></div>
+                    </div>
+                    <div class="report-card">
+                        <h4><i class="fas fa-headset"></i> Suporte Técnico</h4>
+                        <div class="report-item"><span>Total</span><span>${ajudasAdmin.length}</span></div>
+                        <div class="report-item"><span>Pendentes</span><span>${ajPend}</span></div>
+                        <div class="report-item"><span>Concluídas</span><span>${ajConcl}</span></div>
+                    </div>
+                `;
+        }
