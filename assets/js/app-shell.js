@@ -64,6 +64,7 @@
     profileModalSuperadmin: './assets/js/app-profile-modal-superadmin.js',
     profileModalDistributor: './assets/js/app-profile-modal-distributor.js',
     profileModalAdmin: './assets/js/app-profile-modal-admin.js',
+    profileModalWorker: './assets/js/app-profile-modal-worker.js',
     syncPrepare: './assets/js/app-sync-prepare.js',
     syncFiles: './assets/js/app-sync-files.js',
     syncCollections: './assets/js/app-sync-collections.js',
@@ -161,6 +162,7 @@
     if (options.profileModalSuperadmin === true) pedidos.push(MODULOS.profileModalSuperadmin);
     if (options.profileModalDistributor === true) pedidos.push(MODULOS.profileModalDistributor);
     if (options.profileModalAdmin === true) pedidos.push(MODULOS.profileModalAdmin);
+    if (options.profileModalWorker === true) pedidos.push(MODULOS.profileModalWorker);
     if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncFiles === true) pedidos.push(MODULOS.syncFiles);
     if (options.syncCollections === true) pedidos.push(MODULOS.syncCollections);
