@@ -1,6 +1,8 @@
-name: Inspect app migration boundary
+name: Inspect profile helpers
 
 on:
+  push:
+    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
@@ -8,25 +10,39 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Mapear helpers de perfil
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestSaveFormServico.run({',
-              'window.TotalGestProfileModal.render({',
-              'function abrirEditarPerfil()',
-              'function _salvarFormularioInterno(',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'async function carregarDados('
+          markers = [
+              'function previewPerfilLogo(e) {',
+              'function previewPerfilFoto(e) {',
+              'function fecharModalPerfil() {',
+              'async function salvarPerfil()',
+              'function salvarPerfil()'
           ]
-          for item in checks:
-              print(item, text.count(item))
+          for marker in markers:
+              print(marker, text.count(marker))
+          start = text.index('function previewPerfilLogo(e) {')
+          candidates = [
+              text.find('function fecharModalPerfil() {', start),
+              text.find('async function salvarPerfil()', start),
+              text.find('function salvarPerfil()', start)
+          ]
+          candidates = [x for x in candidates if x >= 0]
+          end = min(candidates) if candidates else start + 12000
+          print('--- PROFILE HELPERS ---')
+          print(text[start:end])
+          if candidates:
+              next_start = min(candidates)
+              print('--- NEXT PROFILE FUNCTION ---')
+              print(text[next_start:next_start + 12000])
           PY
+      - run: echo 'profile-helpers-inspection'
