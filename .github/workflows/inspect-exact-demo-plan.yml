@@ -1,6 +1,9 @@
-name: Inspect app migration boundary
+name: Inspect save form branches
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,33 +11,28 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Mapear ramos de gravação
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestApp.init',
-              'function abrirModal(',
-              'function _salvarFormularioInterno(',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'function bootstrapSupabase()',
-              'async function carregarDados(',
-              'window.TotalGestModalFuncionario.render({',
-              'window.TotalGestModalCliente.render({',
-              'window.TotalGestModalFornecedor.render({',
-              'window.TotalGestModalRequisicao.render({',
-              'window.TotalGestModalArtigo.render({',
-              'window.TotalGestModalFolha.render({',
-              'window.TotalGestModalServico.render({',
-              'window.TotalGestModalObra.render({'
-          ]
-          for item in checks:
-              print(item, text.count(item))
+          import re
+          lines=Path('app.html').read_text(encoding='utf-8').splitlines()
+          s=next(i for i,l in enumerate(lines) if 'function _salvarFormularioInterno(' in l)
+          d=0; started=False; e=None
+          for j in range(s,len(lines)):
+              x=lines[j]
+              if '{' in x: started=True
+              d += x.count('{')-x.count('}')
+              if started and d==0:
+                  e=j; break
+          print(f'function: {s+1}-{e+1} ({e-s+1} linhas)')
+          for i in range(s,e+1):
+              if re.search(r"\bent\s*===\s*['\"]", lines[i]) or re.search(r"\bent\s*!==\s*['\"]", lines[i]):
+                  print(f'{i+1}: {lines[i].strip()}')
           PY
