@@ -3229,51 +3229,15 @@
                 const upsertsJson = diffUpsert.states;
                 if (col === 'obraPontoLonga' && lista.length) console.log('[obraPontoLonga] a sincronizar:', upserts.length, 'de', lista.length, 'registo(s) local(is)');
                 if (upserts.length) {
-                    // Em lotes de 200 — um único pedido com centenas/milhares de linhas de
-                    // uma vez (ex.: uma importação grande de clientes) pode ultrapassar o
-                    // tempo limite da base de dados ("statement timeout") e falhar por
-                    // inteiro. Em lotes mais pequenos, cada um tem tempo de sobra, e se um
-                    // lote falhar os restantes continuam a tentar na mesma.
-                    const TAMANHO_LOTE = 200;
-                    let erroNesteTabela = null;
-                    for (let i = 0; i < upserts.length; i += TAMANHO_LOTE) {
-                        const loteRows = upserts.slice(i, i + TAMANHO_LOTE);
-                        const loteJson = upsertsJson.slice(i, i + TAMANHO_LOTE);
-                        // IMPORTANTE: pedimos sempre .select('id') de volta. O Supabase pode responder
-                        // "sem erro" a um upsert que, por causa das permissões (RLS), na prática não
-                        // escreveu nenhuma linha — sem o .select(), nunca saberíamos a diferença entre
-                        // "gravou tudo" e "não gravou nada", e ficávamos a marcar coisas como
-                        // sincronizadas quando não estavam.
-                        const { data: linhasGravadas, error } = await supa.from(meta.tabela).upsert(loteRows, { onConflict: 'id' }).select('id');
-                        if (error) {
-                            console.error('upsert ' + meta.tabela + ' (lote ' + (i / TAMANHO_LOTE + 1) + '):', error.message);
-                            const colunaFalta = _colunaEmFalta(error);
-                            if (colunaFalta) {
-                                // Repete o mesmo lote sem essa coluna — para não ficar preso a
-                                // tentar os mesmos registos para sempre enquanto ela não existir.
-                                console.warn('Coluna "' + colunaFalta + '" não existe em "' + meta.tabela + '" — a sincronizar sem ela por agora. Corre a query SQL correspondente para isto passar a gravar completo.');
-                                const loteRowsSemColuna = loteRows.map(r => { const r2 = { ...r }; delete r2[colunaFalta]; return r2; });
-                                const retry = await supa.from(meta.tabela).upsert(loteRowsSemColuna, { onConflict: 'id' }).select('id');
-                                if (!retry.error && retry.data && retry.data.length >= loteRowsSemColuna.length) {
-                                    loteJson.forEach(u => _snap[col].set(u.id, u.json));
-                                    continue; // este lote já ficou tratado — não conta como erro
-                                }
-                            }
-                            erroNesteTabela = error;
-                            // continua a tentar os restantes lotes — não desiste ao primeiro que falhar
-                        } else if (!linhasGravadas || linhasGravadas.length < loteRows.length) {
-                            // Resposta "sem erro", mas confirmou menos linhas do que enviámos — as
-                            // permissões (RLS) bloquearam algumas em silêncio. Só marca como
-                            // sincronizado o que veio mesmo confirmado; o resto fica pendente e volta
-                            // a tentar na próxima gravação, em vez de se perder para sempre.
-                            const idsConfirmados = new Set((linhasGravadas || []).map(r => r.id));
-                            loteJson.forEach(u => { if (idsConfirmados.has(u.id)) _snap[col].set(u.id, u.json); });
-                            console.error('upsert ' + meta.tabela + ': enviadas ' + loteRows.length + ', confirmadas ' + (linhasGravadas?.length || 0) + ' — bloqueado por permissões (RLS)');
-                            erroNesteTabela = { message: 'Algumas linhas de "' + meta.tabela + '" foram bloqueadas pelas permissões do servidor (RLS)' };
-                        } else {
-                            loteJson.forEach(u => _snap[col].set(u.id, u.json));
-                        }
-                    }
+                    const resultadoUpsert = await window.TotalGestSyncUpsert.run({
+                        supabase: supa,
+                        table: meta.tabela,
+                        rows: upserts,
+                        states: upsertsJson,
+                        snapshot: _snap[col],
+                        missingColumn: _colunaEmFalta
+                    });
+                    const erroNesteTabela = resultadoUpsert.error;
                     if (erroNesteTabela) {
                         if (!_tabelaInexistente(erroNesteTabela) && col !== 'auditoria') { erros++; if (!primeiroErro) primeiroErro = meta.tabela + ' — ' + (erroNesteTabela.message || erroNesteTabela.code || 'erro'); }
                         // As linhas cujo lote falhou não ficaram marcadas como sincronizadas — ficam pendentes para a próxima tentativa, nada se perde
@@ -32090,6 +32054,6 @@ window._relPrefill = function(msg){
 </div>
 
   <script src="./assets/js/app-shell.js"></script>
-  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true, saveQueue: true, bootstrap: true });</script>
+  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true, syncUpsert: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
