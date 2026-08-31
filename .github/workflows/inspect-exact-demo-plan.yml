@@ -28,3 +28,4 @@ jobs:
           git add app.html assets/js/app-shell.js sw.js
           git commit -m 'Extrair notificações pós-gravação de serviço'
           git push origin HEAD:refactor/separar-index-app
+      - run: echo 'migracao-notificacoes-servico'
