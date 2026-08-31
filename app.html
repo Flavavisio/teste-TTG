@@ -3020,38 +3020,19 @@
             // Portal do cliente: só precisa de uma fração dos dados da empresa (as suas próprias
             // obras/contratos/OS/relatórios) — poupa bastante egress não pedir o resto (stock,
             // frota, funcionários, despesas, etc. que o portal nunca mostra).
-            const TABELAS_PORTAL_CLIENTE = new Set(['administradores', 'clientes', 'locais', 'contratos', 'servicos', 'folhas_obra', 'relatorios_especialidade', 'obras', 'notificacoes']);
-
             let resultados;
             try {
-                resultados = await Promise.all(tabelas.map(t => {
-                    if (clienteId && !TABELAS_PORTAL_CLIENTE.has(t)) {
-                        return Promise.resolve({ data: [], error: null }); // nem chega a pedir à rede
-                    }
-                    let q = supa.from(t).select('*');
-                    if (t === 'ponto') q = supa.from(t).select('*').gte('data', _pontoCarregadoDesde);
-                    else if (t === 'servicos') q = supa.from(t).select('*').or(`status.neq.concluído,data.gte.${_servicosCarregadoDesde}`);
-                    else if (t === 'folhas_obra') q = supa.from(t).select('*').or(`assinatura.is.null,data.gte.${_folhasCarregadoDesde}`);
-                    else if (t === 'auditoria') q = supa.from(t).select('*').gte('data', _auditoriaCarregadaDesde);
-                    if (clienteId) {
-                        // portal do cliente: restringe ainda mais, só ao que é dele
-                        if (t === 'administradores') q = q.eq('id', tenantId);
-                        else if (t === 'clientes') q = q.eq('id', clienteId);
-                        else if (t === 'locais' || t === 'contratos' || t === 'servicos' || t === 'obras' || t === 'relatorios_especialidade') q = q.eq('cliente_id', clienteId);
-                        else if (t === 'folhas_obra') q = q.eq('admin_id', tenantId); // esta tabela não tem coluna cliente_id
-                        else if (tenantId) q = q.eq('admin_id', tenantId);
-                    } else if (!ehSuperAdmin && tenantId && t !== 'encarregado_funcionarios') {
-                        // NOTA: já não traz aqui a linha especial 'superadmin' (dados bancários globais) —
-                        // isso ficava visível para QUALQUER sessão (incluindo funcionários/encarregados,
-                        // que nunca precisam disso). Passa a ser pedida à parte, só quando necessário
-                        // (ver _obterDadosBancariosGlobais), e o envio de emails passou a ir buscá-la
-                        // diretamente no servidor em vez de depender do que o browser carregou.
-                        if (t === 'administradores') q = q.eq('id', tenantId);
-                        else if (t === 'referencias') q = q.eq('admin_referenciador_id', tenantId); // esta tabela não tem coluna admin_id
-                        else q = q.eq('admin_id', tenantId);
-                    }
-                    return q;
-                }));
+                resultados = await window.TotalGestLoadQueries.fetchAll({
+                    supabase: supa,
+                    tables: tabelas,
+                    tenantId: tenantId,
+                    superAdmin: ehSuperAdmin,
+                    clienteId: clienteId,
+                    pontoSince: _pontoCarregadoDesde,
+                    servicesSince: _servicosCarregadoDesde,
+                    sheetsSince: _folhasCarregadoDesde,
+                    auditSince: _auditoriaCarregadaDesde
+                });
             } catch (e) {
                 // falhou a ligação a meio (ex: ficou offline agora) — usa a cópia local se existir
                 const _cache = _carregarCacheLocal();
@@ -31946,6 +31927,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>

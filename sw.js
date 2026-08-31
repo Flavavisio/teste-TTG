@@ -1,5 +1,5 @@
 // Service Worker — Total Gest PWA
-const CACHE = 'totalgest-v38';
+const CACHE = 'totalgest-v39';
 const ASSETS = [
   './index.html',
   './app.html',
@@ -29,6 +29,7 @@ const ASSETS = [
   './assets/js/app-sync-pending.js',
   './assets/js/app-period-loading.js',
   './assets/js/app-load-context.js',
+  './assets/js/app-load-queries.js',
   './assets/js/app-sync-prepare.js',
   './assets/js/app-sync-files.js',
   './assets/js/app-sync-collections.js',
