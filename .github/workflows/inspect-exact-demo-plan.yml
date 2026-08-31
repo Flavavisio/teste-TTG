@@ -33,3 +33,4 @@ jobs:
           git add -A
           git commit -m 'Extrair validação comum de contactos dos formulários'
           git push origin HEAD:refactor/separar-index-app
+      - run: echo 'migracao-contact-validation'
