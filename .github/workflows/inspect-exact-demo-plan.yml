@@ -27,3 +27,4 @@ jobs:
           print('CONTEXT_REPR=', repr(text[pos:pos+1200]))
           print('BEFORE_REPR=', repr(text[pos-300:pos]))
           PY
+      - run: echo 'perfil-admin-tail-audit'
