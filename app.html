@@ -23911,25 +23911,16 @@ async function salvarAdmin(e) {
                     renderPoint: typeof renderizarPonto === 'function' ? renderizarPonto : null,
                     showAlert: alert
                 });
-                if (_folhaObraPendente && _folhaObraPendente.obraId === obj.obraId) {
-                    const { obraId, terminou } = _folhaObraPendente;
-                    _folhaObraPendente = null;
-                    const obraRec = dados.obras?.find(o => o.id === obraId);
-                    if (obraRec) {
-                        if (terminou) {
-                            obraRec.estado = 'concluida';
-                            obraRec.dataConclusao = getDataHoje();
-                            guardarDados(dados);
-                            renderizarTudo();
-                            alert('✅ Folha guardada e obra terminada. Obrigado!');
-                        } else {
-                            obraRec.estado = 'suspensa';
-                            guardarDados(dados);
-                            renderizarTudo();
-                            alert('Folha de obra guardada ✓ Obra em Stand By. Podes voltar a dar entrada quando retomares.');
-                        }
-                    }
-                }
+                window.TotalGestSaveFormFolhaObraPending.apply({
+                    value: obj,
+                    pending: _folhaObraPendente,
+                    data: dados,
+                    clearPending: () => { _folhaObraPendente = null; },
+                    getToday: getDataHoje,
+                    saveData: guardarDados,
+                    renderAll: renderizarTudo,
+                    showAlert: alert
+                });
             }
             try {
                 await guardarDados(dados);
@@ -30675,6 +30666,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
