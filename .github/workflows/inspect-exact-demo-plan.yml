@@ -1,6 +1,8 @@
-name: Inspect app migration boundary
+name: Inspect remaining save form
 
 on:
+  push:
+    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
@@ -8,33 +10,38 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Auditar salvar formulário restante
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestApp.init',
-              'function abrirModal(',
-              'function _salvarFormularioInterno(',
-              'window.TotalGestSaveFormFornecedor.run({',
-              'window.TotalGestSaveFormArtigo.run({',
-              'window.TotalGestSaveFormRequisicao.run({',
-              'window.TotalGestSaveFormObra.run({',
-              'window.TotalGestSaveFormFolha.run({',
-              'window.TotalGestSaveFormCliente.prepare({',
-              'window.TotalGestSaveFormFuncionarioOrchestrator.run({',
-              'window.TotalGestSaveFormServico.run({',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'function bootstrapSupabase()',
-              'async function carregarDados('
-          ]
-          for item in checks:
-              print(item, text.count(item))
+          start = text.index('        async function _salvarFormularioInterno() {')
+          end = text.index('        function salvarFormulario()', start)
+          block = text[start:end]
+          print(block)
+          print('\n=== linhas ===', len(block.splitlines()))
+          print('=== ramos ===')
+          for ent in ['funcionario','cliente','servico','folha','requisicao','fornecedor','artigo','obra']:
+              print(ent, block.count("ent === '%s'" % ent))
+          print('=== chamadas ===')
+          for token in [
+              'TotalGestSaveFormFuncionarioOrchestrator.run({',
+              'TotalGestSaveFormCliente.prepare({',
+              'TotalGestSaveFormServico.run({',
+              'TotalGestSaveFormFolha.run({',
+              'TotalGestSaveFormRequisicao.run({',
+              'TotalGestSaveFormFornecedor.run({',
+              'TotalGestSaveFormArtigo.run({',
+              'TotalGestSaveFormObra.run({',
+              'guardarDados(', 'renderizarTudo(', 'fecharModal(',
+              'lista =', 'obj =', 'dados[', '_guardarArmazem(',
+              'setTimeout(', 'await '
+          ]:
+              print(token, block.count(token))
           PY
