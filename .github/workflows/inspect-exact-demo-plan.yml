@@ -1,4 +1,4 @@
-name: Inspect cliente save branch
+name: Migrate cliente save branch
 
 on:
   push:
@@ -7,26 +7,28 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspecionar ramo cliente
+      - name: Extrair preparação de cliente
+        run: python3 .github/scripts/migrate-save-cliente.py
+      - name: Validar
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          start = text.index("            } else if (ent === 'cliente') {\n")
-          end = text.index("            } else if (ent === 'servico') {\n", start)
-          block = text[start:end]
-          print(block)
-          print('\n=== contagens ===')
-          for token in ['dados.clientes', 'usuarioLogado', 'document.getElementById', 'alert(', 'return;', 'obj =', 'lista =']:
-              print(token, block.count(token))
-          PY
+          node --check assets/js/app-save-form-cliente.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
+      - name: Gravar migração
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-shell.js sw.js
+          git commit -m 'Extrair preparação do formulário de cliente'
+          git push origin HEAD:refactor/separar-index-app
