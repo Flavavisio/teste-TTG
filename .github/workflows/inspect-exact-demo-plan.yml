@@ -1,4 +1,4 @@
-name: Inspect snapshot boundary
+name: Inspect snapshot usages
 
 on:
   push:
@@ -17,23 +17,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear snapshots locais
+      - name: Mostrar contextos adicionais dos snapshots
         run: |
           python3 - <<'PY'
           from pathlib import Path
           lines = Path('app.html').read_text(encoding='utf-8').splitlines()
-          terms = ['_snap', '_snapLic', '_snapJunc', '_reconstruirSnapshots', '_restaurarSnapshotDaCache']
-          for term in terms:
-              hits = [i for i,l in enumerate(lines) if term in l]
-              print(f'\n=== {term}: {len(hits)} ocorrência(s) ===')
-              for i in hits:
+          for start,end,title in [
+              (3155,3185,'contador/estado pendente'),
+              (11945,11980,'escrita adicional em snapshot')
+          ]:
+              print(f'\n=== {title} ===')
+              for i in range(start-1, min(len(lines), end)):
                   print(f'{i+1}: {lines[i]}')
-          print('\n=== CONTEXTO 2868-2925 ===')
-          for i in range(2867, min(len(lines), 2925)):
-              print(f'{i+1}: {lines[i]}')
-          print('\n=== CONTEXTO RESTAURO CACHE ===')
-          hits = [i for i,l in enumerate(lines) if '_restaurarSnapshotDaCache' in l]
-          for i in hits:
-              for j in range(max(0,i-12), min(len(lines),i+25)):
-                  print(f'{j+1}: {lines[j]}')
           PY
