@@ -21,5 +21,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add .github/diagnostics/reports-erp-rounds.txt
-          git diff --cached --quiet || git commit -m 'Diagnosticar ERP e Rondas nos relatórios'
-          git diff --cached --quiet || git push origin HEAD:refactor/separar-index-app
+          if ! git diff --cached --quiet; then
+            git commit -m 'Diagnosticar ERP e Rondas nos relatórios'
+            git push origin HEAD:refactor/separar-index-app
+          fi
