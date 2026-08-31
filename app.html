@@ -18611,88 +18611,19 @@
         }
 
         function atualizarContagens() {
-            let countFunc = 0,
-                countCli = 0,
-                osPend = 0,
-                osAndamento = 0,
-                countPonto = 0,
-                countPedidos = 0,
-                countFolhas = 0,
-                countReqs = 0,
-                countEncarregados = 0;
-            if (usuarioLogado && (usuarioLogado.role === 'admin' || usuarioLogado.role === 'subadmin')) {
-                const adminId = usuarioLogado.role === 'admin' ? usuarioLogado.id : usuarioLogado.adminId;
-                countFunc = dados.funcionarios ? dados.funcionarios.filter(f => f.adminId === adminId && f.role !== 'admin' && f
-                        .role !== 'superadmin').length : 0;
-                countEncarregados = dados.encarregados ? dados.encarregados.filter(e => e.adminId === adminId).length : 0;
-                countCli = dados.clientes ? dados.clientes.filter(c => c.adminId === adminId).length : 0;
-                osPend = dados.servicos ? dados.servicos.filter(s => s.adminId === adminId && s.status === 'pendente')
-                    .length : 0;
-                osAndamento = dados.servicos ? dados.servicos.filter(s => s.adminId === adminId && s.status ===
-                    'em andamento').length : 0;
-                countPonto = dados.ponto ? dados.ponto.filter(p => p.adminId === adminId).length : 0;
-                countPedidos = dados.pedidos ? dados.pedidos.filter(p => p.adminId === adminId && p.status === 'pendente_aprov')
-                    .length : 0;
-                countFolhas = dados.folhasObra ? dados.folhasObra.filter(f => f.adminId === adminId).length : 0;
-                countReqs = dados.requisicoes ? dados.requisicoes.filter(r =>
-                    r.adminId === adminId &&
-                    (r.status === 'pendente_aprov' || r.status === 'em_andamento' || r.status === 'aguarda_validacao')
-                ).length : 0;
-            } else if (usuarioLogado && usuarioLogado.role === 'encarregado') {
-                const encarregado = dados.encarregados?.find(e => e.id === usuarioLogado.id);
-                if (encarregado) {
-                    countFunc = dados.funcionarios ? dados.funcionarios.filter(f =>
-                        encarregado.funcionariosIds?.includes(f.id) &&
-                        f.role !== 'admin' &&
-                        f.role !== 'superadmin'
-                    ).length : 0;
-                    countPonto = dados.ponto ? dados.ponto.filter(p => p.funcionarioId === usuarioLogado.id).length : 0;
-                    countPedidos = dados.pedidos ? dados.pedidos.filter(p =>
-                        p.funcionarioId === usuarioLogado.id && p.status === 'pendente_aprov'
-                    ).length : 0;
-                    countReqs = dados.requisicoes ? dados.requisicoes.filter(r =>
-                        r.funcionarioId === usuarioLogado.id &&
-                        (r.status === 'pendente_aprov' || r.status === 'em_andamento' || r.status === 'aguarda_validacao')
-                    ).length : 0;
-                    countFolhas = dados.folhasObra ? dados.folhasObra.filter(f => f.funcionarioId === usuarioLogado.id)
-                        .length : 0;
-                    osPend = dados.servicos ? dados.servicos.filter(s => {
-                        const atribuidos = (s.funcionariosIds && s.funcionariosIds.length) ? s.funcionariosIds : [s.funcionarioId].filter(Boolean);
-                        return s.adminId === encarregado.adminId &&
-                            (s.funcionarioId === null || atribuidos.includes(usuarioLogado.id) || atribuidos.some(fid => encarregado.funcionariosIds?.includes(fid))) &&
-                            s.status === 'pendente';
-                    }).length : 0;
-                    osAndamento = dados.servicos ? dados.servicos.filter(s => {
-                        const atribuidos = (s.funcionariosIds && s.funcionariosIds.length) ? s.funcionariosIds : [s.funcionarioId].filter(Boolean);
-                        return s.adminId === encarregado.adminId &&
-                            (s.funcionarioId === null || atribuidos.includes(usuarioLogado.id) || atribuidos.some(fid => encarregado.funcionariosIds?.includes(fid))) &&
-                            s.status === 'em andamento';
-                    }).length : 0;
-                }
-            } else if (usuarioLogado && usuarioLogado.role === 'funcionario') {
-                const funcObj = dados.funcionarios?.find(f => f.id === usuarioLogado.id);
-                const adminId = funcObj?.adminId;
-                if (adminId) {
-                    osPend = dados.servicos ? dados.servicos.filter(s => {
-                        const atribuidos = (s.funcionariosIds && s.funcionariosIds.length) ? s.funcionariosIds : [s.funcionarioId].filter(Boolean);
-                        return s.adminId === adminId && (s.funcionarioId === null || atribuidos.includes(usuarioLogado.id)) && s.status === 'pendente';
-                    }).length : 0;
-                    osAndamento = dados.servicos ? dados.servicos.filter(s => {
-                        const atribuidos = (s.funcionariosIds && s.funcionariosIds.length) ? s.funcionariosIds : [s.funcionarioId].filter(Boolean);
-                        return s.adminId === adminId && (s.funcionarioId === null || atribuidos.includes(usuarioLogado.id)) && s.status === 'em andamento';
-                    }).length : 0;
-                }
-                countPonto = dados.ponto ? dados.ponto.filter(p => p.funcionarioId === usuarioLogado.id).length : 0;
-                countPedidos = dados.pedidos ? dados.pedidos.filter(p =>
-                    p.funcionarioId === usuarioLogado.id && p.status === 'pendente_aprov'
-                ).length : 0;
-                countReqs = dados.requisicoes ? dados.requisicoes.filter(r =>
-                    r.funcionarioId === usuarioLogado.id &&
-                    (r.status === 'pendente_aprov' || r.status === 'em_andamento' || r.status === 'aguarda_validacao')
-                ).length : 0;
-                countFolhas = dados.folhasObra ? dados.folhasObra.filter(f => f.funcionarioId === usuarioLogado.id)
-                    .length : 0;
-            }
+            const _roleCounts = window.TotalGestDashboardCounts.calculateRoleCounts({
+                data: dados,
+                user: usuarioLogado
+            });
+            const countFunc = _roleCounts.countFunc;
+            const countCli = _roleCounts.countCli;
+            const osPend = _roleCounts.osPend;
+            const osAndamento = _roleCounts.osAndamento;
+            const countPonto = _roleCounts.countPonto;
+            const countPedidos = _roleCounts.countPedidos;
+            const countFolhas = _roleCounts.countFolhas;
+            const countReqs = _roleCounts.countReqs;
+            const countEncarregados = _roleCounts.countEncarregados;
             const licencasAtivas = dados.administradores ? dados.administradores.filter(a =>
                 a.ativo && a.licenca && isLicencaValida(a.licenca.dataExpiracao)
             ).length : 0;
@@ -29359,6 +29290,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, dashboardCounts: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
