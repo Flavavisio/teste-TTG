@@ -23746,45 +23746,21 @@ async function salvarAdmin(e) {
                 const _roleTipoEl = document.getElementById('f_role_tipo');
                 const _roleTipo = _roleTipoEl ? _roleTipoEl.value : 'funcionario';
 
-                if (!isEdit && _roleTipo === 'encarregado') {
-                    // Redireciona para a tabela de encarregados, reaproveitando os mesmos campos
-                    const _adminIdNovo = (usuarioLogado.role === 'admin' ? usuarioLogado.id : usuarioLogado.adminId);
-                    const encObj = {
-                        id: gerarId(),
-                        nome: document.getElementById('f_nome').value.trim(),
-                        cargo: document.getElementById('f_cargo').value.trim(),
-                        telefone: document.getElementById('f_telefone').value.trim(),
-                        email: document.getElementById('f_email').value.trim(),
-                        senha: document.getElementById('f_senha').value,
-                        morada: document.getElementById('f_morada').value.trim(),
-                        codigoPostal: document.getElementById('f_cp').value.trim(),
-                        dataNascimento: document.getElementById('f_nasc').value,
-                        horasSemanais: parseInt(document.getElementById('f_horas').value) || 40,
-                        adminId: _adminIdNovo,
-                        funcionariosIds: Array.from(document.querySelectorAll('.f-equipa-check:checked')).map(cb => cb.value),
-                        mudarSenha: true,
-                        gpsPonto: true,
-                        dataCriacao: Date.now()
-                    };
-                    dados.encarregados = dados.encarregados || [];
-                    dados.encarregados.push(encObj);
-                    guardarDados(dados);
-                    registarAuditoria('criar', 'encarregado', encObj.id, encObj.nome);
-                    fecharModal();
-                    renderizarTudo();
-                    if (encObj.email && encObj.senha) {
-                        try {
-                            await guardarDados(dados);
-                        } catch (e) {
-                            alert(`⚠️ O encarregado ${encObj.nome} foi criado no ecrã, mas ainda não foi possível confirmar a gravação no servidor (${e && e.message ? e.message : e}).\n\nNão foi criada a conta de login para evitar inconsistências — tenta novamente mais tarde.`);
-                            return;
-                        }
-                        criarUtilizadorAuth(encObj.email, encObj.senha, 'encarregado', encObj.adminId, encObj.id, encObj.nome).then(r => {
-                            if (!r.ok) alert('✅ Encarregado criado.\n⚠️ A conta de login não foi criada automaticamente: ' + r.erro + '\nSe o email já tiver sido usado antes, pede para o removerem da autenticação antes de tentares de novo.');
-                        });
-                    }
-                    return;
-                }
+                const _encResultado = await window.TotalGestSaveFormFuncionarioEncarregado.run({
+                    document: document,
+                    data: dados,
+                    user: usuarioLogado,
+                    isEdit: isEdit,
+                    roleType: _roleTipo,
+                    generateId: gerarId,
+                    saveData: guardarDados,
+                    audit: registarAuditoria,
+                    closeModal: fecharModal,
+                    renderAll: renderizarTudo,
+                    createAuth: criarUtilizadorAuth,
+                    showAlert: alert
+                });
+                if (_encResultado.handled) return;
 
                 const _funcResultado = await window.TotalGestSaveFormFuncionario.prepare({
                     document: document,
@@ -30896,6 +30872,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
