@@ -1,6 +1,9 @@
-name: Inspect app migration boundary
+name: Inspect servico save branch
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,36 +11,34 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Mapear ramo serviço
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestApp.init',
-              'function abrirModal(',
-              'function _salvarFormularioInterno(',
-              'window.TotalGestSaveFormFornecedor.run({',
-              'window.TotalGestSaveFormArtigo.run({',
-              'window.TotalGestSaveFormRequisicao.run({',
-              'window.TotalGestSaveFormObra.run({',
-              'window.TotalGestSaveFormFolhaContext.prepare({',
-              'window.TotalGestSaveFormFolhaSignature.prepare({',
-              'window.TotalGestSaveFormFolhaObject.prepare({',
-              'window.TotalGestSaveFormFolhaAssist.prepare({',
-              'window.TotalGestSaveFormFolhaConsumos.prepare({',
-              'window.TotalGestSaveFormFolhaManutencao.apply({',
-              'window.TotalGestSaveFormFolhaPonto.apply({',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'function bootstrapSupabase()',
-              'async function carregarDados('
-          ]
-          for item in checks:
-              print(item, text.count(item))
+          start = text.index("            } else if (ent === 'servico') {")
+          candidates = []
+          for marker in ["            } else if (ent === 'folha') {", "            } else if (ent === 'cliente') {", "            } else if (ent === 'funcionario') {", "            } else if (ent === 'obra') {"]:
+              try:
+                  pos = text.index(marker, start + 1)
+                  candidates.append((pos, marker))
+              except ValueError:
+                  pass
+          end, next_marker = min(candidates)
+          block = text[start:end]
+          print('proximo', next_marker)
+          print('linhas', len(block.splitlines()))
+          for token in ['dados.', 'document.getElementById', 'guardarDados(', 'gerarId(', 'alert(', 'confirm(', '_guardarArmazem(', 'renderizar', 'supa.', 'await ', '_notificarFuncionario(', 'setTimeout(']:
+              print(token, block.count(token))
+          print('\n=== inicio/fim ===')
+          lines=block.splitlines()
+          print('\n'.join(lines[:45]))
+          print('\n--- FIM ---')
+          print('\n'.join(lines[-45:]))
           PY
