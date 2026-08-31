@@ -3158,17 +3158,12 @@
             } catch (e) { console.warn('auditoria:', e); }
         }
         function _contarAlteracoesPendentes() {
-            let n = 0;
-            ORDEM.forEach(col => {
-                (dados[col] || []).forEach(o => {
-                    const json = JSON.stringify(M[col].to(o));
-                    if (_snap[col].get(o.id) !== json) n++;
-                });
-                for (const id of _snap[col].keys()) {
-                    if (!(dados[col] || []).some(o => o.id === id)) n++;
-                }
+            return window.TotalGestSyncPending.count({
+                order: ORDEM,
+                data: dados,
+                metadata: M,
+                snapshots: _snap
             });
-            return n;
         }
 
         const _guardarDadosQueue = window.TotalGestSaveQueue.create({
@@ -31964,6 +31959,7 @@ window._relPrefill = function(msg){
 
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
-                syncSnapshots: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+                syncSnapshots: true,
+            syncPending: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
