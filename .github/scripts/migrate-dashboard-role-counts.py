@@ -115,7 +115,7 @@ shell = shell.replace(shell_mod, shell_mod + "    dashboardCounts: './assets/js/
 shell_load = "    if (options.reportsDistributorMetrics === true) pedidos.push(MODULOS.reportsDistributorMetrics);\n"
 assert shell.count(shell_load) == 1
 shell = shell.replace(shell_load, shell_load + "    if (options.dashboardCounts === true) pedidos.push(MODULOS.dashboardCounts);\n", 1)
-assert shell.count('dashboardCounts') == 2
+assert shell.count('dashboardCounts') == 3
 
 init_token = 'reportsDistributorMetrics: true, syncPrepare: true'
 assert app.count(init_token) == 1
