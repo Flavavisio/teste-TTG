@@ -11,12 +11,15 @@ sw = SW.read_text(encoding='utf-8')
 
 fn_marker = '        function abrirEditarPerfil() {'
 start_marker = "            } else if (usuarioLogado.role === 'admin' || usuarioLogado.role === 'subadmin') {\n"
-end_marker = "            } else {\n"
+last_field = 'perf_contrato_modo_wizard'
+tail_token = "                        ` : ''}\n                        </div>\n                    `;\n"
 assert app.count(fn_marker) == 1, app.count(fn_marker)
 fn = app.index(fn_marker)
 start_branch = app.index(start_marker, fn)
-end = app.index(end_marker, start_branch + len(start_marker))
 start = start_branch + len(start_marker)
+last = app.index(last_field, start)
+tail = app.index(tail_token, last)
+end = tail + len(tail_token)
 old = app[start:end]
 
 for token in [
@@ -33,7 +36,7 @@ for token in [
 prefix = '                campos.innerHTML = `'
 suffix = '                    `;\n'
 assert old.count(prefix) == 1, old.count(prefix)
-assert old.endswith(suffix), repr(old[-100:])
+assert old.endswith(suffix), repr(old[-140:])
 template = old[old.index(prefix) + len(prefix):-len(suffix)]
 
 module = """/* Total Gest — conteúdo do modal de perfil de admin/subadmin. */
@@ -82,9 +85,8 @@ assert sw.count(sw_anchor) == 1, sw.count(sw_anchor)
 sw = sw.replace(sw_anchor, sw_anchor + "  './assets/js/app-profile-modal-admin.js',\n", 1)
 
 assert app.count('window.TotalGestProfileModalAdmin.render({') == 1
-new_end = app.index(end_marker, start)
-new_block = app[start:new_end]
-for token in ['campos.innerHTML = `', 'FERIADOS_MUNICIPAIS).sort()', 'moduloContratosAtivo(admin)']:
+new_block = app[start:start + len(new)]
+for token in ['campos.innerHTML = `', 'perf_contrato_modo_wizard', 'perf_seguranca_ativo']:
     assert token not in new_block, token
 assert shell.count('./assets/js/app-profile-modal-admin.js') == 1
 assert sw.count('./assets/js/app-profile-modal-admin.js') == 1
