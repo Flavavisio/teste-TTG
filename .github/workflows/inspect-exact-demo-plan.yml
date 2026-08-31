@@ -1,8 +1,6 @@
-name: Audit next large app blocks
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
@@ -10,49 +8,16 @@ permissions:
 
 jobs:
   inspect:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear próximos blocos grandes
+      - name: Estado dos módulos principais
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
           text = Path('app.html').read_text(encoding='utf-8')
-          names = ['_salvarFormularioInterno', 'abrirEditarPerfil', '_abrirModalRelatorioEspecialidade', 'renderizarReports']
-          for name in names:
-              m = re.search(r'(?:async\s+)?function\s+' + re.escape(name) + r'\s*\([^)]*\)\s*\{', text)
-              if not m:
-                  print(name, 'NÃO ENCONTRADA')
-                  continue
-              start = m.start()
-              depth = 0
-              in_str = None
-              esc = False
-              i = text.find('{', m.start(), m.end())
-              j = i
-              while j < len(text):
-                  c = text[j]
-                  if in_str:
-                      if esc: esc = False
-                      elif c == '\\': esc = True
-                      elif c == in_str: in_str = None
-                  else:
-                      if c in "'\"`": in_str = c
-                      elif c == '{': depth += 1
-                      elif c == '}':
-                          depth -= 1
-                          if depth == 0:
-                              j += 1
-                              break
-                  j += 1
-              block = text[start:j]
-              print('\n===', name, '===')
-              print('linhas', block.count('\n') + 1, 'chars', len(block))
-              for token in ['supa.', 'guardarDados(', 'renderizarTudo(', 'fetch(', 'document.', 'dados.', 'usuarioLogado', 'await ', 'addEventListener(', 'innerHTML', 'tgConfirm(', 'alert(']:
-                  print(token, block.count(token))
-              print(block[:1800])
+          for item in ['window.TotalGestSaveFormContactValidation.validate({','window.TotalGestSaveFormDispatch.run({','window.TotalGestSaveFormPostPersist.run({','function abrirEditarPerfil()','function renderizarReports()']:
+              print(item, text.count(item))
           PY
