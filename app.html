@@ -3272,21 +3272,19 @@
             }
 
             // 2) DELETES na ordem inversa
-            for (let i = ORDEM.length - 1; i >= 0; i--) {
-                const col = ORDEM[i];
-                const meta = M[col];
-                const remover = window.TotalGestSyncDiff.deletedIds(dados[col] || [], _snap[col]);
-                if (remover.length) {
-                    const { error } = await supa.from(meta.tabela).delete().in('id', remover);
-                    if (error) {
-                        console.error('delete ' + meta.tabela + ':', error.message);
-                        if (!_tabelaInexistente(error)) { erros++; if (!primeiroErro) primeiroErro = 'apagar ' + meta.tabela + ' — ' + (error.message || error.code || 'erro'); }
-                        // NÃO remove do snapshot — tenta apagar de novo na próxima sincronização
-                    } else {
-                        for (const id of remover) { _snap[col].delete(id); _snapLic.delete(id); _snapJunc.delete(id); }
-                    }
-                }
-            }
+            const deleteResult = await window.TotalGestSyncDelete.run({
+                supabase: supa,
+                order: ORDEM,
+                metadata: M,
+                data: dados,
+                snapshots: _snap,
+                licenseSnapshot: _snapLic,
+                junctionSnapshot: _snapJunc,
+                deletedIds: window.TotalGestSyncDiff.deletedIds,
+                missingTable: _tabelaInexistente
+            });
+            erros += deleteResult.errors;
+            if (!primeiroErro && deleteResult.firstError) primeiroErro = deleteResult.firstError;
             mostrarStatusSync(erros, primeiroErro);
             _guardarCacheLocal(); // mantém a cópia local a par do que já foi confirmado no servidor
             mostrarStatusOffline(erros > 0); // atualiza sempre o aviso (limpa se já sincronizado, ou mostra o erro real se falhou)
@@ -32045,6 +32043,6 @@ window._relPrefill = function(msg){
 </div>
 
   <script src="./assets/js/app-shell.js"></script>
-  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, saveQueue: true, bootstrap: true });</script>
+  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
