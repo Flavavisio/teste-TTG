@@ -3192,26 +3192,18 @@
         }
 
         async function _sincronizar() {
-            if (!navigator.onLine) {
-                mostrarStatusOffline();
-                return; // não tenta sequer ir à rede — fica tudo em espera, sem perder nada
-            }
-            let erros = 0;
-            let primeiroErro = '';
-            // repara equipamentos com localId inválido (ex: placeholder '__novo__' de um local nunca gravado)
-            window.TotalGestSyncPrepare.repairInvalidEquipmentLocations(dados);
-            // 0) migrar ficheiros em base64 para o Storage (com fallback que mantém base64)
-            await window.TotalGestSyncFiles.migratePending({
+            await window.TotalGestSyncOrchestrator.run({
+                isOnline: function () { return navigator.onLine; },
+                showOfflineStatus: mostrarStatusOffline,
                 data: dados,
+                repairInvalidEquipmentLocations: window.TotalGestSyncPrepare.repairInvalidEquipmentLocations,
+                migratePending: window.TotalGestSyncFiles.migratePending,
                 fields: FICHEIRO_CAMPOS,
-                uploadDataURL: uploadDataURL
-            });
-            // 1) sincronizar coleções na ordem das FKs
-            const collectionsResult = await window.TotalGestSyncCollections.run({
+                uploadDataURL: uploadDataURL,
+                runCollections: window.TotalGestSyncCollections.run,
                 supabase: supa,
                 order: ORDEM,
                 metadata: M,
-                data: dados,
                 snapshots: _snap,
                 licenseSnapshot: _snapLic,
                 junctionSnapshot: _snapJunc,
@@ -3221,30 +3213,12 @@
                 runEncarregados: window.TotalGestSyncEncarregados.run,
                 licenseToRow: licToRow,
                 missingColumn: _colunaEmFalta,
-                missingTable: _tabelaInexistente
-            });
-            erros += collectionsResult.errors;
-            if (!primeiroErro && collectionsResult.firstError) primeiroErro = collectionsResult.firstError;
-            // 2) DELETES na ordem inversa
-            const deleteResult = await window.TotalGestSyncDelete.run({
-                supabase: supa,
-                order: ORDEM,
-                metadata: M,
-                data: dados,
-                snapshots: _snap,
-                licenseSnapshot: _snapLic,
-                junctionSnapshot: _snapJunc,
+                missingTable: _tabelaInexistente,
+                runDelete: window.TotalGestSyncDelete.run,
                 deletedIds: window.TotalGestSyncDiff.deletedIds,
-                missingTable: _tabelaInexistente
-            });
-            erros += deleteResult.errors;
-            if (!primeiroErro && deleteResult.firstError) primeiroErro = deleteResult.firstError;
-            window.TotalGestSyncFinalize.run({
-                errors: erros,
-                firstError: primeiroErro,
+                finalize: window.TotalGestSyncFinalize.run,
                 showSyncStatus: mostrarStatusSync,
-                saveCache: _guardarCacheLocal,
-                showOfflineStatus: mostrarStatusOffline
+                saveCache: _guardarCacheLocal
             });
         }
 
@@ -31994,6 +31968,6 @@ window._relPrefill = function(msg){
 </div>
 
   <script src="./assets/js/app-shell.js"></script>
-  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
