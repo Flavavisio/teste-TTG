@@ -29693,32 +29693,18 @@ window._relPrefill = function(msg){
             if (!usuarioLogado) return;
             const overlay = document.getElementById('modalPerfilOverlay');
             const campos = document.getElementById('perfilCampos');
-            if (usuarioLogado.role === 'superadmin') {
-                campos.innerHTML = window.TotalGestProfileModalSuperadmin.render({
-                    config: obterConfig(),
-                    bankData: obterDadosBancarios() || {},
-                    getConfig: obterConfig
-                });
-            } else if (usuarioLogado.role === 'admin' && adminAtual()?.ehDistribuidor) {
-                campos.innerHTML = window.TotalGestProfileModalDistributor.render({
-                    admin: adminAtual(),
-                    employee: dados.funcionarios?.find(f => f.id === usuarioLogado.id) || null
-                });
-            } else if (usuarioLogado.role === 'admin' || usuarioLogado.role === 'subadmin') {
-                campos.innerHTML = window.TotalGestProfileModalAdmin.render({
-                    admin: adminAtual(),
-                    employee: dados.funcionarios?.find(f => f.id === usuarioLogado.id) || null,
-                    municipalHolidays: FERIADOS_MUNICIPAIS,
-                    contractsModuleEnabled: moduloContratosAtivo
-                });
-            } else {
-                const _perfilColaborador = window.TotalGestProfileModalWorker.render({
-                    employee: dados.funcionarios?.find(f => f.id === usuarioLogado.id) || dados.encarregados?.find(e => e.id === usuarioLogado.id) || null,
-                    role: usuarioLogado.role
-                });
-                if (_perfilColaborador == null) return;
-                campos.innerHTML = _perfilColaborador;
-            }
+            const _perfilHtml = window.TotalGestProfileModal.render({
+                user: usuarioLogado,
+                getAdmin: adminAtual,
+                getConfig: obterConfig,
+                getBankData: obterDadosBancarios,
+                employees: dados.funcionarios || [],
+                foremen: dados.encarregados || [],
+                municipalHolidays: FERIADOS_MUNICIPAIS,
+                contractsModuleEnabled: moduloContratosAtivo
+            });
+            if (_perfilHtml == null) return;
+            campos.innerHTML = _perfilHtml;
             overlay.classList.add('open');
         }
 
@@ -30163,6 +30149,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
