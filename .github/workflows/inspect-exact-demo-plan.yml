@@ -16,25 +16,26 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Auditar tail comum de gravação
+      - name: Localizar tail comum de gravação
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
-          start = text.index('        async function _salvarFormularioInterno()')
-          end = text.index('        function salvarFormulario(', start)
-          block = text[start:end]
-          print(block)
-          print('\n=== contagens ===')
-          for token in [
-              "ent === 'servico'",
-              'window.TotalGestSaveFormServico.run({',
-              'window.TotalGestSaveFormPersist.apply({',
-              'window.TotalGestSaveFormServicoNotifications.run({',
-              'guardarDados(', 'fecharModal(', 'renderizarTudo(',
-              'dados.servicos', 'dados.funcionarios', 'dados.clientes', 'dados.folhasObra',
-              '_folhaConsumoPendente', '_guardarConsumoFolha', '_sincronizar'
-          ]:
-              print(token, block.count(token))
+          for token in ['_salvarFormularioInterno', 'function salvarFormulario', 'TotalGestSaveFormPersist.apply', 'TotalGestSaveFormServico.run', 'TotalGestSaveFormServicoNotifications.run']:
+              positions = []
+              pos = 0
+              while True:
+                  i = text.find(token, pos)
+                  if i < 0: break
+                  positions.append(i)
+                  pos = i + 1
+              print(token, positions)
+          start = text.find('_salvarFormularioInterno')
+          persist = text.find('TotalGestSaveFormPersist.apply', start)
+          if start >= 0 and persist >= 0:
+              end = text.find('\n        }', persist)
+              if end < 0: end = persist + 8000
+              print('\n=== contexto ===')
+              print(text[max(0, start-300):min(len(text), end+1200)])
           PY
-          echo 'auditoria-tail-comum'
+          echo 'auditoria-tail-estrutural'
