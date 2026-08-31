@@ -14,6 +14,7 @@
     syncStatus: './assets/js/app-sync-status.js',
     syncHelpers: './assets/js/app-sync-helpers.js',
     syncDiff: './assets/js/app-sync-diff.js',
+    syncPrepare: './assets/js/app-sync-prepare.js',
     syncUpsert: './assets/js/app-sync-upsert.js',
     syncLicenses: './assets/js/app-sync-licenses.js',
     syncEncarregados: './assets/js/app-sync-encarregados.js',
@@ -56,6 +57,7 @@
     if (options.syncStatus === true) pedidos.push(MODULOS.syncStatus);
     if (options.syncHelpers === true) pedidos.push(MODULOS.syncHelpers);
     if (options.syncDiff === true) pedidos.push(MODULOS.syncDiff);
+    if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncUpsert === true) pedidos.push(MODULOS.syncUpsert);
     if (options.syncLicenses === true) pedidos.push(MODULOS.syncLicenses);
     if (options.syncEncarregados === true) pedidos.push(MODULOS.syncEncarregados);

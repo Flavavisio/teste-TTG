@@ -3212,12 +3212,7 @@
             let erros = 0;
             let primeiroErro = '';
             // repara equipamentos com localId inválido (ex: placeholder '__novo__' de um local nunca gravado)
-            {
-                const idsLocaisValidos = new Set((dados.locais || []).map(l => l.id));
-                (dados.equipamentos || []).forEach(eq => {
-                    if (eq.localId && !idsLocaisValidos.has(eq.localId)) eq.localId = null;
-                });
-            }
+            window.TotalGestSyncPrepare.repairInvalidEquipmentLocations(dados);
             // 0) migrar ficheiros em base64 para o Storage (com fallback que mantém base64)
             await migrarFicheirosPendentes();
             // 1) UPSERTS na ordem das FKs
@@ -32043,6 +32038,6 @@ window._relPrefill = function(msg){
 </div>
 
   <script src="./assets/js/app-shell.js"></script>
-  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true, syncPrepare: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
