@@ -1,9 +1,6 @@
-name: Inspect remaining ORDEM loops
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -11,21 +8,22 @@ permissions:
 
 jobs:
   inspect:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mostrar contexto dos ciclos ORDEM
+      - name: Estado dos módulos principais
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          lines = Path('app.html').read_text(encoding='utf-8').splitlines()
-          hits = [i for i,l in enumerate(lines) if 'for (const col of ORDEM)' in l]
-          print('ocorrencias:', len(hits))
-          for n,i in enumerate(hits, 1):
-              print(f'\n=== OCORRENCIA {n} linha {i+1} ===')
-              for j in range(max(0,i-12), min(len(lines),i+18)):
-                  print(f'{j+1}: {lines[j]}')
+          text = Path('app.html').read_text(encoding='utf-8')
+          checks = [
+              'window.TotalGestApp.init',
+              'function guardarDados()',
+              'async function _sincronizar()',
+              'function bootstrapSupabase()'
+          ]
+          for item in checks:
+              print(item, text.count(item))
           PY
