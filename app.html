@@ -23723,58 +23723,26 @@ async function salvarAdmin(e) {
             }
 
             if (ent === 'funcionario') {
-                // Verifica logo aqui se o email já está a ser usado por outro funcionário ou
-                // encarregado — sem isto, só se descobria depois de tentar gravar, com um erro
-                // em bruto do servidor ("duplicate key... funcionarios_email_key") em vez de um
-                // aviso claro.
-                const _emailNovoFunc = (document.getElementById('f_email')?.value || '').trim().toLowerCase();
-                if (_emailNovoFunc) {
-                    const _emailJaUsado = (dados.funcionarios || []).some(f => f.id !== idEditando && (f.email || '').trim().toLowerCase() === _emailNovoFunc)
-                        || (dados.encarregados || []).some(e => e.id !== idEditando && (e.email || '').trim().toLowerCase() === _emailNovoFunc);
-                    if (_emailJaUsado) {
-                        mostrarErro(`Já existe uma conta com o email "${_emailNovoFunc}". Usa outro email para este funcionário.`);
-                        return;
-                    }
-                }
-                if (!isEdit) {
-                    const verif = verificarLimiteFuncionarios(usuarioLogado.role === 'admin' ? usuarioLogado.id : usuarioLogado.adminId);
-                    if (!verif.permitido) {
-                        mostrarErro(verif.mensagem);
-                        return;
-                    }
-                }
-                const _roleTipoEl = document.getElementById('f_role_tipo');
-                const _roleTipo = _roleTipoEl ? _roleTipoEl.value : 'funcionario';
-
-                const _encResultado = await window.TotalGestSaveFormFuncionarioEncarregado.run({
+                const _funcOrq = await window.TotalGestSaveFormFuncionarioOrchestrator.run({
                     document: document,
                     data: dados,
                     user: usuarioLogado,
                     isEdit: isEdit,
-                    roleType: _roleTipo,
+                    editingId: idEditando,
+                    showError: mostrarErro,
+                    verifyLimit: verificarLimiteFuncionarios,
                     generateId: gerarId,
                     saveData: guardarDados,
                     audit: registarAuditoria,
                     closeModal: fecharModal,
                     renderAll: renderizarTudo,
                     createAuth: criarUtilizadorAuth,
-                    showAlert: alert
-                });
-                if (_encResultado.handled) return;
-
-                const _funcResultado = await window.TotalGestSaveFormFuncionario.prepare({
-                    document: document,
-                    data: dados,
-                    user: usuarioLogado,
-                    isEdit: isEdit,
-                    editingId: idEditando,
-                    roleType: _roleTipo,
                     vehicleAssigned: veiculoJaAtribuido,
                     emailRegistered: emailJaRegistado,
                     showAlert: alert
                 });
-                if (!_funcResultado.ok) return;
-                obj = _funcResultado.value;
+                if (_funcOrq.stop) return;
+                obj = _funcOrq.value;
             } else if (ent === 'cliente') {
                 const _clienteResultado = window.TotalGestSaveFormCliente.prepare({
                     document: document,
@@ -30872,6 +30840,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
