@@ -30,6 +30,7 @@
     modalServico: './assets/js/app-modal-servico.js',
     modalObra: './assets/js/app-modal-obra.js',
     saveFormFornecedor: './assets/js/app-save-form-fornecedor.js',
+    saveFormArtigo: './assets/js/app-save-form-artigo.js',
     syncPrepare: './assets/js/app-sync-prepare.js',
     syncFiles: './assets/js/app-sync-files.js',
     syncCollections: './assets/js/app-sync-collections.js',
@@ -93,6 +94,7 @@
     if (options.modalServico === true) pedidos.push(MODULOS.modalServico);
     if (options.modalObra === true) pedidos.push(MODULOS.modalObra);
     if (options.saveFormFornecedor === true) pedidos.push(MODULOS.saveFormFornecedor);
+    if (options.saveFormArtigo === true) pedidos.push(MODULOS.saveFormArtigo);
     if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncFiles === true) pedidos.push(MODULOS.syncFiles);
     if (options.syncCollections === true) pedidos.push(MODULOS.syncCollections);

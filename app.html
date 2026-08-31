@@ -24241,13 +24241,15 @@ async function salvarAdmin(e) {
                 });
                 return;
             } else if (ent === 'artigo') {
-                const nome = document.getElementById('ar_nome').value.trim();
-                if (!nome) { alert('Indique o nome do artigo.'); return; }
-                const cat = document.getElementById('ar_categoria').value;
-                const _arTemSerie = document.getElementById('ar_temserie') ? document.getElementById('ar_temserie').checked : false;
-                obj = { nome, marca: document.getElementById('ar_marca').value.trim(), categoria: (cat === '__nova' ? '' : cat), referencia: document.getElementById('ar_ref').value.trim(), codigoBarras: (_arTemSerie || !document.getElementById('ar_codbarras')) ? '' : document.getElementById('ar_codbarras').value.trim(), temNumeroSerie: _arTemSerie, unidade: document.getElementById('ar_unidade').value, stockMinimo: (document.getElementById('ar_stockmin').value === '' ? '' : _intVal('ar_stockmin', '')), alertaStock: document.getElementById('ar_alerta') ? document.getElementById('ar_alerta').checked : false, precoVenda: document.getElementById('ar_preco').value, precoCompra: document.getElementById('ar_preco_compra') ? document.getElementById('ar_preco_compra').value : '', observacoes: document.getElementById('ar_obs').value.trim(), adminId: (usuarioLogado.role === 'admin' ? usuarioLogado.id : usuarioLogado.adminId) };
-                if (!isEdit) obj.stockInicial = _intVal('ar_stockini', 0);
-                _guardarArmazem('artigos', obj, isEdit); return;
+                window.TotalGestSaveFormArtigo.run({
+                    document: document,
+                    user: usuarioLogado,
+                    isEdit: isEdit,
+                    showAlert: alert,
+                    intVal: _intVal,
+                    saveWarehouse: _guardarArmazem
+                });
+                return;
             } else if (ent === 'obra') {
                 const nome = document.getElementById('ob_nome').value.trim();
                 if (!nome) { alert('Indique o nome da obra.'); return; }
@@ -31172,6 +31174,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
