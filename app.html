@@ -23713,142 +23713,66 @@ async function salvarAdmin(e) {
             });
             if (!_contactosValidos) return;
 
-            if (ent === 'funcionario') {
-                const _funcOrq = await window.TotalGestSaveFormFuncionarioOrchestrator.run({
-                    document: document,
-                    data: dados,
-                    user: usuarioLogado,
-                    isEdit: isEdit,
-                    editingId: idEditando,
-                    showError: mostrarErro,
-                    verifyLimit: verificarLimiteFuncionarios,
-                    generateId: gerarId,
-                    saveData: guardarDados,
-                    audit: registarAuditoria,
-                    closeModal: fecharModal,
-                    renderAll: renderizarTudo,
-                    createAuth: criarUtilizadorAuth,
-                    vehicleAssigned: veiculoJaAtribuido,
-                    emailRegistered: emailJaRegistado,
-                    showAlert: alert
-                });
-                if (_funcOrq.stop) return;
-                obj = _funcOrq.value;
-            } else if (ent === 'cliente') {
-                const _clienteResultado = window.TotalGestSaveFormCliente.prepare({
-                    document: document,
-                    data: dados,
-                    user: usuarioLogado,
-                    editingId: idEditando,
-                    showAlert: alert
-                });
-                if (!_clienteResultado.ok) return;
-                obj = _clienteResultado.value;
-            } else if (ent === 'servico') {
-                const _servicoResultado = await window.TotalGestSaveFormServico.run({
-                    document: document,
-                    data: dados,
-                    user: usuarioLogado,
-                    isEdit: isEdit,
-                    item: item,
-                    editingId: idEditando,
-                    newWorkId: _novaOSObraId,
-                    approvingAssistanceId: _aprovandoAssistenciaId,
-                    tenantId: _tenantId,
-                    generateId: gerarId,
-                    selectedWorkTypes: _sTiposTrabalhoSelecionados,
-                    blockIfAbsent: _bloquearSeAusenteEmOS,
-                    showAlert: alert,
-                    showError: mostrarErro,
-                    showConfirm: confirm,
-                    timeToMinutes: _horaMin,
-                    employeeName: obterNomeFuncionario,
-                    generateRegistrationNumber: gerarNumeroRegistoServidor,
-                    validation: window.TotalGestSaveFormServicoValidation,
-                    context: window.TotalGestSaveFormServicoContext,
-                    object: window.TotalGestSaveFormServicoObject,
-                    conflicts: window.TotalGestSaveFormServicoConflicts,
-                    registration: window.TotalGestSaveFormServicoRegistration
-                });
-                if (!_servicoResultado.ok) return;
-                obj = _servicoResultado.value;
-            } else if (ent === 'folha') {
-                const _foResultado = await window.TotalGestSaveFormFolha.run({
-                    document: document,
-                    data: dados,
-                    user: usuarioLogado,
-                    generateId: gerarId,
-                    showError: mostrarErro,
-                    showAlert: alert,
-                    hoursCorrectedManually: _foHorasCorrigidasManualmente,
-                    hoursForServiceOrder: _horasPicadasOS,
-                    hoursForWork: _horasPicadasObra,
-                    editingId: idEditando,
-                    captureSignature: capturarAssinatura,
-                    uploadImage: _uploadImagemStorage,
-                    isEdit: isEdit,
-                    getToday: getDataHoje,
-                    advancePeriodicity: avancarPeriodicidade,
-                    notify: _notificarFuncionario,
-                    extraMaterials: _foMatExtra
-                });
-                if (!_foResultado.ok) return;
-                obj = _foResultado.value;
-                _folhaConsumoPendente = _foResultado.pendingConsumption;
-                _foMatExtra = [];
-            } else if (ent === 'requisicao') {
-                window.TotalGestSaveFormRequisicao.run({
-                    document: document,
-                    data: dados,
-                    user: usuarioLogado,
-                    isEdit: isEdit,
-                    editingId: idEditando,
-                    generateId: gerarId,
-                    saveData: guardarDados,
-                    closeModal: fecharModal,
-                    renderAll: renderizarTudo,
-                    showAlert: alert,
-                    FileReader: FileReader
-                });
-                return;
-            } else if (ent === 'fornecedor') {
-                window.TotalGestSaveFormFornecedor.run({
-                    document: document,
-                    user: usuarioLogado,
-                    isEdit: isEdit,
-                    showAlert: alert,
-                    saveWarehouse: _guardarArmazem
-                });
-                return;
-            } else if (ent === 'artigo') {
-                window.TotalGestSaveFormArtigo.run({
-                    document: document,
-                    user: usuarioLogado,
-                    isEdit: isEdit,
-                    showAlert: alert,
-                    intVal: _intVal,
-                    saveWarehouse: _guardarArmazem
-                });
-                return;
-            } else if (ent === 'obra') {
-                window.TotalGestSaveFormObra.run({
-                    document: document,
-                    data: dados,
-                    user: usuarioLogado,
-                    isEdit: isEdit,
-                    editingId: idEditando,
-                    generateId: gerarId,
-                    showError: mostrarErro,
-                    showAlert: alert,
-                    saveWarehouse: _guardarArmazem,
-                    confirm: tgConfirm,
-                    createServiceOrder: criarOSdaObra
-                });
-                return;
-            } else {
-                fecharModal();
-                return;
-            }
+            const _dispatchFormulario = await window.TotalGestSaveFormDispatch.run({
+                entity: ent,
+                document: document,
+                data: dados,
+                user: usuarioLogado,
+                isEdit: isEdit,
+                editingId: idEditando,
+                item: item,
+                newWorkId: _novaOSObraId,
+                approvingAssistanceId: _aprovandoAssistenciaId,
+                tenantId: _tenantId,
+                generateId: gerarId,
+                showError: mostrarErro,
+                showAlert: alert,
+                showConfirm: confirm,
+                confirmDialog: tgConfirm,
+                verifyEmployeeLimit: verificarLimiteFuncionarios,
+                saveData: guardarDados,
+                audit: registarAuditoria,
+                closeModal: fecharModal,
+                renderAll: renderizarTudo,
+                createAuth: criarUtilizadorAuth,
+                vehicleAssigned: veiculoJaAtribuido,
+                emailRegistered: emailJaRegistado,
+                selectedWorkTypes: _sTiposTrabalhoSelecionados,
+                blockIfAbsent: _bloquearSeAusenteEmOS,
+                timeToMinutes: _horaMin,
+                employeeName: obterNomeFuncionario,
+                generateRegistrationNumber: gerarNumeroRegistoServidor,
+                hoursCorrectedManually: _foHorasCorrigidasManualmente,
+                hoursForServiceOrder: _horasPicadasOS,
+                hoursForWork: _horasPicadasObra,
+                captureSignature: capturarAssinatura,
+                uploadImage: _uploadImagemStorage,
+                getToday: getDataHoje,
+                advancePeriodicity: avancarPeriodicidade,
+                notify: _notificarFuncionario,
+                extraMaterials: _foMatExtra,
+                setPendingConsumption: value => { _folhaConsumoPendente = value; },
+                clearExtraMaterials: () => { _foMatExtra = []; },
+                FileReader: FileReader,
+                saveWarehouse: _guardarArmazem,
+                intVal: _intVal,
+                createServiceOrder: criarOSdaObra,
+                employeeHandler: window.TotalGestSaveFormFuncionarioOrchestrator,
+                clientHandler: window.TotalGestSaveFormCliente,
+                serviceHandler: window.TotalGestSaveFormServico,
+                sheetHandler: window.TotalGestSaveFormFolha,
+                requestHandler: window.TotalGestSaveFormRequisicao,
+                supplierHandler: window.TotalGestSaveFormFornecedor,
+                articleHandler: window.TotalGestSaveFormArtigo,
+                workHandler: window.TotalGestSaveFormObra,
+                serviceValidation: window.TotalGestSaveFormServicoValidation,
+                serviceContext: window.TotalGestSaveFormServicoContext,
+                serviceObject: window.TotalGestSaveFormServicoObject,
+                serviceConflicts: window.TotalGestSaveFormServicoConflicts,
+                serviceRegistration: window.TotalGestSaveFormServicoRegistration
+            });
+            if (_dispatchFormulario.stop) return;
+            obj = _dispatchFormulario.value;
 
             const _persistenciaFormulario = window.TotalGestSaveFormPersist.apply({
                 entity: ent,
@@ -30648,6 +30572,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
