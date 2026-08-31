@@ -24086,15 +24086,16 @@ async function salvarAdmin(e) {
                 obj = _foObjeto.value;
                 // OS gerada a partir de uma Assistência (Total Gest Assist) — o estado é obrigatório aqui,
                 // e atualiza-se automaticamente do lado do Assist ao gravar a folha.
-                let _foAssistenciaParaAtualizar = null, _foNovoEstadoAssistencia = null;
-                if (obj.servicoId) {
-                    const _osDaFolha = dados.servicos?.find(s => s.id === obj.servicoId);
-                    if (_osDaFolha?.origem === 'assistencia') {
-                        _foNovoEstadoAssistencia = document.getElementById('fo_estado_assistencia')?.value || '';
-                        if (!_foNovoEstadoAssistencia) { alert('Indica o estado da assistência — é obrigatório para OS geradas a partir do Total Gest Assist.'); return; }
-                        _foAssistenciaParaAtualizar = (dados.assistencias || []).find(a => a.id === _osDaFolha.assistenciaId || a.osGeradaId === _osDaFolha.id);
-                    }
-                }
+                const _foAssist = window.TotalGestSaveFormFolhaAssist.prepare({
+                    document: document,
+                    data: dados,
+                    serviceOrderId: obj.servicoId,
+                    showAlert: alert
+                });
+                if (!_foAssist.ok) return;
+                const _foAssistenciaParaAtualizar = _foAssist.assistance;
+                const _foNovoEstadoAssistencia = _foAssist.newState;
+
                 _folhaConsumoPendente = Array.from(document.querySelectorAll('#fo_plano_materiais .fo-consumo')).map(inp => ({ artigoId: inp.getAttribute('data-artigo'), consumido: parseInt(inp.value,10) || 0 }));
                 _folhaConsumoPendente.push(..._foMatExtra.map(x => ({ artigoId: x.artigoId, consumido: x.qtd })));
                 _foMatExtra = [];
@@ -24119,10 +24120,10 @@ async function salvarAdmin(e) {
                         }
                     }
                 }
-                if (_foAssistenciaParaAtualizar && _foNovoEstadoAssistencia) {
-                    _foAssistenciaParaAtualizar.estado = _foNovoEstadoAssistencia;
-                    _foAssistenciaParaAtualizar.dataModificacao = Date.now();
-                }
+                window.TotalGestSaveFormFolhaAssist.apply({
+                    assistance: _foAssistenciaParaAtualizar,
+                    newState: _foNovoEstadoAssistencia
+                });
                 // A folha de obra pode ser criada diretamente (botão "Folha" na lista de OS),
                 // sem passar pelo botão "Saída" da Agenda — nesse caso o registo de ponto desta
                 // OS ficava aberto para sempre, e a próxima entrada noutra OS era bloqueada com
@@ -31053,6 +31054,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
