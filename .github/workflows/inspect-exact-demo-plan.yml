@@ -1,25 +1,37 @@
-name: Inspect reports renderer
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   inspect:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - run: python3 .github/scripts/inspect-reports.py
-      - run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .github/diagnostics/renderizarReports.txt
-          git diff --cached --quiet || git commit -m 'Diagnosticar renderizador de relatórios'
-          git diff --cached --quiet || git push origin HEAD:refactor/separar-index-app
+      - name: Estado dos módulos principais
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('app.html').read_text(encoding='utf-8')
+          checks = [
+              'window.TotalGestSaveFormServico.run({',
+              'window.TotalGestProfileModal.render({',
+              'window.TotalGestProfileSave.run({',
+              'window.TotalGestCardVisibility.run({',
+              'window.TotalGestHomeDashboard.run({',
+              'window.TotalGestMyDay.run({',
+              'function renderizarOMeuDia(',
+              'function renderizarReports(',
+              'function _salvarFormularioInterno(',
+              'function guardarDados()',
+              'async function _sincronizar()',
+              'async function carregarDados('
+          ]
+          for item in checks:
+              print(item, text.count(item))
+          PY
