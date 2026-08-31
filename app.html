@@ -23786,66 +23786,19 @@ async function salvarAdmin(e) {
                     return;
                 }
 
-                obj = {
-                    nome: document.getElementById('f_nome').value.trim(),
-                    foto: document.getElementById('f_foto_data')?.value || null,
-                    cargo: document.getElementById('f_cargo').value.trim(),
-                    telefone: document.getElementById('f_telefone').value.trim(),
-                    email: document.getElementById('f_email').value.trim(),
-                    morada: document.getElementById('f_morada').value.trim(),
-                    codigoPostal: document.getElementById('f_cp').value.trim(),
-                    dataNascimento: document.getElementById('f_nasc').value,
-                    horasSemanais: parseInt(document.getElementById('f_horas').value) || 40,
-                    role: (!isEdit && _roleTipo === 'subadmin') ? 'subadmin' : (!isEdit && _roleTipo === 'vendedor') ? 'vendedor' : (!isEdit && _roleTipo === 'vigilante') ? 'vigilante' : (!isEdit && _roleTipo === 'supervisor_vigilantes') ? 'supervisor_vigilantes' : (isEdit ? undefined : 'funcionario'),
-                    adminId: (usuarioLogado.role === 'admin' ? usuarioLogado.id : usuarioLogado.adminId)
-                };
-                if (obj.role === undefined) delete obj.role;
-                if (!isEdit && _roleTipo === 'vigilante') {
-                    const _supEl = document.getElementById('f_vigilante_supervisor_id');
-                    obj.vigilanteSupervisorId = _supEl && _supEl.value ? _supEl.value : null;
-                }
-                const _supEditEl = document.getElementById('f_vigilante_supervisor_id_edit');
-                if (isEdit && _supEditEl) obj.vigilanteSupervisorId = _supEditEl.value || null;
-                const _fSenhaVal = document.getElementById('f_senha').value;
-                if (_fSenhaVal) obj.senha = _fSenhaVal;
-                if (!isEdit) obj.mudarSenha = true;
-                const ordEl = document.getElementById('f_ordenado');
-                if (ordEl) obj.ordenadoBruto = ordEl.value;
-                const apNumEl = document.getElementById('f_apolice_numero');
-                if (apNumEl) obj.apoliceNumero = apNumEl.value || null;
-                const apSegEl = document.getElementById('f_apolice_seguradora');
-                if (apSegEl) obj.apoliceSeguradora = apSegEl.value || null;
-                const apValEl = document.getElementById('f_apolice_validade');
-                if (apValEl) obj.apoliceValidade = apValEl.value || null;
-                const saudeNumEl = document.getElementById('f_saude_numero');
-                if (saudeNumEl) obj.saudeApoliceNumero = saudeNumEl.value || null;
-                const saudeSegEl = document.getElementById('f_saude_seguradora');
-                if (saudeSegEl) obj.saudeApoliceSeguradora = saudeSegEl.value || null;
-                const saudeValEl = document.getElementById('f_saude_validade');
-                if (saudeValEl) obj.saudeApoliceValidade = saudeValEl.value || null;
-                const shstEl = document.getElementById('f_shst_ultima_consulta');
-                if (shstEl) obj.shstUltimaConsulta = shstEl.value || null;
-                const veicEl = document.getElementById('f_veiculo');
-                if (veicEl) obj.veiculoId = veicEl.value || null;
-                const gpsEl = document.getElementById('f_gps_ponto');
-                if (gpsEl) obj.gpsPonto = gpsEl.checked;
-                const podeAssinarEl = document.getElementById('f_pode_assinar_relatorios');
-                if (podeAssinarEl) obj.podeAssinarRelatorios = podeAssinarEl.checked;
-                const dfEl = document.getElementById('f_dias_ferias');
-                if (dfEl && dfEl.value !== '') obj.diasFerias = parseInt(dfEl.value) || 0;
-                else if (isEdit) { const _ex = dados.funcionarios?.find(x => x.id === idEditando); if (_ex && _ex.diasFerias != null) obj.diasFerias = _ex.diasFerias; }
-                if (obj.veiculoId) {
-                    const ocupado = veiculoJaAtribuido(obj.veiculoId, 'func', isEdit ? idEditando : null);
-                    if (ocupado) { alert('Esse carro já está atribuído a ' + ocupado + '. Um carro só pode ser atribuído a uma pessoa.'); return; }
-                }
-                if (!obj.nome || !obj.cargo || !obj.email || (!isEdit && !obj.senha) || !obj.morada || !obj.codigoPostal || !document.getElementById('f_horas').value) {
-                    alert('Preencha os campos obrigatórios: Nome, Cargo, Email, Senha, Morada, Código Postal e Horas Semanais.');
-                    return;
-                }
-                if (await emailJaRegistado(obj.email, isEdit ? idEditando : null)) {
-                    alert('Já existe um utilizador com este email (' + obj.email + '). Use um email diferente.');
-                    return;
-                }
+                const _funcResultado = await window.TotalGestSaveFormFuncionario.prepare({
+                    document: document,
+                    data: dados,
+                    user: usuarioLogado,
+                    isEdit: isEdit,
+                    editingId: idEditando,
+                    roleType: _roleTipo,
+                    vehicleAssigned: veiculoJaAtribuido,
+                    emailRegistered: emailJaRegistado,
+                    showAlert: alert
+                });
+                if (!_funcResultado.ok) return;
+                obj = _funcResultado.value;
             } else if (ent === 'cliente') {
                 const _clienteResultado = window.TotalGestSaveFormCliente.prepare({
                     document: document,
@@ -30943,6 +30896,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
