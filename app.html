@@ -2982,127 +2982,34 @@
             } catch (e) { return { tenantId: null, superAdmin: false }; }
         }
         async function carregarDados(tenantIdParam, superAdminParam, clienteIdParam) {
-            await _guardarDadosQueue.waitForIdle(); // espera que qualquer gravação pendente termine antes de recarregar,
-                               // para nunca apagar alterações locais ainda não sincronizadas
-
-            if (!navigator.onLine) {
-                const _cache = _carregarCacheLocal();
-                if (_cache) {
-                    dados = _cache;
-                    _restaurarSnapshotDaCache();
-                    mostrarStatusOffline();
-                    return dados;
-                }
-                // sem cache nenhuma guardada e sem rede — não há como arrancar
-            }
-
-            const novos = dadosVazios();
-            const tabelas = ORDEM.map(c => M[c].tabela).concat(['licencas','encarregado_funcionarios']);
-            _pontoCarregadoDesde = _dataCorteMeses(6);
-            _servicosCarregadoDesde = _dataCorteMeses(3);
-            _folhasCarregadoDesde = _dataCorteMeses(3);
-            const _auditoriaCarregadaDesde = _dataCorteMeses(6);
-
-            // Descobre por quem filtrar (empresa/tenant) — evita puxar dados de TODAS as
-            // empresas em cada carregamento, que era a principal causa de egress excessivo.
-            // Se não for passado explicitamente, usa a sessão atual (chamadas de refresh
-            // já autenticadas); só fica sem filtro mesmo para superadmin ou no arranque
-            // muito inicial (antes de existir qualquer sessão).
-            const loadContext = window.TotalGestLoadContext.resolve({
+            return window.TotalGestLoadOrchestrator.run({
                 tenantIdParam: tenantIdParam,
                 superAdminParam: superAdminParam,
                 clienteIdParam: clienteIdParam,
-                user: usuarioLogado
-            });
-            let tenantId = loadContext.tenantId;
-            let ehSuperAdmin = loadContext.superAdmin;
-            let clienteId = loadContext.clienteId;
-            // Portal do cliente: só precisa de uma fração dos dados da empresa (as suas próprias
-            // obras/contratos/OS/relatórios) — poupa bastante egress não pedir o resto (stock,
-            // frota, funcionários, despesas, etc. que o portal nunca mostra).
-            let resultados;
-            try {
-                resultados = await window.TotalGestLoadQueries.fetchAll({
-                    supabase: supa,
-                    tables: tabelas,
-                    tenantId: tenantId,
-                    superAdmin: ehSuperAdmin,
-                    clienteId: clienteId,
-                    pontoSince: _pontoCarregadoDesde,
-                    servicesSince: _servicosCarregadoDesde,
-                    sheetsSince: _folhasCarregadoDesde,
-                    auditSince: _auditoriaCarregadaDesde
-                });
-            } catch (e) {
-                // falhou a ligação a meio (ex: ficou offline agora) — usa a cópia local se existir
-                const _cache = _carregarCacheLocal();
-                if (_cache) { dados = _cache; _restaurarSnapshotDaCache(); mostrarStatusOffline(); return dados; }
-                throw e;
-            }
-            window.TotalGestLoadTransform.apply({
-                tables: tabelas,
-                results: resultados,
+                user: usuarioLogado,
+                waitForIdle: () => _guardarDadosQueue.waitForIdle(),
+                isOnline: () => navigator.onLine,
+                loadCache: _carregarCacheLocal,
+                restoreSnapshot: _restaurarSnapshotDaCache,
+                showOffline: mostrarStatusOffline,
+                setData: value => { dados = value; },
+                emptyData: dadosVazios,
                 order: ORDEM,
                 metadata: M,
-                target: novos,
-                licenseFromRow: licFromRow
+                cutoffMonths: _dataCorteMeses,
+                setPointSince: value => { _pontoCarregadoDesde = value; },
+                setServicesSince: value => { _servicosCarregadoDesde = value; },
+                setSheetsSince: value => { _folhasCarregadoDesde = value; },
+                resolveContext: window.TotalGestLoadContext.resolve,
+                fetchAll: window.TotalGestLoadQueries.fetchAll,
+                transform: window.TotalGestLoadTransform.apply,
+                supabase: supa,
+                licenseFromRow: licFromRow,
+                rebuildSnapshots: _reconstruirSnapshots,
+                saveCache: _guardarCacheLocal
             });
-            dados = novos;
-            _reconstruirSnapshots();
-            _guardarCacheLocal();
-            return dados;
         }
 
-        // -------- sincronização por diferenças (substitui o antigo guardarDados) --------
-        // Campos que podem conter ficheiros em base64 → migram para o Supabase Storage ao gravar
-        const FICHEIRO_CAMPOS = {
-            ponto: ['foto'],
-            administradores: ['logo'],
-            pedidos: ['anexo'],
-            requisicoes: ['anexo'],
-            veiculoDocumentos: ['ficheiro'],
-            funcionarios: ['foto'],
-            folhasObra: ['assinatura'],
-            relatoriosEspecialidade: ['assinaturaCliente', 'assinaturaTecnico'],
-            encomendas: ['fatura']
-        };
-
-        // Tipos de ficheiro permitidos para upload — fotos, assinaturas, logos e documentos
-        // (PDF). Qualquer outro tipo (ex.: executáveis, scripts, HTML) é recusado.
-        const _TIPOS_FICHEIRO_PERMITIDOS = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'application/pdf'];
-        const _TAMANHO_MAX_FICHEIRO = 15 * 1024 * 1024; // 15 MB
-        async function uploadDataURL(dataUrl, pasta) {
-            const m = /^data:([^;]+);base64,(.*)$/.exec(dataUrl || '');
-            if (!m) return dataUrl; // já é URL ou está vazio
-            const mime = m[1].toLowerCase();
-            if (!_TIPOS_FICHEIRO_PERMITIDOS.includes(mime)) {
-                throw new Error('Tipo de ficheiro não permitido (' + mime + '). Só são aceites imagens (PNG, JPG, WEBP, GIF, SVG) ou PDF.');
-            }
-            const bin = atob(m[2]);
-            if (bin.length > _TAMANHO_MAX_FICHEIRO) {
-                throw new Error('Ficheiro demasiado grande (máximo 15 MB).');
-            }
-            const arr = new Uint8Array(bin.length);
-            for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-            const ext = (mime.split('/')[1] || 'bin').split('+')[0];
-            const path = pasta + '/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.' + ext;
-            const { error } = await supa.storage.from('ficheiros').upload(path, arr, { contentType: mime, upsert: false });
-            if (error) throw error;
-            return supa.storage.from('ficheiros').getPublicUrl(path).data.publicUrl;
-        }
-
-
-
-        function registarHistoricoLicenca(adminId, tipo, descricao, valor) {
-            try {
-                dados.historicoLicencas = dados.historicoLicencas || [];
-                dados.historicoLicencas.push({
-                    id: gerarId(), adminId, tipo, descricao: (descricao || '').toString().slice(0, 300),
-                    valor: valor != null ? Number(valor) : null,
-                    feitoPor: usuarioLogado?.nome || '', dataCriacao: Date.now()
-                });
-            } catch (e) { console.warn('historico licenca:', e); }
-        }
         function registarAuditoria(acao, entidade, entidadeId, descricao) {
             try {
                 if (!usuarioLogado) return;
@@ -31916,6 +31823,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
