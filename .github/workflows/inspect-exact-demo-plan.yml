@@ -1,4 +1,4 @@
-name: Inspect pending changes counter
+name: Migrate pending changes counter
 
 on:
   push:
@@ -7,25 +7,30 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear contador de alterações pendentes
+      - name: Extrair contador de alterações pendentes
+        run: python3 .github/scripts/migrate-sync-pending.py
+      - name: Validar JavaScript
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          lines = Path('app.html').read_text(encoding='utf-8').splitlines()
-          hits = [i for i,l in enumerate(lines) if '_contarAlteracoesPendentes' in l]
-          print('ocorrencias:', len(hits))
-          for i in hits:
-              print(f'\n=== linha {i+1} ===')
-              for j in range(max(0,i-8), min(len(lines),i+20)):
-                  print(f'{j+1}: {lines[j]}')
-          PY
+          node --check assets/js/app-sync-pending.js
+          node --check assets/js/app-shell.js
+          node --check sw.js
+      - name: Validar e gravar
+        run: |
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/scripts/migrate-sync-pending.py
+          git add app.html assets/js/app-sync-pending.js assets/js/app-shell.js sw.js .github/scripts/migrate-sync-pending.py
+          git diff --cached --check
+          git commit -m "Extrair contador de alterações pendentes"
+          git push origin HEAD:refactor/separar-index-app
