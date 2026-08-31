@@ -1,6 +1,8 @@
-name: Inspect app migration boundary
+name: Inspect profile superadmin branch
 
 on:
+  push:
+    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
@@ -8,24 +10,23 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Mapear ramo superadmin do perfil
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestSaveFormServico.run({',
-              'function abrirEditarPerfil()',
-              'function _salvarFormularioInterno(',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'async function carregarDados('
-          ]
-          for item in checks:
-              print(item, text.count(item))
+          fn = text.index('        function abrirEditarPerfil() {')
+          start = text.index("            if (usuarioLogado.role === 'superadmin') {", fn)
+          end = text.index("            } else if (usuarioLogado.role === 'admin' && adminAtual()?.ehDistribuidor) {", start)
+          block = text[start:end]
+          print('linhas_superadmin', block.count('\n') + 1)
+          print(block)
+          for token in ['campos.innerHTML', 'dados.', 'usuarioLogado', 'obterConfig(', 'adminAtual(', 'document.', 'onclick=', 'onchange=']:
+              print(token, block.count(token))
           PY
