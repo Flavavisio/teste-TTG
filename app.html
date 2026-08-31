@@ -23876,47 +23876,15 @@ async function salvarAdmin(e) {
             else if (ent === 'cliente') dados.clientes = lista;
             else if (ent === 'servico') {
                 dados.servicos = lista;
-                if (!isEdit) {
-                    const _destinatarios = [...new Set([...(obj.funcionariosIds || []), obj.funcionarioId].filter(Boolean))];
-                    if (_destinatarios.length) {
-                        const _quandoTxt = obj.data ? ('agendada para ' + obj.data + (obj.hora ? ', ' + obj.hora : '')) : 'ainda sem data definida';
-                        const _clienteTxtNovaOS = obj.clienteId ? (obterNomeCliente(obj.clienteId) || '') : '';
-                        const _msg = (_clienteTxtNovaOS ? _clienteTxtNovaOS + ' — ' : '') + (obj.descricao ? obj.descricao + ' — ' : '') + _quandoTxt + '.';
-                        _destinatarios.forEach(fid => _notificarFuncionario(fid, '🧾 Nova Ordem de Serviço atribuída', _msg, obj.adminId));
-                    }
-                    if (obj.pagamentoLocal && obj.clienteId) {
-                        const _adminCriador = dados.administradores?.find(a => a.id === obj.adminId);
-                        const _nomeEmpresa = _adminCriador?.empresa || _adminCriador?.nome || 'A empresa';
-                        const _quandoTxtCli = obj.data ? (obj.data + (obj.hora ? ' às ' + obj.hora : '')) : 'uma data a combinar';
-                        const _valorTxt = obj.valor != null ? _finEur(obj.valor) : 'a combinar';
-                        _notificarFuncionario(obj.clienteId, '💶 Pagamento no local', _nomeEmpresa + ' criou a ordem de serviço ' + (obj.numeroRegisto ? 'nº ' + obj.numeroRegisto : '') + ' para ' + _quandoTxtCli + '. Deverá ter consigo o valor de ' + _valorTxt + ' para efetuar o pagamento no final do serviço. Obrigado.', obj.adminId);
-                    } else if (obj.clienteId && obj.data) {
-                        // Confirmação de agendamento — só quando não há já o aviso de pagamento no
-                        // local (esse já inclui a data), para não mandar duas notificações seguidas
-                        // sobre a mesma OS.
-                        const _quandoTxtCli2 = obj.data + (obj.hora ? ' às ' + obj.hora : '');
-                        _notificarFuncionario(obj.clienteId, '📅 Visita agendada', 'Foi agendada uma visita para ' + _quandoTxtCli2 + (obj.descricao ? ' — ' + obj.descricao : '') + '.', obj.adminId);
-                    }
-                } else if (_servicoAntigo) {
-                    const _idsAntes = [...new Set([...(_servicoAntigo.funcionariosIds || []), _servicoAntigo.funcionarioId].filter(Boolean))];
-                    const _idsDepois = [...new Set([...(obj.funcionariosIds || []), obj.funcionarioId].filter(Boolean))];
-                    const _dataMudou = ('data' in obj) && obj.data !== _servicoAntigo.data;
-                    const _horaMudou = ('hora' in obj) && obj.hora !== _servicoAntigo.hora;
-                    const _removidos = _idsAntes.filter(id => !_idsDepois.includes(id));
-                    const _mantidos = _idsDepois.filter(id => _idsAntes.includes(id));
-                    const _numeroOS = obj.numeroRegisto || _servicoAntigo.numeroRegisto || '';
-                    if (_dataMudou || _horaMudou) {
-                        const _quandoTxt = obj.data ? ('agendada agora para ' + obj.data + (obj.hora ? ', ' + obj.hora : '')) : 'ficou sem data definida';
-                        _mantidos.forEach(fid => _notificarFuncionario(fid, '📅 OS ' + (_numeroOS ? '#' + _numeroOS + ' ' : '') + 'alterada', 'A data/hora foi alterada — ' + _quandoTxt + '.', obj.adminId || _servicoAntigo.adminId));
-                    }
-                    if (_removidos.length) {
-                        _removidos.forEach(fid => _notificarFuncionario(fid, '🚫 Retirado de uma OS', 'Já não estás atribuído à OS ' + (_numeroOS ? '#' + _numeroOS : '') + '.', obj.adminId || _servicoAntigo.adminId));
-                    }
-                    if (obj._eraAprovacaoAssistencia && obj.clienteId) {
-                        const _quandoTxtCli = obj.data ? (obj.data + (obj.hora ? ' às ' + obj.hora : '')) : 'uma data a combinar';
-                        _notificarFuncionario(obj.clienteId, '✅ Pedido de assistência aceite', 'O teu pedido de assistência foi aceite e agendado para ' + _quandoTxtCli + '.', obj.adminId || _servicoAntigo.adminId);
-                    }
-                }
+                window.TotalGestSaveFormServicoNotifications.run({
+                    value: obj,
+                    oldService: _servicoAntigo,
+                    data: dados,
+                    isEdit: isEdit,
+                    clientName: obterNomeCliente,
+                    notify: _notificarFuncionario,
+                    formatEuro: _finEur
+                });
             }
             else if (ent === 'folha') dados.folhasObra = lista;
             if (ent === 'folha') {
@@ -30720,6 +30688,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
