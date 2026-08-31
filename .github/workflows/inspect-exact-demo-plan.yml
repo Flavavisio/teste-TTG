@@ -1,6 +1,9 @@
-name: Inspect app migration boundary
+name: Audit modal and save branches
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,34 +11,30 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Medir abrirModal e mapear gravação
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestApp.init',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'function bootstrapSupabase()',
-              'async function carregarDados(',
-              'const FICHEIRO_CAMPOS = {',
-              'async function uploadDataURL(dataUrl, pasta)',
-              'function registarHistoricoLicenca(',
-              'window.TotalGestModalFuncionario.render({',
-              'window.TotalGestModalCliente.render({',
-              'window.TotalGestModalFornecedor.render({',
-              'window.TotalGestModalRequisicao.render({',
-              'window.TotalGestModalArtigo.render({',
-              'window.TotalGestModalFolha.render({',
-              'window.TotalGestModalServico.render({',
-              'window.TotalGestModalObra.render({'
-          ]
-          for item in checks:
-              print(item, text.count(item))
+          import re
+          lines=Path('app.html').read_text(encoding='utf-8').splitlines()
+          def bounds(name):
+              s=next(i for i,l in enumerate(lines) if re.search(r'\bfunction\s+'+re.escape(name)+r'\s*\(',l))
+              d=0; started=False
+              for e in range(s,len(lines)):
+                  x=lines[e]
+                  if '{' in x: started=True
+                  d += x.count('{')-x.count('}')
+                  if started and d==0: return s,e
+          for name in ['abrirModal','_salvarFormularioInterno']:
+              s,e=bounds(name); print(f'{name}: {s+1}-{e+1} ({e-s+1} linhas)')
+              if name=='_salvarFormularioInterno':
+                  for i in range(s,e+1):
+                      if 'entidadeAtual' in lines[i] or re.search(r"\b(entidade|tipo)\s*===\s*['\"]",lines[i]):
+                          print(f'{i+1}: {lines[i].strip()}')
           PY
