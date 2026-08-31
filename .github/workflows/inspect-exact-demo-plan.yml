@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Localizar fecho de picagem
+      - name: Inspecionar acesso a ponto
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -27,14 +27,7 @@ jobs:
           block = text[start:end]
           lines = block.splitlines()
           for i, line in enumerate(lines):
-              low = line.lower()
-              if 'picag' in low or 'datasaida' in low or 'horasaida' in low:
-                  a=max(0,i-5); b=min(len(lines),i+9)
+              if 'dados.ponto' in line:
+                  a=max(0,i-12); b=min(len(lines),i+18)
                   print('\n'.join(lines[a:b]))
-                  print('---')
-          print('dados.ponto', block.count('dados.ponto'))
-          print('dataSaida', block.count('dataSaida'))
-          print('horaSaida', block.count('horaSaida'))
-          print('guardarDados(', block.count('guardarDados('))
-          print('renderizar', block.count('renderizar'))
           PY
