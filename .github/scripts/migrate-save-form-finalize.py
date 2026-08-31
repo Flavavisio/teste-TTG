@@ -10,9 +10,10 @@ sw = SW.read_text(encoding='utf-8')
 
 start_token = "            try {\n                await guardarDados(dados);\n            } catch (err) {\n"
 end_token = "            const _tornouSeSubadmin = ent === 'funcionario'"
-assert app.count(start_token) == 1, app.count(start_token)
-start = app.index(start_token)
-end = app.index(end_token, start)
+function_start = app.index('async function _salvarFormularioInterno(e)')
+end = app.index(end_token, function_start)
+start = app.rfind(start_token, function_start, end)
+assert start >= 0
 old = app[start:end]
 for token in [
     "registarAuditoria(isEdit ? 'editar' : 'criar'",
@@ -59,16 +60,10 @@ sw = sw.replace(sw_anchor, sw_anchor + "  './assets/js/app-save-form-finalize.js
 assert app.count('window.TotalGestSaveFormFinalize.run({') == 1
 new_end = app.index(end_token, start)
 new_block = app[start:new_end]
-for token in [
-    "registarAuditoria(isEdit ? 'editar' : 'criar'",
-    "window._osObraCriadaComSucesso = true;",
-    'fecharModal();',
-    'renderizarTudo();'
-]:
-    if token == "window._osObraCriadaComSucesso = true;":
-        assert new_block.count(token) == 1
-    else:
-        assert token not in new_block, token
+assert "registarAuditoria(isEdit ? 'editar' : 'criar'" not in new_block
+assert new_block.count('window._osObraCriadaComSucesso = true;') == 1
+assert new_block.count('fecharModal();') == 0
+assert new_block.count('renderizarTudo();') == 0
 assert shell.count('./assets/js/app-save-form-finalize.js') == 1
 assert sw.count('./assets/js/app-save-form-finalize.js') == 1
 
