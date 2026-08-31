@@ -80,7 +80,7 @@ sw = sw.replace("const CACHE = 'totalgest-v103';", "const CACHE = 'totalgest-v10
 assert app.count('window.TotalGestReportsDistributorMetrics.calculateOverview({') == 1
 assert app.count('window.TotalGestReportsDistributorMetrics.calculateClient({') == 1
 assert app[start:].count("const valorAddons = (temContratos ?") == 0
-assert shell.count('reportsDistributorMetrics') == 2
+assert shell.count('reportsDistributorMetrics') == 3
 assert sw.count("./assets/js/app-reports-distributor-metrics.js") == 1
 
 APP.write_text(app, encoding='utf-8')
