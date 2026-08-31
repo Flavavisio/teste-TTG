@@ -1,4 +1,4 @@
-name: Inspect render hotspots
+name: Migrate home dashboard
 
 on:
   push:
@@ -9,17 +9,22 @@ permissions:
   contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - run: python3 .github/scripts/inspect-render-hotspots.py
+      - run: python3 .github/scripts/migrate-home-dashboard.py
+      - run: |
+          node --check assets/js/app-home-dashboard.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
       - run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .github/diagnostics/render-hotspots
-          git commit -m 'Diagnosticar renderizadores principais'
+          git add app.html assets/js/app-shell.js assets/js/app-home-dashboard.js sw.js
+          git commit -m 'Extrair dashboard principal da Home'
           git push origin HEAD:refactor/separar-index-app
