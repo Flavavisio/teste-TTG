@@ -69,6 +69,7 @@
     profileHelpers: './assets/js/app-profile-helpers.js',
     profileSaveSuperadmin: './assets/js/app-profile-save-superadmin.js',
     profileSaveDistributor: './assets/js/app-profile-save-distributor.js',
+    profileSaveAdmin: './assets/js/app-profile-save-admin.js',
     syncPrepare: './assets/js/app-sync-prepare.js',
     syncFiles: './assets/js/app-sync-files.js',
     syncCollections: './assets/js/app-sync-collections.js',
@@ -171,6 +172,7 @@
     if (options.profileHelpers === true) pedidos.push(MODULOS.profileHelpers);
     if (options.profileSaveSuperadmin === true) pedidos.push(MODULOS.profileSaveSuperadmin);
     if (options.profileSaveDistributor === true) pedidos.push(MODULOS.profileSaveDistributor);
+    if (options.profileSaveAdmin === true) pedidos.push(MODULOS.profileSaveAdmin);
     if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncFiles === true) pedidos.push(MODULOS.syncFiles);
     if (options.syncCollections === true) pedidos.push(MODULOS.syncCollections);
