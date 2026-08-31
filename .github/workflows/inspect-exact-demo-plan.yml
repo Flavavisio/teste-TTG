@@ -1,4 +1,4 @@
-name: Inspect profile orchestration
+name: Migrate worker profile modal
 
 on:
   push:
@@ -6,64 +6,26 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear abrirEditarPerfil
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          marker = 'function abrirEditarPerfil()'
-          assert text.count(marker) == 1, text.count(marker)
-          start = text.index(marker)
-          brace = text.index('{', start)
-          depth = 0
-          i = brace
-          quote = None
-          template = False
-          escape = False
-          while i < len(text):
-              c = text[i]
-              if quote:
-                  if escape: escape = False
-                  elif c == '\\': escape = True
-                  elif c == quote: quote = None
-                  i += 1; continue
-              if template:
-                  if escape: escape = False
-                  elif c == '\\': escape = True
-                  elif c == '`': template = False
-                  i += 1; continue
-              if c in ("'", '"'): quote = c; i += 1; continue
-              if c == '`': template = True; i += 1; continue
-              if c == '{': depth += 1
-              elif c == '}':
-                  depth -= 1
-                  if depth == 0:
-                      end = i + 1
-                      break
-              i += 1
-          block = text[start:end]
-          print('chars', len(block), 'lines', block.count('\n') + 1)
-          print('--- FUNCTION ---')
-          print(block)
-          print('--- COUNTS ---')
-          for token in [
-              'TotalGestProfileModalSuperadmin.render({',
-              'TotalGestProfileModalDistributor.render({',
-              'TotalGestProfileModalAdmin.render({',
-              'modalPerfil', 'modalPerfilCampos', 'perfilModal',
-              'classList.add', 'style.display', 'requestAnimationFrame',
-              'setTimeout', 'querySelector', 'getElementById'
-          ]:
-              print(token, block.count(token))
-          PY
-      - run: echo 'profile-orchestration-inspection-trigger'
+      - run: python3 .github/scripts/migrate-profile-worker.py
+      - run: |
+          node --check assets/js/app-profile-modal-worker.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-shell.js assets/js/app-profile-modal-worker.js sw.js
+          git commit -m 'Extrair perfil de funcionário e encarregado'
+          git push origin HEAD:refactor/separar-index-app
+      - run: echo 'worker-profile-migration'
