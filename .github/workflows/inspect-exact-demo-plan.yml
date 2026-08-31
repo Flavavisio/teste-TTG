@@ -1,4 +1,4 @@
-name: Inspect adjacent reports module metrics
+name: Migrate reports fleet metrics
 
 on:
   push:
@@ -6,59 +6,25 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear blocos adjacentes de métricas
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8')
-          marker='function renderizarReports('
-          assert text.count(marker)==1
-          start=text.index(marker); brace=text.index('{',start)
-          depth=0; mode='normal'; esc=False; stack=[]; td=[]; i=brace
-          while i < len(text):
-              c=text[i]; n=text[i+1] if i+1<len(text) else ''
-              if mode=='line':
-                  if c=='\n': mode=stack.pop() if stack else 'normal'
-              elif mode=='block':
-                  if c=='*' and n=='/': mode=stack.pop() if stack else 'normal'; i+=1
-              elif mode in ('single','double'):
-                  if esc: esc=False
-                  elif c=='\\': esc=True
-                  elif (mode=='single' and c=="'") or (mode=='double' and c=='"'): mode=stack.pop() if stack else 'normal'
-              elif mode=='template':
-                  if esc: esc=False
-                  elif c=='\\': esc=True
-                  elif c=='`': mode=stack.pop() if stack else 'normal'
-                  elif c=='$' and n=='{': stack.append('template'); mode='texpr'; td.append(1); depth+=1; i+=1
-              else:
-                  cur=mode
-                  if c=='/' and n=='/': stack.append(cur); mode='line'; i+=1
-                  elif c=='/' and n=='*': stack.append(cur); mode='block'; i+=1
-                  elif c=="'": stack.append(cur); mode='single'
-                  elif c=='"': stack.append(cur); mode='double'
-                  elif c=='`': stack.append(cur); mode='template'
-                  elif c=='{': depth+=1; td[-1:]=[td[-1]+1] if cur=='texpr' and td else td[-1:]
-                  elif c=='}':
-                      depth-=1
-                      if cur=='texpr':
-                          td[-1]-=1
-                          if td[-1]==0: td.pop(); mode=stack.pop()
-                      elif depth==0: end=i+1; break
-              i+=1
-          block=text[start:end]
-          needles=['const comFrota =','const frotaMensais =','const frotaAnuais =','const receitaFrota =','const comArmazem =','const armMensais =','const armAnuais =','const armDemos =','const receitaArmazem =','const comNotif =','const comCrm =']
-          print('LINES',len(block.splitlines()),'CHARS',len(block))
-          for x in needles: print(x, block.count(x))
-          for ln,line in enumerate(block.splitlines(),1):
-              if 130 <= ln <= 180: print(f'{ln:04d}: {line}')
-          PY
+      - run: python3 .github/scripts/migrate-reports-fleet-metrics.py
+      - run: |
+          node --check assets/js/app-reports-module-metrics.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-reports-module-metrics.js sw.js
+          git commit -m 'Extrair métricas de frota dos relatórios'
+          git push origin HEAD:refactor/separar-index-app
