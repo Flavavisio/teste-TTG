@@ -1,4 +1,4 @@
-name: Inspect obra modal boundary
+name: Migrate obra modal
 
 on:
   push:
@@ -7,27 +7,28 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspecionar obra e fim de abrirModal
+      - name: Extrair modal de obra
+        run: python3 .github/scripts/migrate-modal-obra.py
+      - name: Validar
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          lines=Path('app.html').read_text(encoding='utf-8').splitlines()
-          start=next(i for i,l in enumerate(lines) if "} else if (entidade === 'obra') {" in l and i>22000)
-          print('obra start', start+1)
-          for i in range(start,min(len(lines),start+180)):
-              print(f'{i+1}: {lines[i]}')
-          print('\n=== marcadores posteriores ===')
-          for term in ['modalTitle','formFields','modalOverlay','_sIniciarTagsDescricao','onLocalObraChange']:
-              hits=[i+1 for i,l in enumerate(lines[start:start+220],start) if term in l]
-              print(term,hits)
-          PY
+          node --check assets/js/app-modal-obra.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
+      - name: Gravar migração
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-shell.js assets/js/app-modal-obra.js sw.js
+          git commit -m 'Extrair formulário do modal de obra'
+          git push origin HEAD:refactor/separar-index-app
