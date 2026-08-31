@@ -1,4 +1,4 @@
-name: Inspect profile helpers
+name: Migrate profile helpers
 
 on:
   push:
@@ -6,43 +6,26 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear helpers de perfil
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          markers = [
-              'function previewPerfilLogo(e) {',
-              'function previewPerfilFoto(e) {',
-              'function fecharModalPerfil() {',
-              'async function salvarPerfil()',
-              'function salvarPerfil()'
-          ]
-          for marker in markers:
-              print(marker, text.count(marker))
-          start = text.index('function previewPerfilLogo(e) {')
-          candidates = [
-              text.find('function fecharModalPerfil() {', start),
-              text.find('async function salvarPerfil()', start),
-              text.find('function salvarPerfil()', start)
-          ]
-          candidates = [x for x in candidates if x >= 0]
-          end = min(candidates) if candidates else start + 12000
-          print('--- PROFILE HELPERS ---')
-          print(text[start:end])
-          if candidates:
-              next_start = min(candidates)
-              print('--- NEXT PROFILE FUNCTION ---')
-              print(text[next_start:next_start + 12000])
-          PY
-      - run: echo 'profile-helpers-inspection'
+      - run: python3 .github/scripts/migrate-profile-helpers.py
+      - run: |
+          node --check assets/js/app-profile-helpers.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-shell.js assets/js/app-profile-helpers.js sw.js
+          git commit -m 'Extrair helpers do modal de perfil'
+          git push origin HEAD:refactor/separar-index-app
+      - run: echo 'profile-helpers-migration'
