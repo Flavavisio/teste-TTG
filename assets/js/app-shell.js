@@ -49,6 +49,7 @@
     saveFormServicoContext: './assets/js/app-save-form-servico-context.js',
     saveFormServicoObject: './assets/js/app-save-form-servico-object.js',
     saveFormServicoConflicts: './assets/js/app-save-form-servico-conflicts.js',
+    saveFormServicoRegistration: './assets/js/app-save-form-servico-registration.js',
     syncPrepare: './assets/js/app-sync-prepare.js',
     syncFiles: './assets/js/app-sync-files.js',
     syncCollections: './assets/js/app-sync-collections.js',
@@ -131,6 +132,7 @@
     if (options.saveFormServicoContext === true) pedidos.push(MODULOS.saveFormServicoContext);
     if (options.saveFormServicoObject === true) pedidos.push(MODULOS.saveFormServicoObject);
     if (options.saveFormServicoConflicts === true) pedidos.push(MODULOS.saveFormServicoConflicts);
+    if (options.saveFormServicoRegistration === true) pedidos.push(MODULOS.saveFormServicoRegistration);
     if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncFiles === true) pedidos.push(MODULOS.syncFiles);
     if (options.syncCollections === true) pedidos.push(MODULOS.syncCollections);
