@@ -1,8 +1,6 @@
-name: Inspect profile admin tail
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
@@ -10,21 +8,27 @@ permissions:
 
 jobs:
   inspect:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspecionar fim exato do perfil admin
+      - name: Estado dos módulos principais
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
-          fn = text.index('        function abrirEditarPerfil() {')
-          start = text.index("            } else if (usuarioLogado.role === 'admin' || usuarioLogado.role === 'subadmin') {", fn)
-          pos = text.index('perf_contrato_modo_wizard', start)
-          print('CONTEXT_REPR=', repr(text[pos:pos+1200]))
-          print('BEFORE_REPR=', repr(text[pos-300:pos]))
+          checks = [
+              'window.TotalGestSaveFormServico.run({',
+              'window.TotalGestProfileModalSuperadmin.render({',
+              'window.TotalGestProfileModalDistributor.render({',
+              'window.TotalGestProfileModalAdmin.render({',
+              'function abrirEditarPerfil()',
+              'function _salvarFormularioInterno(',
+              'function guardarDados()',
+              'async function _sincronizar()',
+              'async function carregarDados('
+          ]
+          for item in checks:
+              print(item, text.count(item))
           PY
-      - run: echo 'perfil-admin-tail-audit'
