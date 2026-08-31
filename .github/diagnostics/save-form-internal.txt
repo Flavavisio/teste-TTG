@@ -1,0 +1,119 @@
+function _salvarFormularioInterno(e) {
+            const ent = entidadeAtual;
+            if (!ent) return;
+            let obj = {};
+            const isEdit = !!idEditando;
+
+            const _contactosValidos = window.TotalGestSaveFormContactValidation.validate({
+                document: document,
+                postalCodeValid: codigoPostalValido,
+                phoneValid: telefoneValido,
+                showError: mostrarErro
+            });
+            if (!_contactosValidos) return;
+
+            const _dispatchFormulario = await window.TotalGestSaveFormDispatch.run({
+                entity: ent,
+                document: document,
+                data: dados,
+                user: usuarioLogado,
+                isEdit: isEdit,
+                editingId: idEditando,
+                item: item,
+                newWorkId: _novaOSObraId,
+                approvingAssistanceId: _aprovandoAssistenciaId,
+                tenantId: _tenantId,
+                generateId: gerarId,
+                showError: mostrarErro,
+                showAlert: alert,
+                showConfirm: confirm,
+                confirmDialog: tgConfirm,
+                verifyEmployeeLimit: verificarLimiteFuncionarios,
+                saveData: guardarDados,
+                audit: registarAuditoria,
+                closeModal: fecharModal,
+                renderAll: renderizarTudo,
+                createAuth: criarUtilizadorAuth,
+                vehicleAssigned: veiculoJaAtribuido,
+                emailRegistered: emailJaRegistado,
+                selectedWorkTypes: _sTiposTrabalhoSelecionados,
+                blockIfAbsent: _bloquearSeAusenteEmOS,
+                timeToMinutes: _horaMin,
+                employeeName: obterNomeFuncionario,
+                generateRegistrationNumber: gerarNumeroRegistoServidor,
+                hoursCorrectedManually: _foHorasCorrigidasManualmente,
+                hoursForServiceOrder: _horasPicadasOS,
+                hoursForWork: _horasPicadasObra,
+                captureSignature: capturarAssinatura,
+                uploadImage: _uploadImagemStorage,
+                getToday: getDataHoje,
+                advancePeriodicity: avancarPeriodicidade,
+                notify: _notificarFuncionario,
+                extraMaterials: _foMatExtra,
+                setPendingConsumption: value => { _folhaConsumoPendente = value; },
+                clearExtraMaterials: () => { _foMatExtra = []; },
+                FileReader: FileReader,
+                saveWarehouse: _guardarArmazem,
+                intVal: _intVal,
+                createServiceOrder: criarOSdaObra,
+                employeeHandler: window.TotalGestSaveFormFuncionarioOrchestrator,
+                clientHandler: window.TotalGestSaveFormCliente,
+                serviceHandler: window.TotalGestSaveFormServico,
+                sheetHandler: window.TotalGestSaveFormFolha,
+                requestHandler: window.TotalGestSaveFormRequisicao,
+                supplierHandler: window.TotalGestSaveFormFornecedor,
+                articleHandler: window.TotalGestSaveFormArtigo,
+                workHandler: window.TotalGestSaveFormObra,
+                serviceValidation: window.TotalGestSaveFormServicoValidation,
+                serviceContext: window.TotalGestSaveFormServicoContext,
+                serviceObject: window.TotalGestSaveFormServicoObject,
+                serviceConflicts: window.TotalGestSaveFormServicoConflicts,
+                serviceRegistration: window.TotalGestSaveFormServicoRegistration
+            });
+            if (_dispatchFormulario.stop) return;
+            obj = _dispatchFormulario.value;
+
+            const _posPersistenciaFormulario = await window.TotalGestSaveFormPostPersist.run({
+                entity: ent,
+                data: dados,
+                value: obj,
+                isEdit: isEdit,
+                editingId: idEditando,
+                newWorkId: _novaOSObraId,
+                generateId: gerarId,
+                persist: window.TotalGestSaveFormPersist,
+                serviceNotifications: window.TotalGestSaveFormServicoNotifications,
+                sheetUsage: window.TotalGestSaveFormFolhaUsage,
+                sheetOsPending: window.TotalGestSaveFormFolhaOsPending,
+                sheetWorkPending: window.TotalGestSaveFormFolhaObraPending,
+                finalize: window.TotalGestSaveFormFinalize,
+                auth: window.TotalGestSaveFormAuth,
+                clientName: obterNomeCliente,
+                notify: _notificarFuncionario,
+                formatEuro: _finEur,
+                getPendingConsumption: () => _folhaConsumoPendente,
+                clearPendingConsumption: () => { _folhaConsumoPendente = []; },
+                getPendingServiceOrder: () => _folhaOSPendente,
+                clearPendingServiceOrder: () => { _folhaOSPendente = null; },
+                getPendingWork: () => _folhaObraPendente,
+                clearPendingWork: () => { _folhaObraPendente = null; },
+                applyConsumption: _aplicarConsumoFolha,
+                pendingSpecialty: _tiposEspecialidadePendentes,
+                completeService: _concluirOS,
+                openSpecialtyQueue: abrirFilaRelatoriosEspecialidade,
+                saveData: guardarDados,
+                renderAgenda: renderizarAgendaObras,
+                renderPoint: typeof renderizarPonto === 'function' ? renderizarPonto : null,
+                getToday: getDataHoje,
+                renderAll: renderizarTudo,
+                showAlert: alert,
+                audit: registarAuditoria,
+                markServiceWorkCreated: () => { window._osObraCriadaComSucesso = true; },
+                closeModal: fecharModal,
+                createAuth: criarUtilizadorAuth,
+                clientTechnicalEmail: _emailFantasmaCliente
+            });
+            if (!_posPersistenciaFormulario.ok) return;
+            obj = _posPersistenciaFormulario.value;
+
+        }
