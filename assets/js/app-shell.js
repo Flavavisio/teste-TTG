@@ -26,6 +26,7 @@
     modalFornecedor: './assets/js/app-modal-fornecedor.js',
     modalRequisicao: './assets/js/app-modal-requisicao.js',
     modalArtigo: './assets/js/app-modal-artigo.js',
+    modalFolha: './assets/js/app-modal-folha.js',
     syncPrepare: './assets/js/app-sync-prepare.js',
     syncFiles: './assets/js/app-sync-files.js',
     syncCollections: './assets/js/app-sync-collections.js',
@@ -85,6 +86,7 @@
     if (options.modalFornecedor === true) pedidos.push(MODULOS.modalFornecedor);
     if (options.modalRequisicao === true) pedidos.push(MODULOS.modalRequisicao);
     if (options.modalArtigo === true) pedidos.push(MODULOS.modalArtigo);
+    if (options.modalFolha === true) pedidos.push(MODULOS.modalFolha);
     if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncFiles === true) pedidos.push(MODULOS.syncFiles);
     if (options.syncCollections === true) pedidos.push(MODULOS.syncCollections);
