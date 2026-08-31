@@ -18222,26 +18222,38 @@
                     let totalErpGlobal = 0;
                     let totalRondasGlobal = 0;
                     admins.forEach(admin => {
-                        const funcs = dados.funcionarios ? dados.funcionarios.filter(f => f.adminId === admin.id && f
-                            .role !== 'admin' && f.role !== 'superadmin').length : 0;
-                        const encarregados = dados.encarregados ? dados.encarregados.filter(e => e.adminId === admin.id)
-                            .length : 0;
-                        const valor = admin.licenca && admin.ativo ? valorBaseCobradoDe(admin) : 0;
-                        const temContratos = moduloContratosAtivo(admin);
-                        const temFrota = moduloFrotaAtivo(admin);
-                        const valorContratos = temContratos ? (admin.contratosPlano === 'anual' ? PRECO_CONTRATOS_ANUAL : PRECO_CONTRATOS_MENSAL) : 0;
-                        const valorFrota = temFrota ? (admin.frotaPlano === 'anual' ? PRECO_FROTA_ANUAL : PRECO_FROTA_MENSAL) : 0;
-                        const temArmazem = moduloArmazemAtivo(admin);
-                        const valorArmazem = temArmazem ? (admin.armazemPlano === 'anual' ? PRECO_ARMAZEM_ANUAL : PRECO_ARMAZEM_MENSAL) : 0;
-                        const temCrm = moduloCrmAtivo(admin);
-                        const valorCrm = temCrm ? (admin.crmPlano === 'anual' ? PRECO_CRM_ANUAL : PRECO_CRM_MENSAL) : 0;
-                        const temErp = moduloErpAtivo(admin);
-                        const valorErp = temErp ? (admin.erpPlano === 'anual' ? PRECO_ERP_ANUAL : PRECO_ERP_MENSAL) : 0;
-                        // Rondas: grátis por agora (fase de lançamento) — a soma já está pronta para
-                        // quando passar a ter preço, só é preciso mudar PRECO_RONDAS_MENSAL/ANUAL.
-                        const temRondas = moduloRondasAtivo(admin);
-                        const valorRondas = temRondas ? (admin.rondasPlano === 'anual' ? PRECO_RONDAS_ANUAL : PRECO_RONDAS_MENSAL) : 0;
-                        const valorEmpresa = valor + valorContratos + valorFrota + valorArmazem + valorCrm + valorErp + valorRondas;
+                        const _row = window.TotalGestReportsSuperadminMetrics.calculateCompany({
+                            admin: admin,
+                            data: dados,
+                            baseValueCharged: valorBaseCobradoDe,
+                            contractsActive: moduloContratosAtivo,
+                            fleetActive: moduloFrotaAtivo,
+                            warehouseActive: moduloArmazemAtivo,
+                            crmActive: moduloCrmAtivo,
+                            erpActive: moduloErpAtivo,
+                            roundsActive: moduloRondasAtivo,
+                            contractsAnnualPrice: PRECO_CONTRATOS_ANUAL,
+                            contractsMonthlyPrice: PRECO_CONTRATOS_MENSAL,
+                            fleetAnnualPrice: PRECO_FROTA_ANUAL,
+                            fleetMonthlyPrice: PRECO_FROTA_MENSAL,
+                            warehouseAnnualPrice: PRECO_ARMAZEM_ANUAL,
+                            warehouseMonthlyPrice: PRECO_ARMAZEM_MENSAL,
+                            crmAnnualPrice: PRECO_CRM_ANUAL,
+                            crmMonthlyPrice: PRECO_CRM_MENSAL,
+                            erpAnnualPrice: PRECO_ERP_ANUAL,
+                            erpMonthlyPrice: PRECO_ERP_MENSAL,
+                            roundsAnnualPrice: PRECO_RONDAS_ANUAL,
+                            roundsMonthlyPrice: PRECO_RONDAS_MENSAL
+                        });
+                        const funcs = _row.funcionarios;
+                        const encarregados = _row.encarregados;
+                        const temContratos = _row.temContratos;
+                        const temFrota = _row.temFrota;
+                        const temArmazem = _row.temArmazem;
+                        const temCrm = _row.temCrm;
+                        const temErp = _row.temErp;
+                        const temRondas = _row.temRondas;
+                        const valorEmpresa = _row.valorEmpresa;
                         const dataExp = admin.licenca ? new Date(admin.licenca.dataExpiracao).toLocaleDateString(
                             'pt-PT') : '-';
                         const planoLabel = admin.licenca ? PLANOS[admin.licenca.plano]?.label || admin.licenca.plano :
