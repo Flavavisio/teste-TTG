@@ -9,19 +9,90 @@ app = APP.read_text(encoding='utf-8')
 shell = SHELL.read_text(encoding='utf-8')
 sw = SW.read_text(encoding='utf-8')
 
+
+def scan_quoted(text, pos, quote):
+    assert text[pos] == quote
+    i = pos + 1
+    while i < len(text):
+        if text[i] == '\\':
+            i += 2
+            continue
+        if text[i] == quote:
+            return i
+        i += 1
+    raise AssertionError('string sem fecho')
+
+
+def scan_template(text, pos):
+    assert text[pos] == '`'
+    i = pos + 1
+    while i < len(text):
+        c = text[i]
+        if c == '\\':
+            i += 2
+            continue
+        if c == '`':
+            return i
+        if c == '$' and i + 1 < len(text) and text[i + 1] == '{':
+            i = scan_expression(text, i + 2)
+            continue
+        i += 1
+    raise AssertionError('template sem fecho')
+
+
+def scan_expression(text, pos):
+    depth = 1
+    i = pos
+    while i < len(text):
+        c = text[i]
+        if c in ("'", '"'):
+            i = scan_quoted(text, i, c) + 1
+            continue
+        if c == '`':
+            i = scan_template(text, i) + 1
+            continue
+        if c == '/' and i + 1 < len(text) and text[i + 1] == '/':
+            nl = text.find('\n', i + 2)
+            i = len(text) if nl < 0 else nl + 1
+            continue
+        if c == '/' and i + 1 < len(text) and text[i + 1] == '*':
+            end = text.find('*/', i + 2)
+            assert end >= 0, 'comentário sem fecho'
+            i = end + 2
+            continue
+        if c == '{':
+            depth += 1
+        elif c == '}':
+            depth -= 1
+            if depth == 0:
+                return i + 1
+        i += 1
+    raise AssertionError('expressão de template sem fecho')
+
+
 fn_marker = '        function abrirEditarPerfil() {'
 start_marker = "            } else if (usuarioLogado.role === 'admin' || usuarioLogado.role === 'subadmin') {\n"
-last_field = 'perf_contrato_modo_wizard'
-tail_token = "                        ` : ''}\n                        </div>\n                    `;\n"
 assert app.count(fn_marker) == 1, app.count(fn_marker)
 fn = app.index(fn_marker)
 start_branch = app.index(start_marker, fn)
 start = start_branch + len(start_marker)
-last = app.index(last_field, start)
-tail = app.index(tail_token, last)
-end = tail + len(tail_token)
-old = app[start:end]
 
+prefix = '                campos.innerHTML = `'
+render_stmt = app.index(prefix, start)
+assert render_stmt > start
+open_tick = render_stmt + len(prefix) - 1
+close_tick = scan_template(app, open_tick)
+end = close_tick + 1
+while end < len(app) and app[end] in ' \t':
+    end += 1
+assert app[end] == ';', repr(app[end:end + 40])
+end += 1
+if app.startswith('\r\n', end):
+    end += 2
+elif app.startswith('\n', end):
+    end += 1
+
+old = app[start:end]
 for token in [
     'const admin = adminAtual();',
     'const func = dados.funcionarios?.find',
@@ -33,11 +104,9 @@ for token in [
 ]:
     assert token in old, token
 
-prefix = '                campos.innerHTML = `'
-suffix = '                    `;\n'
-assert old.count(prefix) == 1, old.count(prefix)
-assert old.endswith(suffix), repr(old[-140:])
-template = old[old.index(prefix) + len(prefix):-len(suffix)]
+template = app[open_tick + 1:close_tick]
+assert template.count('perf_contrato_modo_wizard') == 1
+assert template.count('perf_seguranca_ativo') == 1
 
 module = """/* Total Gest — conteúdo do modal de perfil de admin/subadmin. */
 (function () {
