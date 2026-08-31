@@ -23898,25 +23898,19 @@ async function salvarAdmin(e) {
                     applyConsumption: _aplicarConsumoFolha
                 });
                 _folhaConsumoPendente = [];
-                if (_folhaOSPendente && _folhaOSPendente.osId === obj.servicoId) {
-                    const { osId, terminou } = _folhaOSPendente;
-                    _folhaOSPendente = null;
-                    const osv = dados.servicos?.find(s => s.id === osId);
-                    if (osv) {
-                        if (terminou) {
-                            const pendentesEspec = _tiposEspecialidadePendentes(osId);
-                            const _finalizarOS = () => { _concluirOS(osv); };
-                            if (pendentesEspec.length) abrirFilaRelatoriosEspecialidade(osId, pendentesEspec, _finalizarOS);
-                            else _finalizarOS();
-                        } else {
-                            osv.status = 'stand by';
-                            guardarDados(dados);
-                            renderizarAgendaObras();
-                            if (typeof renderizarPonto === 'function') renderizarPonto();
-                            alert('Folha de obra guardada ✓ Obra em Stand By. Podes voltar a dar entrada quando retomares.');
-                        }
-                    }
-                }
+                window.TotalGestSaveFormFolhaOsPending.apply({
+                    value: obj,
+                    pending: _folhaOSPendente,
+                    data: dados,
+                    clearPending: () => { _folhaOSPendente = null; },
+                    pendingSpecialty: _tiposEspecialidadePendentes,
+                    completeService: _concluirOS,
+                    openSpecialtyQueue: abrirFilaRelatoriosEspecialidade,
+                    saveData: guardarDados,
+                    renderAgenda: renderizarAgendaObras,
+                    renderPoint: typeof renderizarPonto === 'function' ? renderizarPonto : null,
+                    showAlert: alert
+                });
                 if (_folhaObraPendente && _folhaObraPendente.obraId === obj.obraId) {
                     const { obraId, terminou } = _folhaObraPendente;
                     _folhaObraPendente = null;
@@ -30681,6 +30675,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
