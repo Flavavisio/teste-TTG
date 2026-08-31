@@ -44,3 +44,4 @@ jobs:
           for token in ['campos.innerHTML', 'dados.', 'usuarioLogado', 'adminAtual(', 'document.', 'obterConfig(', 'onclick=', 'onchange=', 'perf_']:
               print(token, block.count(token))
           PY
+      - run: echo 'perfil-admin-audit'
