@@ -1,4 +1,4 @@
-name: Inspect requisicao modal block
+name: Migrate requisicao modal
 
 on:
   push:
@@ -7,23 +7,28 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspecionar requisição
+      - name: Extrair modal de requisição
+        run: python3 .github/scripts/migrate-modal-requisicao.py
+      - name: Validar
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8')
-          m=text.index('        function abrirModal(')
-          a="            } else if (entidade === 'requisicao') {\n"; b="            } else if (entidade === 'fornecedor') {\n"
-          s=text.index(a,m); e=text.index(b,s); block=text[s:e]
-          print(block)
-          PY
+          node --check assets/js/app-modal-requisicao.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
+      - name: Gravar migração
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-shell.js assets/js/app-modal-requisicao.js sw.js
+          git commit -m 'Extrair formulário do modal de requisição'
+          git push origin HEAD:refactor/separar-index-app
