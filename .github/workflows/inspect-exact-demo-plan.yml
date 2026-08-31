@@ -1,36 +1,29 @@
-name: Migrate sync upsert
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Extrair UPSERT em lotes
-        run: python3 .github/scripts/migrate-sync-upsert.py
-      - name: Validar módulos JavaScript
+      - name: Estado dos módulos principais
         run: |
-          node --check assets/js/app-sync-upsert.js
-          node --check assets/js/app-shell.js
-          node --check sw.js
-      - name: Validar e gravar
-        run: |
-          git diff --check
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          rm .github/scripts/migrate-sync-upsert.py
-          git add app.html assets/js/app-sync-upsert.js assets/js/app-shell.js sw.js .github/scripts/migrate-sync-upsert.py
-          git diff --cached --check
-          git commit -m "Extrair UPSERT em lotes da sincronização"
-          git push origin HEAD:refactor/separar-index-app
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('app.html').read_text(encoding='utf-8')
+          checks = [
+              'window.TotalGestApp.init',
+              'function guardarDados()',
+              'async function _sincronizar()',
+              'function bootstrapSupabase()'
+          ]
+          for item in checks:
+              print(item, text.count(item))
+          PY
