@@ -1,54 +1,33 @@
-name: Repair load orchestrator boundary
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  repair:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-          fetch-depth: 0
-      - name: Restaurar bloco removido pela fronteira larga
-        run: python3 .github/scripts/repair-load-orchestrator-boundary.py
-      - name: Validar
+      - name: Estado dos módulos principais
         run: |
-          node --check assets/js/app-load-orchestrator.js
-          node --check assets/js/app-shell.js
-          node --check sw.js
-          git diff --check
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
           checks = [
+              'window.TotalGestApp.init',
+              'function guardarDados()',
+              'async function _sincronizar()',
+              'function bootstrapSupabase()',
               'async function carregarDados(',
-              'window.TotalGestLoadOrchestrator.run({',
               'const FICHEIRO_CAMPOS = {',
               'async function uploadDataURL(dataUrl, pasta)',
-              'function registarHistoricoLicenca(',
-              'function registarAuditoria('
+              'function registarHistoricoLicenca('
           ]
-          for token in checks:
-              count = text.count(token)
-              print(token, count)
-              if count != 1:
-                  raise SystemExit(1)
+          for item in checks:
+              print(item, text.count(item))
           PY
-      - name: Gravar correção
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          rm .github/scripts/repair-load-orchestrator-boundary.py
-          git add app.html .github/scripts/repair-load-orchestrator-boundary.py
-          git diff --cached --check
-          git commit -m "Corrigir fronteira da orquestração de carregamento"
-          git push origin HEAD:refactor/separar-index-app
