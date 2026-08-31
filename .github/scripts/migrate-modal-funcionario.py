@@ -80,7 +80,10 @@ sw=sw.replace(sw_anchor, sw_anchor+"  './assets/js/app-modal-funcionario.js',\n"
 
 assert app.count('window.TotalGestModalFuncionario.render({')==1
 assert app.count(start_token)==1
-assert app.count('class=\"ff-wrap\"')==0
+new_end=app.index(end_token, start)
+new_branch=app[start:new_end]
+assert 'class="ff-wrap"' not in new_branch
+assert 'html = `' not in new_branch
 assert shell.count("./assets/js/app-modal-funcionario.js")==1
 assert sw.count("./assets/js/app-modal-funcionario.js")==1
 
