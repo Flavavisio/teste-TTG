@@ -3224,15 +3224,9 @@
             for (const col of ORDEM) {
                 const meta = M[col];
                 const lista = dados[col] || [];
-                const upserts = [];
-                const upsertsJson = [];
-                const idsAtuais = new Set();
-                for (const o of lista) {
-                    idsAtuais.add(o.id);
-                    const row = meta.to(o);
-                    const json = JSON.stringify(row);
-                    if (_snap[col].get(o.id) !== json) { upserts.push(row); upsertsJson.push({ id: o.id, json }); }
-                }
+                const diffUpsert = window.TotalGestSyncDiff.changedRows(lista, meta.to, _snap[col]);
+                const upserts = diffUpsert.rows;
+                const upsertsJson = diffUpsert.states;
                 if (col === 'obraPontoLonga' && lista.length) console.log('[obraPontoLonga] a sincronizar:', upserts.length, 'de', lista.length, 'registo(s) local(is)');
                 if (upserts.length) {
                     // Em lotes de 200 — um único pedido com centenas/milhares de linhas de
@@ -3326,9 +3320,7 @@
             for (let i = ORDEM.length - 1; i >= 0; i--) {
                 const col = ORDEM[i];
                 const meta = M[col];
-                const idsAtuais = new Set((dados[col] || []).map(o => o.id));
-                const remover = [];
-                for (const id of _snap[col].keys()) if (!idsAtuais.has(id)) remover.push(id);
+                const remover = window.TotalGestSyncDiff.deletedIds(dados[col] || [], _snap[col]);
                 if (remover.length) {
                     const { error } = await supa.from(meta.tabela).delete().in('id', remover);
                     if (error) {
@@ -32098,6 +32090,6 @@ window._relPrefill = function(msg){
 </div>
 
   <script src="./assets/js/app-shell.js"></script>
-  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, saveQueue: true, bootstrap: true });</script>
+  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>

@@ -13,6 +13,7 @@
     connectivity: './assets/js/app-connectivity.js',
     syncStatus: './assets/js/app-sync-status.js',
     syncHelpers: './assets/js/app-sync-helpers.js',
+    syncDiff: './assets/js/app-sync-diff.js',
     saveQueue: './assets/js/app-save-queue.js',
     bootstrap: './assets/js/app-bootstrap.js'
   };
@@ -50,6 +51,7 @@
     if (options.connectivity === true) pedidos.push(MODULOS.connectivity);
     if (options.syncStatus === true) pedidos.push(MODULOS.syncStatus);
     if (options.syncHelpers === true) pedidos.push(MODULOS.syncHelpers);
+    if (options.syncDiff === true) pedidos.push(MODULOS.syncDiff);
     if (options.saveQueue === true) pedidos.push(MODULOS.saveQueue);
     if (options.bootstrap === true) pedidos.push(MODULOS.bootstrap);
 
