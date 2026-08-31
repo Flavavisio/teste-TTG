@@ -1,6 +1,9 @@
-name: Inspect app migration boundary
+name: Inspect pending file migration
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,22 +11,38 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Mapear migrarFicheirosPendentes
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestApp.init',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'function bootstrapSupabase()'
-          ]
-          for item in checks:
-              print(item, text.count(item))
+          lines = Path('app.html').read_text(encoding='utf-8').splitlines()
+          targets = ['async function migrarFicheirosPendentes', 'function migrarFicheirosPendentes']
+          start = next(i for i,l in enumerate(lines) if any(t in l for t in targets))
+          depth = 0
+          begun = False
+          end = None
+          for i in range(start, len(lines)):
+              line = lines[i]
+              for ch in line:
+                  if ch == '{':
+                      depth += 1
+                      begun = True
+                  elif ch == '}':
+                      depth -= 1
+              if begun and depth == 0:
+                  end = i + 1
+                  break
+          print('=== FUNCAO ===')
+          for i in range(start, end):
+              print(f'{i+1}: {lines[i]}')
+          print('=== REFERENCIAS ===')
+          text = '\n'.join(lines)
+          for term in ['migrarFicheirosPendentes()', 'upload', 'storage', 'base64', 'data:', 'ficheiro', 'anexo']:
+              print(term, text.count(term))
           PY
