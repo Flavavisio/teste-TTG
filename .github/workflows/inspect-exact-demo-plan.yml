@@ -1,6 +1,9 @@
-name: Inspect app migration boundary
+name: Inspect carregarDados boundary
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,22 +11,33 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Mapear carregarDados
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestApp.init',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'function bootstrapSupabase()'
-          ]
-          for item in checks:
-              print(item, text.count(item))
+          lines = Path('app.html').read_text(encoding='utf-8').splitlines()
+          start = next(i for i,l in enumerate(lines) if 'async function carregarDados(' in l)
+          depth = 0
+          seen = False
+          end = None
+          for i in range(start, len(lines)):
+              line = lines[i]
+              depth += line.count('{') - line.count('}')
+              if '{' in line: seen = True
+              if seen and depth == 0:
+                  end = i
+                  break
+          print('carregarDados:', start+1, end+1 if end is not None else None, 'linhas', (end-start+1) if end is not None else None)
+          for i in range(start, min(len(lines), (end or start)+1)):
+              print(f'{i+1}: {lines[i]}')
+          print('\n=== ocorrencias helpers/contexto ===')
+          for term in ['_obterTenantDoUser', '_carregarCacheLocal', '_restaurarSnapshotDaCache', '_guardarCacheLocal', '_reconstruirSnapshots', 'dadosVazios()', 'Promise.all(', 'tabelas = ORDEM']:
+              hits=[i+1 for i,l in enumerate(lines) if term in l]
+              print(term, hits)
           PY
