@@ -1,6 +1,9 @@
-name: Inspect app migration boundary
+name: Inspect remaining save branches
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,31 +11,33 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Inspecionar funcionário cliente e serviço
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestApp.init',
-              'function abrirModal(',
-              'function _salvarFormularioInterno(',
-              'window.TotalGestSaveFormFornecedor.run({',
-              'window.TotalGestSaveFormArtigo.run({',
-              'window.TotalGestSaveFormRequisicao.run({',
-              'window.TotalGestSaveFormObra.run({',
-              'window.TotalGestSaveFormFolha.run({',
-              'window.TotalGestSaveFormCliente.prepare({',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'function bootstrapSupabase()',
-              'async function carregarDados('
+          starts = [
+              ("funcionario", "            if (ent === 'funcionario') {", "            } else if (ent === 'cliente') {"),
+              ("cliente", "            } else if (ent === 'cliente') {", "            } else if (ent === 'servico') {"),
+              ("servico", "            } else if (ent === 'servico') {", "            } else if (ent === 'folha') {")
           ]
-          for item in checks:
-              print(item, text.count(item))
+          for name, a, b in starts:
+              s = text.index(a)
+              e = text.index(b, s)
+              block = text[s:e]
+              print(f'\n===== {name} ({block.count(chr(10))+1} linhas) =====')
+              print(block)
+              print('--- contagens ---')
+              for token in ['await ', 'guardarDados(', '_guardarArmazem(', 'dados.', 'document.', 'alert(', 'confirm(', 'prompt(', 'supa.', 'fetch(', 'setTimeout(', 'return;']:
+                  print(token, block.count(token))
+          fn = text.index('        async function _salvarFormularioInterno() {')
+          tail = text.index("            } else if (ent === 'fornecedor') {", fn)
+          print('\n===== início do common tail depois dos ramos fall-through =====')
+          print(text[tail:tail+8000])
           PY
