@@ -24232,10 +24232,14 @@ async function salvarAdmin(e) {
                 }
                 return;
             } else if (ent === 'fornecedor') {
-                const nome = document.getElementById('fr_nome').value.trim();
-                if (!nome) { alert('Indique o nome do fornecedor.'); return; }
-                obj = { nome, nif: document.getElementById('fr_nif').value.trim(), contacto: document.getElementById('fr_contacto').value.trim(), email: document.getElementById('fr_email').value.trim(), observacoes: document.getElementById('fr_obs').value.trim(), adminId: (usuarioLogado.role === 'admin' ? usuarioLogado.id : usuarioLogado.adminId) };
-                _guardarArmazem('fornecedores', obj, isEdit); return;
+                window.TotalGestSaveFormFornecedor.run({
+                    document: document,
+                    user: usuarioLogado,
+                    isEdit: isEdit,
+                    showAlert: alert,
+                    saveWarehouse: _guardarArmazem
+                });
+                return;
             } else if (ent === 'artigo') {
                 const nome = document.getElementById('ar_nome').value.trim();
                 if (!nome) { alert('Indique o nome do artigo.'); return; }
@@ -31168,6 +31172,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
