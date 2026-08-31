@@ -1,4 +1,4 @@
-name: Inspect save form branches
+name: Inspect fornecedor save branch
 
 on:
   push:
@@ -17,22 +17,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear ramos de gravação
+      - name: Inspecionar fornecedor e fase comum
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
           lines=Path('app.html').read_text(encoding='utf-8').splitlines()
-          s=next(i for i,l in enumerate(lines) if 'function _salvarFormularioInterno(' in l)
-          d=0; started=False; e=None
-          for j in range(s,len(lines)):
-              x=lines[j]
-              if '{' in x: started=True
-              d += x.count('{')-x.count('}')
-              if started and d==0:
-                  e=j; break
-          print(f'function: {s+1}-{e+1} ({e-s+1} linhas)')
-          for i in range(s,e+1):
-              if re.search(r"\bent\s*===\s*['\"]", lines[i]) or re.search(r"\bent\s*!==\s*['\"]", lines[i]):
-                  print(f'{i+1}: {lines[i].strip()}')
+          start=next(i for i,l in enumerate(lines) if "} else if (ent === 'fornecedor') {" in l)
+          for i in range(start-8,start+90):
+              print(f'{i+1}: {lines[i]}')
           PY
