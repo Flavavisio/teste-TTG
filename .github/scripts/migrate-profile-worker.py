@@ -74,8 +74,8 @@ fn_marker = 'function abrirEditarPerfil() {'
 assert app.count(fn_marker) == 1, app.count(fn_marker)
 fn = app.index(fn_marker)
 start_marker = "            } else {\n                const func = dados.funcionarios?.find(f => f.id === usuarioLogado.id) || dados.encarregados?.find(e => e.id === usuarioLogado.id);\n"
-assert app.count(start_marker, fn) == 1, app.count(start_marker, fn)
 branch = app.index(start_marker, fn)
+assert branch < app.index("            overlay.classList.add('open');", fn)
 start = branch + len("            } else {\n")
 end_marker = "            }\n            overlay.classList.add('open');"
 end = app.index(end_marker, start)
