@@ -23847,54 +23847,15 @@ async function salvarAdmin(e) {
                     return;
                 }
             } else if (ent === 'cliente') {
-                obj = {
-                    nome: document.getElementById('c_nome').value.trim(),
-                    numeroCliente: document.getElementById('c_numero_cliente').value.trim(),
-                    morada: document.getElementById('c_morada').value.trim(),
-                    numeroPorta: document.getElementById('c_numero_porta').value.trim(),
-                    codigoPostal: document.getElementById('c_cp').value.trim(),
-                    cidade: document.getElementById('c_cidade').value.trim(),
-                    freguesia: document.getElementById('c_freguesia').value.trim(),
-                    pinMapa: document.getElementById('c_pin_mapa').value.trim() || null,
-                    nif: document.getElementById('c_nif').value.trim(),
-                    telefone: document.getElementById('c_telefone').value.trim(),
-                    email: document.getElementById('c_email').value.trim(),
-                    pessoaContacto: document.getElementById('c_contacto').value.trim(),
-                    adminId: (usuarioLogado.role === 'admin' ? usuarioLogado.id : usuarioLogado.adminId)
-                };
-                obj.portalAtivo = document.getElementById('c_portal_ativo')?.checked || false;
-                { const _cs = document.getElementById('c_senha')?.value || ''; if (_cs) obj.senha = _cs; }
-                if (!obj.nif) {
-                    alert('Preenche pelo menos o NIF do cliente.');
-                    return;
-                }
-                if (!/^\d{1,9}$/.test(obj.nif)) {
-                    alert('O NIF deve ter só números, até 9 dígitos no máximo.');
-                    return;
-                }
-                const _NIF_CONSUMIDOR_FINAL = '999999990';
-                {
-                    const _outroComMesmoNif = obj.nif !== _NIF_CONSUMIDOR_FINAL
-                        ? (dados.clientes || []).find(c => c.adminId === obj.adminId && c.nif === obj.nif && c.id !== idEditando)
-                        : null;
-                    if (_outroComMesmoNif) {
-                        alert(`Já existe um cliente com este NIF: "${_outroComMesmoNif.nome}". Cada cliente precisa de um NIF diferente — é o que identifica o login no Portal.`);
-                        return;
-                    }
-                }
-                if (!obj.nome) obj.nome = 'Cliente ' + obj.nif;
-                if (obj.numeroCliente && !/^\d{1,8}$/.test(obj.numeroCliente)) {
-                    alert('O número de cliente deve ter só dígitos, até 8 no máximo.');
-                    return;
-                }
-                if (obj.portalAtivo && obj.nif === _NIF_CONSUMIDOR_FINAL) {
-                    alert('⚠️ Este cliente tem o NIF de "Consumidor Final" (999999990) — como esse NIF pode estar repetido em vários clientes, não é possível ativar o Portal para ele. Define um NIF próprio a este cliente se precisares de lhe dar acesso ao Portal.');
-                    return;
-                }
-                if (obj.portalAtivo && !obj.nif) {
-                    alert('Para ativar o Portal do Cliente é preciso um NIF (é com ele que o cliente entra).');
-                    return;
-                }
+                const _clienteResultado = window.TotalGestSaveFormCliente.prepare({
+                    document: document,
+                    data: dados,
+                    user: usuarioLogado,
+                    editingId: idEditando,
+                    showAlert: alert
+                });
+                if (!_clienteResultado.ok) return;
+                obj = _clienteResultado.value;
             } else if (ent === 'servico') {
                 if (!isEdit && usuarioLogado?.role === 'funcionario') {
                     alert('Os funcionários não podem criar ordens de serviço. Só podem alterar o estado (pendente / em andamento / concluído).');
@@ -30982,6 +30943,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
