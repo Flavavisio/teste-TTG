@@ -19,6 +19,7 @@
     periodLoading: './assets/js/app-period-loading.js',
     loadContext: './assets/js/app-load-context.js',
     loadQueries: './assets/js/app-load-queries.js',
+    loadTransform: './assets/js/app-load-transform.js',
     syncPrepare: './assets/js/app-sync-prepare.js',
     syncFiles: './assets/js/app-sync-files.js',
     syncCollections: './assets/js/app-sync-collections.js',
@@ -71,6 +72,7 @@
     if (options.periodLoading === true) pedidos.push(MODULOS.periodLoading);
     if (options.loadContext === true) pedidos.push(MODULOS.loadContext);
     if (options.loadQueries === true) pedidos.push(MODULOS.loadQueries);
+    if (options.loadTransform === true) pedidos.push(MODULOS.loadTransform);
     if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncFiles === true) pedidos.push(MODULOS.syncFiles);
     if (options.syncCollections === true) pedidos.push(MODULOS.syncCollections);
