@@ -13,7 +13,7 @@
     else if (entity === 'cliente') list = data.clientes || [];
     else if (entity === 'servico') list = data.servicos || [];
     else if (entity === 'folha') list = data.folhasObra || [];
-    else return { ok: false, value: value, oldService: null, oldEmployee: null };
+    else return { ok: false, value: value, list: null, oldService: null, oldEmployee: null };
 
     let oldService = null;
     let oldEmployee = null;
@@ -30,14 +30,10 @@
       list.push(value);
     }
 
-    if (entity === 'funcionario') data.funcionarios = list;
-    else if (entity === 'cliente') data.clientes = list;
-    else if (entity === 'servico') data.servicos = list;
-    else if (entity === 'folha') data.folhasObra = list;
-
     return {
       ok: true,
       value: value,
+      list: list,
       oldService: oldService,
       oldEmployee: oldEmployee
     };
