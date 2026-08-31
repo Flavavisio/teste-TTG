@@ -66,4 +66,4 @@ jobs:
           ]:
               print(token, block.count(token))
           PY
-      - run: echo 'profile-orchestration-inspection'
+      - run: echo 'profile-orchestration-inspection-trigger'
