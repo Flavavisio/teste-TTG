@@ -24171,65 +24171,19 @@ async function salvarAdmin(e) {
                     if (_pontoAbertoDestaOS) _pontoAbertoDestaOS.saida = new Date().toTimeString().slice(0, 5);
                 }
             } else if (ent === 'requisicao') {
-                const produtoInputs = document.querySelectorAll('.item-produto');
-                const qtdInputs = document.querySelectorAll('.item-qtd');
-                let itens = [];
-                for (let i = 0; i < produtoInputs.length; i++) {
-                    const nome = produtoInputs[i].value.trim();
-                    const qtd = parseInt(qtdInputs[i].value) || 1;
-                    if (nome) itens.push({ nome, quantidade: qtd });
-                }
-                let funcionarioId;
-                if (usuarioLogado?.role === 'admin') {
-                    funcionarioId = document.getElementById('req_funcionario')?.value || null;
-                } else {
-                    funcionarioId = usuarioLogado.id; // funcionário ou encarregado: a própria pessoa
-                }
-                obj = {
-                    obraDescricao: document.getElementById('req_obra_desc').value.trim(),
-                    fornecedor: document.getElementById('req_fornecedor').value.trim(),
-                    descricao: document.getElementById('req_descricao').value.trim(),
-                    itens: itens,
-                    data: document.getElementById('req_data').value,
-                    funcionarioId: funcionarioId,
-                    adminId: usuarioLogado?.role === 'admin' ? usuarioLogado.id : (usuarioLogado?.role === 'encarregado' ?
-                        usuarioLogado.adminId : usuarioLogado?.adminId),
-                    status: 'pendente_aprov'
-                };
-                if (!obj.obraDescricao || !obj.descricao) {
-                    alert('Obra e descrição são obrigatórios.');
-                    return;
-                }
-                const fileInput = document.getElementById('req_anexo');
-                if (fileInput && fileInput.files && fileInput.files[0]) {
-                    const reader = new FileReader();
-                    reader.onload = function(ev) {
-                        obj.anexo = ev.target.result;
-                        finalizarRequisicao(obj);
-                    };
-                    reader.readAsDataURL(fileInput.files[0]);
-                    return;
-                } else {
-                    const reqAtual = dados.requisicoes?.find(x => x.id === idEditando);
-                    obj.anexo = reqAtual && reqAtual.anexo ? reqAtual.anexo : null;
-                    finalizarRequisicao(obj);
-                    return;
-                }
-                function finalizarRequisicao(objFinal) {
-                    let lista = dados.requisicoes || [];
-                    if (isEdit) {
-                        const idx = lista.findIndex(i => i.id === idEditando);
-                        if (idx !== -1) lista[idx] = { ...lista[idx], ...objFinal };
-                    } else {
-                        objFinal.id = gerarId();
-                        lista.push(objFinal);
-                    }
-                    dados.requisicoes = lista;
-                    guardarDados(dados);
-                    fecharModal();
-                    renderizarTudo();
-                    alert('Requisição ' + (isEdit ? 'atualizada' : 'criada') + ' com sucesso!');
-                }
+                window.TotalGestSaveFormRequisicao.run({
+                    document: document,
+                    data: dados,
+                    user: usuarioLogado,
+                    isEdit: isEdit,
+                    editingId: idEditando,
+                    generateId: gerarId,
+                    saveData: guardarDados,
+                    closeModal: fecharModal,
+                    renderAll: renderizarTudo,
+                    showAlert: alert,
+                    FileReader: FileReader
+                });
                 return;
             } else if (ent === 'fornecedor') {
                 window.TotalGestSaveFormFornecedor.run({
@@ -31174,6 +31128,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
