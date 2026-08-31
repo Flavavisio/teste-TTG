@@ -23754,64 +23754,33 @@ async function salvarAdmin(e) {
                 if (!_clienteResultado.ok) return;
                 obj = _clienteResultado.value;
             } else if (ent === 'servico') {
-                const _servicoValidacao = window.TotalGestSaveFormServicoValidation.validate({
+                const _servicoResultado = await window.TotalGestSaveFormServico.run({
                     document: document,
                     data: dados,
                     user: usuarioLogado,
                     isEdit: isEdit,
                     item: item,
-                    showAlert: alert,
-                    showError: mostrarErro
-                });
-                if (!_servicoValidacao.ok) return;
-                const _servicoContexto = window.TotalGestSaveFormServicoContext.prepare({
-                    document: document,
-                    data: dados,
-                    user: usuarioLogado,
-                    isEdit: isEdit,
                     editingId: idEditando,
+                    newWorkId: _novaOSObraId,
+                    approvingAssistanceId: _aprovandoAssistenciaId,
                     tenantId: _tenantId,
                     generateId: gerarId,
-                    showAlert: alert,
-                    showConfirm: confirm
-                });
-                if (!_servicoContexto.ok) return;
-                let funcionarioId = _servicoContexto.employeeId;
-                const funcionariosIds = _servicoContexto.employeeIds;
-                const adminId = _servicoContexto.adminId;
-                const _osExist = _servicoContexto.existingOrder;
-                const _sLocalIdResolvido = _servicoContexto.localId;
-                obj = window.TotalGestSaveFormServicoObject.prepare({
-                    document: document,
-                    employeeId: funcionarioId,
-                    employeeIds: funcionariosIds,
-                    existingOrder: _osExist,
-                    newWorkId: _novaOSObraId,
-                    localId: _sLocalIdResolvido,
-                    adminId: adminId,
                     selectedWorkTypes: _sTiposTrabalhoSelecionados,
-                    approvingAssistanceId: _aprovandoAssistenciaId,
-                    editingId: idEditando
-                });
-                const _servicoConflitos = window.TotalGestSaveFormServicoConflicts.validate({
-                    value: obj,
-                    data: dados,
-                    user: usuarioLogado,
-                    isEdit: isEdit,
-                    editingId: idEditando,
                     blockIfAbsent: _bloquearSeAusenteEmOS,
                     showAlert: alert,
+                    showError: mostrarErro,
                     showConfirm: confirm,
                     timeToMinutes: _horaMin,
-                    employeeName: obterNomeFuncionario
+                    employeeName: obterNomeFuncionario,
+                    generateRegistrationNumber: gerarNumeroRegistoServidor,
+                    validation: window.TotalGestSaveFormServicoValidation,
+                    context: window.TotalGestSaveFormServicoContext,
+                    object: window.TotalGestSaveFormServicoObject,
+                    conflicts: window.TotalGestSaveFormServicoConflicts,
+                    registration: window.TotalGestSaveFormServicoRegistration
                 });
-                if (!_servicoConflitos.ok) return;
-                obj = _servicoConflitos.value;
-                obj = await window.TotalGestSaveFormServicoRegistration.apply({
-                    value: obj,
-                    isEdit: isEdit,
-                    generateRegistrationNumber: gerarNumeroRegistoServidor
-                });
+                if (!_servicoResultado.ok) return;
+                obj = _servicoResultado.value;
             } else if (ent === 'folha') {
                 const _foResultado = await window.TotalGestSaveFormFolha.run({
                     document: document,
@@ -30757,6 +30726,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>

@@ -50,6 +50,7 @@
     saveFormServicoObject: './assets/js/app-save-form-servico-object.js',
     saveFormServicoConflicts: './assets/js/app-save-form-servico-conflicts.js',
     saveFormServicoRegistration: './assets/js/app-save-form-servico-registration.js',
+    saveFormServico: './assets/js/app-save-form-servico.js',
     syncPrepare: './assets/js/app-sync-prepare.js',
     syncFiles: './assets/js/app-sync-files.js',
     syncCollections: './assets/js/app-sync-collections.js',
@@ -133,6 +134,7 @@
     if (options.saveFormServicoObject === true) pedidos.push(MODULOS.saveFormServicoObject);
     if (options.saveFormServicoConflicts === true) pedidos.push(MODULOS.saveFormServicoConflicts);
     if (options.saveFormServicoRegistration === true) pedidos.push(MODULOS.saveFormServicoRegistration);
+    if (options.saveFormServico === true) pedidos.push(MODULOS.saveFormServico);
     if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncFiles === true) pedidos.push(MODULOS.syncFiles);
     if (options.syncCollections === true) pedidos.push(MODULOS.syncCollections);
