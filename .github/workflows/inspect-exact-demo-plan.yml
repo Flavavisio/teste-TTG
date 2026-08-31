@@ -1,6 +1,8 @@
-name: Inspect app migration boundary
+name: Inspect save-form common tail
 
 on:
+  push:
+    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
@@ -8,35 +10,30 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Auditar tail comum de gravação
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestApp.init',
-              'function abrirModal(',
-              'function _salvarFormularioInterno(',
-              'window.TotalGestSaveFormFornecedor.run({',
-              'window.TotalGestSaveFormArtigo.run({',
-              'window.TotalGestSaveFormRequisicao.run({',
-              'window.TotalGestSaveFormObra.run({',
-              'window.TotalGestSaveFormFolha.run({',
-              'window.TotalGestSaveFormCliente.prepare({',
-              'window.TotalGestSaveFormFuncionarioOrchestrator.run({',
+          start = text.index('        async function _salvarFormularioInterno()')
+          end = text.index('        function salvarFormulario(', start)
+          block = text[start:end]
+          print(block)
+          print('\n=== contagens ===')
+          for token in [
+              "ent === 'servico'",
               'window.TotalGestSaveFormServico.run({',
               'window.TotalGestSaveFormPersist.apply({',
               'window.TotalGestSaveFormServicoNotifications.run({',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'function bootstrapSupabase()',
-              'async function carregarDados('
-          ]
-          for item in checks:
-              print(item, text.count(item))
+              'guardarDados(', 'fecharModal(', 'renderizarTudo(',
+              'dados.servicos', 'dados.funcionarios', 'dados.clientes', 'dados.folhasObra',
+              '_folhaConsumoPendente', '_guardarConsumoFolha', '_sincronizar'
+          ]:
+              print(token, block.count(token))
           PY
