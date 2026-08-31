@@ -1,6 +1,9 @@
-name: Inspect app migration boundary
+name: Audit remaining app inline blocks
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,26 +11,77 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Mapear funções inline e integração modular
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
+
           text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestApp.init',
-              'function guardarDados()',
-              'async function _sincronizar()',
+          lines = text.splitlines()
+          shell = Path('assets/js/app-shell.js').read_text(encoding='utf-8')
+          sw = Path('sw.js').read_text(encoding='utf-8')
+
+          print('=== CONTAGENS PRINCIPAIS ===')
+          for token in [
               'function bootstrapSupabase()',
               'async function carregarDados(',
+              'window.TotalGestLoadOrchestrator.run({',
+              'function guardarDados()',
+              'async function _sincronizar()',
               'const FICHEIRO_CAMPOS = {',
               'async function uploadDataURL(dataUrl, pasta)',
               'function registarHistoricoLicenca('
-          ]
-          for item in checks:
-              print(item, text.count(item))
+          ]:
+              print(token, text.count(token))
+
+          print('\n=== MAIORES FUNÇÕES DECLARADAS INLINE ===')
+          pattern = re.compile(r'^\s*(async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(')
+          found = []
+          for i, line in enumerate(lines):
+              m = pattern.match(line)
+              if not m:
+                  continue
+              depth = 0
+              started = False
+              end = None
+              for j in range(i, len(lines)):
+                  s = lines[j]
+                  # suficiente para ranking estrutural; confirmação exata é feita antes de qualquer migração
+                  if '{' in s:
+                      started = True
+                  depth += s.count('{') - s.count('}')
+                  if started and depth == 0:
+                      end = j
+                      break
+              if end is not None:
+                  found.append((end-i+1, i+1, end+1, m.group(2)))
+          for size, start, end, name in sorted(found, reverse=True)[:30]:
+              print(f'{size:5d} linhas | {start:5d}-{end:5d} | {name}')
+
+          print('\n=== BOOTSTRAP SUPABASE / AUTH TOKENS ===')
+          for term in ['bootstrapSupabase', 'onAuthStateChange', 'getSession(', 'getUser(', 'carregarDados(', '_obterTenantDoUser(', 'supa.auth', 'window.supabase']:
+              hits = [i+1 for i,l in enumerate(lines) if term in l]
+              print(term, hits[:40], 'total=', len(hits))
+
+          print('\n=== MÓDULOS SHELL VS SW ===')
+          paths = re.findall(r"[A-Za-z0-9_]+:\s*'([^']+)'", shell)
+          for path in paths:
+              print(path, 'exists=', Path(path).exists(), 'sw=', path in sw)
+
+          print('\n=== TODOS OS app-*.js NO SHELL/SW ===')
+          for p in sorted(Path('assets/js').glob('app-*.js')):
+              rel = './' + p.as_posix()
+              print(rel, 'shell=', rel in shell, 'sw=', rel in sw)
           PY
+      - name: Validar JavaScript modular
+        run: |
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
