@@ -3010,6 +3010,56 @@
             });
         }
 
+        // -------- sincronização por diferenças (substitui o antigo guardarDados) --------
+        // Campos que podem conter ficheiros em base64 → migram para o Supabase Storage ao gravar
+        const FICHEIRO_CAMPOS = {
+            ponto: ['foto'],
+            administradores: ['logo'],
+            pedidos: ['anexo'],
+            requisicoes: ['anexo'],
+            veiculoDocumentos: ['ficheiro'],
+            funcionarios: ['foto'],
+            folhasObra: ['assinatura'],
+            relatoriosEspecialidade: ['assinaturaCliente', 'assinaturaTecnico'],
+            encomendas: ['fatura']
+        };
+
+        // Tipos de ficheiro permitidos para upload — fotos, assinaturas, logos e documentos
+        // (PDF). Qualquer outro tipo (ex.: executáveis, scripts, HTML) é recusado.
+        const _TIPOS_FICHEIRO_PERMITIDOS = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'application/pdf'];
+        const _TAMANHO_MAX_FICHEIRO = 15 * 1024 * 1024; // 15 MB
+        async function uploadDataURL(dataUrl, pasta) {
+            const m = /^data:([^;]+);base64,(.*)$/.exec(dataUrl || '');
+            if (!m) return dataUrl; // já é URL ou está vazio
+            const mime = m[1].toLowerCase();
+            if (!_TIPOS_FICHEIRO_PERMITIDOS.includes(mime)) {
+                throw new Error('Tipo de ficheiro não permitido (' + mime + '). Só são aceites imagens (PNG, JPG, WEBP, GIF, SVG) ou PDF.');
+            }
+            const bin = atob(m[2]);
+            if (bin.length > _TAMANHO_MAX_FICHEIRO) {
+                throw new Error('Ficheiro demasiado grande (máximo 15 MB).');
+            }
+            const arr = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+            const ext = (mime.split('/')[1] || 'bin').split('+')[0];
+            const path = pasta + '/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+            const { error } = await supa.storage.from('ficheiros').upload(path, arr, { contentType: mime, upsert: false });
+            if (error) throw error;
+            return supa.storage.from('ficheiros').getPublicUrl(path).data.publicUrl;
+        }
+
+
+
+        function registarHistoricoLicenca(adminId, tipo, descricao, valor) {
+            try {
+                dados.historicoLicencas = dados.historicoLicencas || [];
+                dados.historicoLicencas.push({
+                    id: gerarId(), adminId, tipo, descricao: (descricao || '').toString().slice(0, 300),
+                    valor: valor != null ? Number(valor) : null,
+                    feitoPor: usuarioLogado?.nome || '', dataCriacao: Date.now()
+                });
+            } catch (e) { console.warn('historico licenca:', e); }
+        }
         function registarAuditoria(acao, entidade, entidadeId, descricao) {
             try {
                 if (!usuarioLogado) return;
