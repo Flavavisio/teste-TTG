@@ -1,45 +1,30 @@
-name: Inspect remaining servico validations
+name: Migrate servico conflicts
 
 on:
   push:
-    branches:
-      - refactor/separar-index-app
+    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Auditar validações restantes do serviço
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          start = text.index('                obj = window.TotalGestSaveFormServicoObject.prepare({')
-          end = text.index("            } else if (ent === 'folha') {", start)
-          block = text[start:end]
-          print(block)
-          print('\n=== contagens ===')
-          for token in [
-              '_bloquearSeAusenteEmOS(',
-              'Selecione um cliente.',
-              'outrasNoMesmoDia',
-              'tiposRepetidos',
-              '_horaMin(',
-              'emConflito',
-              'obterNomeFuncionario(',
-              'gerarNumeroRegistoServidor()',
-              'confirm(',
-              'dados.servicos',
-              'await '
-          ]:
-              print(token, block.count(token))
-          PY
-          echo 'auditoria-servico-validacoes'
+      - run: python3 .github/scripts/migrate-save-servico-conflicts.py
+      - run: |
+          node --check assets/js/app-save-form-servico-conflicts.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-shell.js sw.js
+          git commit -m 'Extrair validações posteriores da gravação de serviço'
+          git push origin HEAD:refactor/separar-index-app
