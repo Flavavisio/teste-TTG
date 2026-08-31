@@ -1,10 +1,6 @@
 from pathlib import Path
-
-text=Path('app.html').read_text(encoding='utf-8')
-name='renderizarOMeuDia'
-start=text.index('function '+name+'(')
-brace=text.index('{',start)
-
+import re
+text=Path('app.html').read_text(encoding='utf-8'); start=text.index('function renderizarOMeuDia('); brace=text.index('{',start)
 def scan_end(text, brace):
     depth=0; mode='normal'; escape=False; stack=[]; tdepth=[]; i=brace
     while i<len(text):
@@ -29,9 +25,7 @@ def scan_end(text, brace):
             elif c=="'": stack.append(current); mode='single'
             elif c=='"': stack.append(current); mode='double'
             elif c=='`': stack.append(current); mode='template'
-            elif c=='{':
-                depth+=1
-                if current=='template_expr': tdepth[-1]+=1
+            elif c=='{': depth+=1; tdepth[-1:]=[tdepth[-1]+1] if current=='template_expr' else tdepth[-1:]
             elif c=='}':
                 depth-=1
                 if current=='template_expr':
@@ -40,9 +34,12 @@ def scan_end(text, brace):
                 elif depth==0: return i+1
         i+=1
     raise AssertionError('unclosed')
-
 end=scan_end(text,brace); block=text[start:end]
-out=Path('.github/diagnostics/renderizarOMeuDia.txt'); out.parent.mkdir(parents=True,exist_ok=True); out.write_text(block,encoding='utf-8')
-print('LINES',len(block.splitlines()),'CHARS',len(block))
-for token in ['window._','window.TotalGest','innerHTML','dados.','usuarioLogado','adminAtual()','await ','supabase','fetch(','setInterval','addEventListener','localStorage']:
-    print(token,block.count(token))
+names=['document','window','alert','confirm','usuarioLogado','dados','_ehPerfilMobile','getDataHoje','escapeHtmlSimples','picarPonto','abrirSecao','picarPontoOS','abrirVerOS','_osMapaInfo','obterNomeCliente','_whatsappUrlOS','_registarKmViagemOS','obterNomeFuncionario','formatarData','formatarMoeda','renderizarHomeDashboard']
+out=['LINES %d CHARS %d'%(len(block.splitlines()),len(block))]
+for n in names:
+    c=len(re.findall(r'(?<![\w$])'+re.escape(n)+r'(?![\w$])',block))
+    if c: out.append(f'{n} {c}')
+out.append('WINDOW_HANDLERS '+','.join(sorted(set(re.findall(r'window\.([_$A-Za-z][\w$]*)\s*=\s*function',block)))))
+Path('.github/diagnostics/renderizarOMeuDia-deps.txt').write_text('\n'.join(out)+'\n',encoding='utf-8')
+print('\n'.join(out))
