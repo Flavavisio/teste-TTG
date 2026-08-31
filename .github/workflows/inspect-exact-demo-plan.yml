@@ -1,6 +1,8 @@
-name: Inspect app migration boundary
+name: Inspect reports company summary
 
 on:
+  push:
+    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
@@ -8,25 +10,10 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestReportsModuleMetrics.calculateCrm({',
-              'function renderizarReports(',
-              'function renderizarOMeuDia(',
-              'function _salvarFormularioInterno(',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'async function carregarDados('
-          ]
-          for item in checks:
-              print(item, text.count(item))
-          PY
+      - run: python3 .github/scripts/inspect-reports-company-summary.py
