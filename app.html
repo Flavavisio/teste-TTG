@@ -18398,11 +18398,18 @@
                 // Nota: o Total Gest Assist deixou de ter card/receita própria — vem sempre incluído
                 // na licença de CRM Comercial (mesma subscrição, mesmo valor, já contabilizado acima).
                 // Receita por módulo (barra)
-                const _adm = admins.filter(a => a.id !== 'superadmin');
-                let recBase = 0; _adm.forEach(a => { if (a.licenca && a.ativo !== false && a.licenca.dataExpiracao > Date.now()) recBase += valorBaseCobradoDe(a); });
-                const mods = [{ l: 'Licenças base', v: recBase, c: '#2563eb' }, { l: 'Contratos', v: receitaManut, c: '#16a34a' }, { l: 'Frota', v: receitaFrota, c: '#0ea5e9' }, { l: 'Armazém', v: receitaArmazem, c: '#b45309' }, { l: 'Notificações', v: receitaNotif, c: '#e11d48' }, { l: 'CRM + Assist', v: receitaCrm, c: '#7c3aed' }];
-                const maxMod = Math.max(1, ...mods.map(m => m.v));
-                const recTot = recBase + receitaManut + receitaFrota + receitaArmazem + receitaNotif + receitaCrm;
+                const _revenueSummary = window.TotalGestReportsSuperadminMetrics.calculateRevenueSummary({
+                    admins: admins,
+                    baseValueCharged: valorBaseCobradoDe,
+                    contractsRevenue: receitaManut,
+                    fleetRevenue: receitaFrota,
+                    warehouseRevenue: receitaArmazem,
+                    notificationsRevenue: receitaNotif,
+                    crmRevenue: receitaCrm
+                });
+                const mods = _revenueSummary.modules;
+                const maxMod = _revenueSummary.maxModuleRevenue;
+                const recTot = _revenueSummary.totalRevenue;
                 let barras = '';
                 mods.forEach(m => { barras += `<div style="margin:8px 0;"><div style="display:flex;justify-content:space-between;font-size:.85rem;"><span>${m.l}</span><strong>${m.v.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</strong></div><div style="background:#eef2f7;border-radius:6px;height:10px;overflow:hidden;margin-top:3px;"><div style="height:100%;width:${Math.round(m.v / maxMod * 100)}%;background:${m.c};"></div></div></div>`; });
                 html += `<div class="report-card"><h4><i class="fas fa-coins"></i> Receita por módulo</h4>${barras}<div class="report-item" style="font-weight:bold;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:6px;"><span>Total</span><span>${recTot.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span></div></div>`;

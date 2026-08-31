@@ -74,5 +74,28 @@
     };
   }
 
-  window.TotalGestReportsSuperadminMetrics = { calculate: calculate, calculateCompany: calculateCompany };
+
+  function calculateRevenueSummary(options) {
+    const opts = options || {};
+    const admins = (opts.admins || []).filter(a => a.id !== 'superadmin');
+    let baseRevenue = 0;
+    admins.forEach(a => {
+      if (a.licenca && a.ativo !== false && a.licenca.dataExpiracao > Date.now()) baseRevenue += opts.baseValueCharged(a);
+    });
+    const modules = [
+      { l: 'Licenças base', v: baseRevenue, c: '#2563eb' },
+      { l: 'Contratos', v: opts.contractsRevenue, c: '#16a34a' },
+      { l: 'Frota', v: opts.fleetRevenue, c: '#0ea5e9' },
+      { l: 'Armazém', v: opts.warehouseRevenue, c: '#b45309' },
+      { l: 'Notificações', v: opts.notificationsRevenue, c: '#e11d48' },
+      { l: 'CRM + Assist', v: opts.crmRevenue, c: '#7c3aed' }
+    ];
+    return {
+      modules: modules,
+      maxModuleRevenue: Math.max(1, ...modules.map(m => m.v)),
+      totalRevenue: baseRevenue + opts.contractsRevenue + opts.fleetRevenue + opts.warehouseRevenue + opts.notificationsRevenue + opts.crmRevenue
+    };
+  }
+
+  window.TotalGestReportsSuperadminMetrics = { calculate: calculate, calculateCompany: calculateCompany, calculateRevenueSummary: calculateRevenueSummary };
 })();
