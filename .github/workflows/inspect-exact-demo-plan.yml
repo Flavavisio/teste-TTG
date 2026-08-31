@@ -1,4 +1,4 @@
-name: Inspect bootstrap and auth
+name: Inspect session protection
 
 on:
   push:
@@ -17,34 +17,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspecionar bootstrap e Auth
+      - name: Mapear proteção de sessão
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
           lines = text.splitlines()
-
-          def show_function(name):
-              token = 'function ' + name + '('
-              start = next(i for i,l in enumerate(lines) if token in l)
-              depth = 0
-              started = False
-              end = None
-              for i in range(start, len(lines)):
-                  line = lines[i]
-                  if '{' in line: started = True
-                  depth += line.count('{') - line.count('}')
-                  if started and depth == 0:
-                      end = i
-                      break
-              print(f'=== {name}: {start+1}-{end+1} ({end-start+1} linhas) ===')
-              for i in range(start, end+1):
+          for term in ['_avisoSessaoMostrado', '_mostrarAvisoSessaoExpirada', '_trocandoConta', '_fetchOriginalTG', 'onAuthStateChange']:
+              hits=[i for i,l in enumerate(lines) if term in l]
+              print(f'\n=== {term}: {len(hits)} ===')
+              for i in hits:
                   print(f'{i+1}: {lines[i]}')
-
-          show_function('bootstrapSupabase')
-
-          for center in [2353, 2431, 2446, 3129, 29347]:
-              print(f'\n=== CONTEXTO {center} ===')
-              for i in range(max(0, center-18), min(len(lines), center+28)):
-                  print(f'{i+1}: {lines[i]}')
+          print('\n=== BLOCO 2433-2465 ===')
+          for i in range(2432, 2465):
+              print(f'{i+1}: {lines[i]}')
           PY
