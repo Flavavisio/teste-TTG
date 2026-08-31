@@ -1,6 +1,8 @@
-name: Inspect app migration boundary
+name: Inspect salvarPerfil
 
 on:
+  push:
+    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
@@ -8,26 +10,33 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Mapear salvarPerfil
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestSaveFormServico.run({',
-              'window.TotalGestProfileModal.render({',
-              'function abrirEditarPerfil()',
-              'function salvarPerfil(e) {',
-              'function _salvarFormularioInterno(',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'async function carregarDados('
-          ]
-          for item in checks:
-              print(item, text.count(item))
+          start = text.index('function salvarPerfil(e) {')
+          end = text.index('// =============================================================\n        //  INICIALIZAÇÃO', start)
+          block = text[start:end]
+          print('LINES', len(block.splitlines()), 'CHARS', len(block))
+          print(block)
+          print('--- BRANCH COUNTS ---')
+          for token in [
+              "if (usuarioLogado.role === 'superadmin') {",
+              "} else if (usuarioLogado.role === 'admin' && adminAtual()?.ehDistribuidor) {",
+              "} else if (usuarioLogado.role === 'admin' || usuarioLogado.role === 'subadmin') {",
+              '} else {',
+              'guardarDados(dados);',
+              'FileReader()',
+              'fecharModalPerfil();',
+              "alert('Perfil atualizado com sucesso!');"
+          ]:
+              print(token, block.count(token))
           PY
+      - run: echo 'save-profile-inspection'
