@@ -24102,26 +24102,15 @@ async function salvarAdmin(e) {
                 });
                 _foMatExtra = [];
                 // Se a folha vem de uma OS ligada a um contrato, regista a manutenção automaticamente
-                if (!isEdit && obj.servicoId) {
-                    const osv = dados.servicos?.find(s => s.id === obj.servicoId);
-                    if (osv?.contratoId) {
-                        const cont = dados.contratos?.find(c => c.id === osv.contratoId);
-                        if (cont) {
-                            obj.contratoId = cont.id;
-                            const proximaData = avancarPeriodicidade(obj.data || getDataHoje(), cont.periodicidade);
-                            dados.registosManutencao = dados.registosManutencao || [];
-                            dados.registosManutencao.push({
-                                id: gerarId(), adminId: cont.adminId, contratoId: cont.id, equipamentoId: cont.equipamentoId,
-                                dataRealizacao: obj.data || getDataHoje(),
-                                tecnicoId: obj.funcionarioId || cont.tecnicoId || null,
-                                observacoes: 'Manutenção concluída via OS ' + (osv.numeroRegisto || '') + '.',
-                                proximaData, dataCriacao: Date.now()
-                            });
-                            cont.proximaManutencao = proximaData;
-                            if (cont.clienteId) _notificarFuncionario(cont.clienteId, '✅ Manutenção realizada', 'A manutenção do contrato ' + (cont.numero || '') + ' foi concluída com sucesso.', cont.adminId);
-                        }
-                    }
-                }
+                window.TotalGestSaveFormFolhaManutencao.apply({
+                    data: dados,
+                    sheet: obj,
+                    isEdit: isEdit,
+                    generateId: gerarId,
+                    getToday: getDataHoje,
+                    advancePeriodicity: avancarPeriodicidade,
+                    notify: _notificarFuncionario
+                });
                 window.TotalGestSaveFormFolhaAssist.apply({
                     assistance: _foAssistenciaParaAtualizar,
                     newState: _foNovoEstadoAssistencia
@@ -31056,6 +31045,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
