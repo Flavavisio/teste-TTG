@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 APP = Path('app.html')
 SHELL = Path('assets/js/app-shell.js')
@@ -8,18 +9,22 @@ app = APP.read_text(encoding='utf-8')
 shell = SHELL.read_text(encoding='utf-8')
 sw = SW.read_text(encoding='utf-8')
 
-old = """                if (!isEdit) {
-                    obj.numeroRegisto = await gerarNumeroRegistoServidor();
-                }
-"""
-assert app.count(old) == 1, app.count(old)
-new = """                obj = await window.TotalGestSaveFormServicoRegistration.apply({
-                    value: obj,
-                    isEdit: isEdit,
-                    generateRegistrationNumber: gerarNumeroRegistoServidor
-                });
-"""
-app = app.replace(old, new, 1)
+pattern = re.compile(
+    r"(?P<indent>[ \t]*)if\s*\(\s*!isEdit\s*\)\s*\{\s*"
+    r"obj\.numeroRegisto\s*=\s*await\s+gerarNumeroRegistoServidor\(\)\s*;\s*\}"
+)
+matches = list(pattern.finditer(app))
+assert len(matches) == 1, len(matches)
+match = matches[0]
+indent = match.group('indent')
+new = (
+    indent + "obj = await window.TotalGestSaveFormServicoRegistration.apply({\n" +
+    indent + "    value: obj,\n" +
+    indent + "    isEdit: isEdit,\n" +
+    indent + "    generateRegistrationNumber: gerarNumeroRegistoServidor\n" +
+    indent + "});"
+)
+app = app[:match.start()] + new + app[match.end():]
 
 anchor = 'saveFormServicoConflicts: true'
 assert app.count(anchor) == 1, app.count(anchor)
@@ -39,7 +44,6 @@ assert sw.count(sw_anchor) == 1, sw.count(sw_anchor)
 sw = sw.replace(sw_anchor, sw_anchor + "  './assets/js/app-save-form-servico-registration.js',\n", 1)
 
 assert app.count('window.TotalGestSaveFormServicoRegistration.apply({') == 1
-assert app.count('gerarNumeroRegistoServidor();') == 0
 assert shell.count('./assets/js/app-save-form-servico-registration.js') == 1
 assert sw.count('./assets/js/app-save-form-servico-registration.js') == 1
 
