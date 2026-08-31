@@ -24068,29 +24068,22 @@ async function salvarAdmin(e) {
                 const _foAssinaturaBase64 = _foAssinatura.base64;
                 const _foFolhaId = _foAssinatura.id;
                 const _foAssinaturaPath = _foAssinatura.path;
-                obj = {
-                    clienteId: _foClienteId || null,
-                    localId: _foLocalId || null,
-                    obraDescricao: _foObraDescricao,
-                    descricao: document.getElementById('fo_descricao').value.trim(),
-                    materiais: document.getElementById('fo_materiais').value.trim(),
-                    horasTrabalhadas: horas,
-                    data: document.getElementById('fo_data').value,
-                    funcionarioId: funcionarioId,
-                    servicoId: document.getElementById('fo_servico_id')?.value || null,
-                    obraId: document.getElementById('fo_obra')?.value || null,
-                    assinatura: _foAssinaturaPath ? '' : _foAssinaturaBase64,
-                    assinaturaPath: _foAssinaturaPath,
-                    assinaturaNome: document.getElementById('fo_assinatura_nome')?.value.trim() || null,
-                    dataAtualizacao: Date.now(),
-                    adminId: _foAdminId
-                };
-                if (!isEdit) obj.id = _foFolhaId;
-                if (!obj.obraDescricao) { alert('A descrição da obra é obrigatória.'); return; }
-                if (document.getElementById('fo_mat_sim') && !document.getElementById('fo_mat_sim').classList.contains('ativo') && !document.getElementById('fo_mat_nao').classList.contains('ativo')) {
-                    alert('Indica se usaste materiais desta obra (Sim/Não).'); return;
-                }
-                if (!obj.funcionarioId) { alert('Funcionário não identificado.'); return; }
+                const _foObjeto = window.TotalGestSaveFormFolhaObject.prepare({
+                    document: document,
+                    clientId: _foClienteId,
+                    localId: _foLocalId,
+                    workDescription: _foObraDescricao,
+                    hours: horas,
+                    employeeId: funcionarioId,
+                    signatureBase64: _foAssinaturaBase64,
+                    signaturePath: _foAssinaturaPath,
+                    adminId: _foAdminId,
+                    sheetId: _foFolhaId,
+                    isEdit: isEdit,
+                    showAlert: alert
+                });
+                if (!_foObjeto.ok) return;
+                obj = _foObjeto.value;
                 // OS gerada a partir de uma Assistência (Total Gest Assist) — o estado é obrigatório aqui,
                 // e atualiza-se automaticamente do lado do Assist ao gravar a folha.
                 let _foAssistenciaParaAtualizar = null, _foNovoEstadoAssistencia = null;
@@ -31060,6 +31053,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>

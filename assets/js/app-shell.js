@@ -35,6 +35,7 @@
     saveFormObra: './assets/js/app-save-form-obra.js',
     saveFormFolhaContext: './assets/js/app-save-form-folha-context.js',
     saveFormFolhaSignature: './assets/js/app-save-form-folha-signature.js',
+    saveFormFolhaObject: './assets/js/app-save-form-folha-object.js',
     syncPrepare: './assets/js/app-sync-prepare.js',
     syncFiles: './assets/js/app-sync-files.js',
     syncCollections: './assets/js/app-sync-collections.js',
@@ -103,6 +104,7 @@
     if (options.saveFormObra === true) pedidos.push(MODULOS.saveFormObra);
     if (options.saveFormFolhaContext === true) pedidos.push(MODULOS.saveFormFolhaContext);
     if (options.saveFormFolhaSignature === true) pedidos.push(MODULOS.saveFormFolhaSignature);
+    if (options.saveFormFolhaObject === true) pedidos.push(MODULOS.saveFormFolhaObject);
     if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncFiles === true) pedidos.push(MODULOS.syncFiles);
     if (options.syncCollections === true) pedidos.push(MODULOS.syncCollections);
