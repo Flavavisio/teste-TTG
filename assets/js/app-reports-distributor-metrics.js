@@ -61,9 +61,25 @@
     return { totalFunc,totalCli,totalOS,osPend,totalPonto,totalPedidos,pedPend,totalFolhas,totalReqs,reqPend,totalEncarregados,numOrd,gastoFunc,gastoEnc,gastoTotal:gastoFunc+gastoEnc,osList,osPendentes:osList.filter(s=>s.status==='pendente').length,osAndamento:osList.filter(s=>s.status==='em andamento'||s.status==='em_andamento').length,osConcluidas:osList.filter(s=>(s.status||'').toLowerCase().includes('conclu')).length };
   }
 
+  function calculateAdminContracts(options) {
+    const opts = options || {};
+    const data = opts.data || {};
+    const contracts = (data.contratos || []).filter(c => c.adminId === opts.adminId);
+    let emDia = 0, aVencer = 0, vencidos = 0, valor = 0;
+    contracts.forEach(c => {
+      const chave = opts.maintenanceState(opts.nextMaintenance(c)).chave;
+      if (chave === 'vencido') vencidos++;
+      else if (chave === 'a_vencer') aVencer++;
+      else if (chave === 'em_dia') emDia++;
+      valor += opts.toNumber(c.valor);
+    });
+    return { contracts: contracts, emDia: emDia, aVencer: aVencer, vencidos: vencidos, valor: valor };
+  }
+
   window.TotalGestReportsDistributorMetrics = {
     calculateOverview: calculateOverview,
     calculateClient: calculateClient,
-    calculateAdminOverview: calculateAdminOverview
+    calculateAdminOverview: calculateAdminOverview,
+    calculateAdminContracts: calculateAdminContracts
   };
 })();

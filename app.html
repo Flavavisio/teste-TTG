@@ -18514,13 +18514,18 @@
             const osAndamento = _adminOverview.osAndamento;
             const osConcluidas = _adminOverview.osConcluidas;
             const eur = (n) => n.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-            const contratosAdmin = (dados.contratos || []).filter(c => c.adminId === admin.id);
-            let ctEmDia = 0, ctAVencer = 0, ctVencidos = 0, ctValor = 0;
-            contratosAdmin.forEach(c => {
-                const ch = estadoManutencao(calcularProximaManutencao(c)).chave;
-                if (ch === 'vencido') ctVencidos++; else if (ch === 'a_vencer') ctAVencer++; else if (ch === 'em_dia') ctEmDia++;
-                ctValor += numOrd(c.valor);
+            const _adminContracts = window.TotalGestReportsDistributorMetrics.calculateAdminContracts({
+                data: dados,
+                adminId: admin.id,
+                maintenanceState: estadoManutencao,
+                nextMaintenance: calcularProximaManutencao,
+                toNumber: numOrd
             });
+            const contratosAdmin = _adminContracts.contracts;
+            const ctEmDia = _adminContracts.emDia;
+            const ctAVencer = _adminContracts.aVencer;
+            const ctVencidos = _adminContracts.vencidos;
+            const ctValor = _adminContracts.valor;
             const totalLocais = (dados.locais || []).filter(l => l.adminId === admin.id).length;
             const totalEquip = (dados.equipamentos || []).filter(e => e.adminId === admin.id).length;
             const totalRegistos = (dados.registosManutencao || []).filter(r => r.adminId === admin.id).length;
