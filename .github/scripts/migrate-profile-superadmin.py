@@ -8,12 +8,14 @@ app = APP.read_text(encoding='utf-8')
 shell = SHELL.read_text(encoding='utf-8')
 sw = SW.read_text(encoding='utf-8')
 
+fn_marker = '        function abrirEditarPerfil() {'
 start_marker = "            if (usuarioLogado.role === 'superadmin') {\n"
 end_marker = "            } else if (usuarioLogado.role === 'admin' && adminAtual()?.ehDistribuidor) {\n"
-assert app.count(start_marker) == 1, app.count(start_marker)
-assert app.count(end_marker) == 1, app.count(end_marker)
-start = app.index(start_marker) + len(start_marker)
-end = app.index(end_marker, start)
+assert app.count(fn_marker) == 1, app.count(fn_marker)
+fn = app.index(fn_marker)
+start_branch = app.index(start_marker, fn)
+end = app.index(end_marker, start_branch)
+start = start_branch + len(start_marker)
 old = app[start:end]
 for token in [
     'const config = obterConfig();',
