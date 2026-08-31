@@ -1,4 +1,4 @@
-name: Inspect salvarPerfil
+name: Migrate superadmin profile save
 
 on:
   push:
@@ -6,37 +6,26 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear salvarPerfil
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          start = text.index('function salvarPerfil(e) {')
-          end = text.index('// =============================================================\n        //  INICIALIZAÇÃO', start)
-          block = text[start:end]
-          print('LINES', len(block.splitlines()), 'CHARS', len(block))
-          print(block)
-          print('--- BRANCH COUNTS ---')
-          for token in [
-              "if (usuarioLogado.role === 'superadmin') {",
-              "} else if (usuarioLogado.role === 'admin' && adminAtual()?.ehDistribuidor) {",
-              "} else if (usuarioLogado.role === 'admin' || usuarioLogado.role === 'subadmin') {",
-              '} else {',
-              'guardarDados(dados);',
-              'FileReader()',
-              'fecharModalPerfil();',
-              "alert('Perfil atualizado com sucesso!');"
-          ]:
-              print(token, block.count(token))
-          PY
-      - run: echo 'save-profile-inspection'
+      - run: python3 .github/scripts/migrate-profile-save-superadmin.py
+      - run: |
+          node --check assets/js/app-profile-save-superadmin.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-shell.js assets/js/app-profile-save-superadmin.js sw.js
+          git commit -m 'Extrair gravação do perfil superadmin'
+          git push origin HEAD:refactor/separar-index-app
+      - run: echo 'profile-save-superadmin-migration'
