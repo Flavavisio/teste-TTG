@@ -1,0 +1,417 @@
+--- context line 12 ---
+4:                 const admins = dados.administradores || [];
+5:                 const _metrics = window.TotalGestReportsSuperadminMetrics.calculate({
+6:                     admins: admins,
+7:                     data: dados,
+8:                     contractsActive: moduloContratosAtivo,
+9:                     fleetActive: moduloFrotaAtivo,
+10:                     warehouseActive: moduloArmazemAtivo,
+11:                     crmActive: moduloCrmAtivo,
+12:                     erpActive: moduloErpAtivo,
+13:                     baseValueCharged: valorBaseCobradoDe,
+14:                     contractsAnnualPrice: PRECO_CONTRATOS_ANUAL,
+15:                     contractsMonthlyPrice: PRECO_CONTRATOS_MENSAL,
+16:                     fleetAnnualPrice: PRECO_FROTA_ANUAL,
+17:                     fleetMonthlyPrice: PRECO_FROTA_MENSAL,
+18:                     warehouseAnnualPrice: PRECO_ARMAZEM_ANUAL,
+19:                     warehouseMonthlyPrice: PRECO_ARMAZEM_MENSAL,
+20:                     crmAnnualPrice: PRECO_CRM_ANUAL,
+21:                     crmMonthlyPrice: PRECO_CRM_MENSAL,
+22:                     erpAnnualPrice: PRECO_ERP_ANUAL,
+23:                     erpMonthlyPrice: PRECO_ERP_MENSAL
+
+--- context line 22 ---
+14:                     contractsAnnualPrice: PRECO_CONTRATOS_ANUAL,
+15:                     contractsMonthlyPrice: PRECO_CONTRATOS_MENSAL,
+16:                     fleetAnnualPrice: PRECO_FROTA_ANUAL,
+17:                     fleetMonthlyPrice: PRECO_FROTA_MENSAL,
+18:                     warehouseAnnualPrice: PRECO_ARMAZEM_ANUAL,
+19:                     warehouseMonthlyPrice: PRECO_ARMAZEM_MENSAL,
+20:                     crmAnnualPrice: PRECO_CRM_ANUAL,
+21:                     crmMonthlyPrice: PRECO_CRM_MENSAL,
+22:                     erpAnnualPrice: PRECO_ERP_ANUAL,
+23:                     erpMonthlyPrice: PRECO_ERP_MENSAL
+24:                 });
+25:                 const _emp = _metrics.empresas;
+26:                 const _empAtivas = _metrics.empresasAtivas;
+27:                 const _expira = _metrics.expiramEm10Dias;
+28:                 const _totFunc = _metrics.totalFuncionarios;
+29:                 const _totEnc = _metrics.totalEncarregados;
+30:                 const _addons = _metrics.addonsAtivos;
+31:                 const _recT = _metrics.receitaRecorrente;
+32:                 const _kpi = (lbl, val, cor, ic) => `<div style="border:1px solid #e6eaf2;border-left:4px solid ${cor};border-radius:10px;padding:12px 14px;background:#fff;"><div style="font-size:.78rem;color:#64748b;"><i class="fas ${ic}" style="color:${cor};"></i> ${lbl}</div><div style="font-size:1.2rem;font-weight:800;color:#0f172a;margin-top:4px;">${val}</div></div>`;
+33:                 let html = `<div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button class="btn btn-outline" onclick="relSuperAdminPDF()"><i class="fas fa-file-pdf"></i> Exportar PDF</button></div>`;
+
+--- context line 23 ---
+15:                     contractsMonthlyPrice: PRECO_CONTRATOS_MENSAL,
+16:                     fleetAnnualPrice: PRECO_FROTA_ANUAL,
+17:                     fleetMonthlyPrice: PRECO_FROTA_MENSAL,
+18:                     warehouseAnnualPrice: PRECO_ARMAZEM_ANUAL,
+19:                     warehouseMonthlyPrice: PRECO_ARMAZEM_MENSAL,
+20:                     crmAnnualPrice: PRECO_CRM_ANUAL,
+21:                     crmMonthlyPrice: PRECO_CRM_MENSAL,
+22:                     erpAnnualPrice: PRECO_ERP_ANUAL,
+23:                     erpMonthlyPrice: PRECO_ERP_MENSAL
+24:                 });
+25:                 const _emp = _metrics.empresas;
+26:                 const _empAtivas = _metrics.empresasAtivas;
+27:                 const _expira = _metrics.expiramEm10Dias;
+28:                 const _totFunc = _metrics.totalFuncionarios;
+29:                 const _totEnc = _metrics.totalEncarregados;
+30:                 const _addons = _metrics.addonsAtivos;
+31:                 const _recT = _metrics.receitaRecorrente;
+32:                 const _kpi = (lbl, val, cor, ic) => `<div style="border:1px solid #e6eaf2;border-left:4px solid ${cor};border-radius:10px;padding:12px 14px;background:#fff;"><div style="font-size:.78rem;color:#64748b;"><i class="fas ${ic}" style="color:${cor};"></i> ${lbl}</div><div style="font-size:1.2rem;font-weight:800;color:#0f172a;margin-top:4px;">${val}</div></div>`;
+33:                 let html = `<div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button class="btn btn-outline" onclick="relSuperAdminPDF()"><i class="fas fa-file-pdf"></i> Exportar PDF</button></div>`;
+34:                 html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:16px;">
+
+--- context line 46 ---
+38:                     ${_kpi('A expirar (≤10d)', String(_expira), _expira ? '#dc2626' : '#16a34a', 'fa-hourglass-half')}
+39:                     ${_kpi('Receita recorrente', _recT.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €', '#16a34a', 'fa-euro-sign')}
+40:                 </div>`;
+41:                 html += `<div class="report-card"><h4><i class="fas fa-chart-line"></i> Resumo por Empresa</h4>`;
+42:                 if (admins.length === 0) {
+43:                     html += `<p class="text-muted">Nenhuma empresa registada.</p>`;
+44:                 } else {
+45:                     html += `<div class="table-wrapper"><table>
+46:                                 <thead><tr><th>Empresa</th><th>Administrador</th><th>Plano</th><th>Expiração</th><th>Funcionários</th><th>Encarregados</th><th>Contratos</th><th>Frota</th><th>Armazém</th><th>CRM + Assist</th><th>ERP</th><th>Rondas</th><th>Receita (€)</th></tr></thead><tbody>`;
+47:                     let totalReceitaGlobal = 0;
+48:                     let totalFuncGlobal = 0;
+49:                     let totalEncarregadosGlobal = 0;
+50:                     let totalContratosGlobal = 0;
+51:                     let totalFrotaGlobal = 0;
+52:                     let totalArmazemGlobal = 0;
+53:                     let totalCrmGlobal = 0;
+54:                     let totalErpGlobal = 0;
+55:                     let totalRondasGlobal = 0;
+56:                     admins.forEach(admin => {
+57:                         const funcs = dados.funcionarios ? dados.funcionarios.filter(f => f.adminId === admin.id && f
+
+--- context line 54 ---
+46:                                 <thead><tr><th>Empresa</th><th>Administrador</th><th>Plano</th><th>Expiração</th><th>Funcionários</th><th>Encarregados</th><th>Contratos</th><th>Frota</th><th>Armazém</th><th>CRM + Assist</th><th>ERP</th><th>Rondas</th><th>Receita (€)</th></tr></thead><tbody>`;
+47:                     let totalReceitaGlobal = 0;
+48:                     let totalFuncGlobal = 0;
+49:                     let totalEncarregadosGlobal = 0;
+50:                     let totalContratosGlobal = 0;
+51:                     let totalFrotaGlobal = 0;
+52:                     let totalArmazemGlobal = 0;
+53:                     let totalCrmGlobal = 0;
+54:                     let totalErpGlobal = 0;
+55:                     let totalRondasGlobal = 0;
+56:                     admins.forEach(admin => {
+57:                         const funcs = dados.funcionarios ? dados.funcionarios.filter(f => f.adminId === admin.id && f
+58:                             .role !== 'admin' && f.role !== 'superadmin').length : 0;
+59:                         const encarregados = dados.encarregados ? dados.encarregados.filter(e => e.adminId === admin.id)
+60:                             .length : 0;
+61:                         const valor = admin.licenca && admin.ativo ? valorBaseCobradoDe(admin) : 0;
+62:                         const temContratos = moduloContratosAtivo(admin);
+63:                         const temFrota = moduloFrotaAtivo(admin);
+64:                         const valorContratos = temContratos ? (admin.contratosPlano === 'anual' ? PRECO_CONTRATOS_ANUAL : PRECO_CONTRATOS_MENSAL) : 0;
+65:                         const valorFrota = temFrota ? (admin.frotaPlano === 'anual' ? PRECO_FROTA_ANUAL : PRECO_FROTA_MENSAL) : 0;
+
+--- context line 55 ---
+47:                     let totalReceitaGlobal = 0;
+48:                     let totalFuncGlobal = 0;
+49:                     let totalEncarregadosGlobal = 0;
+50:                     let totalContratosGlobal = 0;
+51:                     let totalFrotaGlobal = 0;
+52:                     let totalArmazemGlobal = 0;
+53:                     let totalCrmGlobal = 0;
+54:                     let totalErpGlobal = 0;
+55:                     let totalRondasGlobal = 0;
+56:                     admins.forEach(admin => {
+57:                         const funcs = dados.funcionarios ? dados.funcionarios.filter(f => f.adminId === admin.id && f
+58:                             .role !== 'admin' && f.role !== 'superadmin').length : 0;
+59:                         const encarregados = dados.encarregados ? dados.encarregados.filter(e => e.adminId === admin.id)
+60:                             .length : 0;
+61:                         const valor = admin.licenca && admin.ativo ? valorBaseCobradoDe(admin) : 0;
+62:                         const temContratos = moduloContratosAtivo(admin);
+63:                         const temFrota = moduloFrotaAtivo(admin);
+64:                         const valorContratos = temContratos ? (admin.contratosPlano === 'anual' ? PRECO_CONTRATOS_ANUAL : PRECO_CONTRATOS_MENSAL) : 0;
+65:                         const valorFrota = temFrota ? (admin.frotaPlano === 'anual' ? PRECO_FROTA_ANUAL : PRECO_FROTA_MENSAL) : 0;
+66:                         const temArmazem = moduloArmazemAtivo(admin);
+
+--- context line 70 ---
+62:                         const temContratos = moduloContratosAtivo(admin);
+63:                         const temFrota = moduloFrotaAtivo(admin);
+64:                         const valorContratos = temContratos ? (admin.contratosPlano === 'anual' ? PRECO_CONTRATOS_ANUAL : PRECO_CONTRATOS_MENSAL) : 0;
+65:                         const valorFrota = temFrota ? (admin.frotaPlano === 'anual' ? PRECO_FROTA_ANUAL : PRECO_FROTA_MENSAL) : 0;
+66:                         const temArmazem = moduloArmazemAtivo(admin);
+67:                         const valorArmazem = temArmazem ? (admin.armazemPlano === 'anual' ? PRECO_ARMAZEM_ANUAL : PRECO_ARMAZEM_MENSAL) : 0;
+68:                         const temCrm = moduloCrmAtivo(admin);
+69:                         const valorCrm = temCrm ? (admin.crmPlano === 'anual' ? PRECO_CRM_ANUAL : PRECO_CRM_MENSAL) : 0;
+70:                         const temErp = moduloErpAtivo(admin);
+71:                         const valorErp = temErp ? (admin.erpPlano === 'anual' ? PRECO_ERP_ANUAL : PRECO_ERP_MENSAL) : 0;
+72:                         // Rondas: grátis por agora (fase de lançamento) — a soma já está pronta para
+73:                         // quando passar a ter preço, só é preciso mudar PRECO_RONDAS_MENSAL/ANUAL.
+74:                         const temRondas = moduloRondasAtivo(admin);
+75:                         const valorRondas = temRondas ? (admin.rondasPlano === 'anual' ? PRECO_RONDAS_ANUAL : PRECO_RONDAS_MENSAL) : 0;
+76:                         const valorEmpresa = valor + valorContratos + valorFrota + valorArmazem + valorCrm + valorErp + valorRondas;
+77:                         const dataExp = admin.licenca ? new Date(admin.licenca.dataExpiracao).toLocaleDateString(
+78:                             'pt-PT') : '-';
+79:                         const planoLabel = admin.licenca ? PLANOS[admin.licenca.plano]?.label || admin.licenca.plano :
+80:                             'Sem licença';
+81:                         const maxFunc = admin.licenca ? admin.licenca.maxFuncionarios : 0;
+
+--- context line 71 ---
+63:                         const temFrota = moduloFrotaAtivo(admin);
+64:                         const valorContratos = temContratos ? (admin.contratosPlano === 'anual' ? PRECO_CONTRATOS_ANUAL : PRECO_CONTRATOS_MENSAL) : 0;
+65:                         const valorFrota = temFrota ? (admin.frotaPlano === 'anual' ? PRECO_FROTA_ANUAL : PRECO_FROTA_MENSAL) : 0;
+66:                         const temArmazem = moduloArmazemAtivo(admin);
+67:                         const valorArmazem = temArmazem ? (admin.armazemPlano === 'anual' ? PRECO_ARMAZEM_ANUAL : PRECO_ARMAZEM_MENSAL) : 0;
+68:                         const temCrm = moduloCrmAtivo(admin);
+69:                         const valorCrm = temCrm ? (admin.crmPlano === 'anual' ? PRECO_CRM_ANUAL : PRECO_CRM_MENSAL) : 0;
+70:                         const temErp = moduloErpAtivo(admin);
+71:                         const valorErp = temErp ? (admin.erpPlano === 'anual' ? PRECO_ERP_ANUAL : PRECO_ERP_MENSAL) : 0;
+72:                         // Rondas: grátis por agora (fase de lançamento) — a soma já está pronta para
+73:                         // quando passar a ter preço, só é preciso mudar PRECO_RONDAS_MENSAL/ANUAL.
+74:                         const temRondas = moduloRondasAtivo(admin);
+75:                         const valorRondas = temRondas ? (admin.rondasPlano === 'anual' ? PRECO_RONDAS_ANUAL : PRECO_RONDAS_MENSAL) : 0;
+76:                         const valorEmpresa = valor + valorContratos + valorFrota + valorArmazem + valorCrm + valorErp + valorRondas;
+77:                         const dataExp = admin.licenca ? new Date(admin.licenca.dataExpiracao).toLocaleDateString(
+78:                             'pt-PT') : '-';
+79:                         const planoLabel = admin.licenca ? PLANOS[admin.licenca.plano]?.label || admin.licenca.plano :
+80:                             'Sem licença';
+81:                         const maxFunc = admin.licenca ? admin.licenca.maxFuncionarios : 0;
+82:                         const atingiuLimite = funcs >= maxFunc && maxFunc > 0;
+
+--- context line 72 ---
+64:                         const valorContratos = temContratos ? (admin.contratosPlano === 'anual' ? PRECO_CONTRATOS_ANUAL : PRECO_CONTRATOS_MENSAL) : 0;
+65:                         const valorFrota = temFrota ? (admin.frotaPlano === 'anual' ? PRECO_FROTA_ANUAL : PRECO_FROTA_MENSAL) : 0;
+66:                         const temArmazem = moduloArmazemAtivo(admin);
+67:                         const valorArmazem = temArmazem ? (admin.armazemPlano === 'anual' ? PRECO_ARMAZEM_ANUAL : PRECO_ARMAZEM_MENSAL) : 0;
+68:                         const temCrm = moduloCrmAtivo(admin);
+69:                         const valorCrm = temCrm ? (admin.crmPlano === 'anual' ? PRECO_CRM_ANUAL : PRECO_CRM_MENSAL) : 0;
+70:                         const temErp = moduloErpAtivo(admin);
+71:                         const valorErp = temErp ? (admin.erpPlano === 'anual' ? PRECO_ERP_ANUAL : PRECO_ERP_MENSAL) : 0;
+72:                         // Rondas: grátis por agora (fase de lançamento) — a soma já está pronta para
+73:                         // quando passar a ter preço, só é preciso mudar PRECO_RONDAS_MENSAL/ANUAL.
+74:                         const temRondas = moduloRondasAtivo(admin);
+75:                         const valorRondas = temRondas ? (admin.rondasPlano === 'anual' ? PRECO_RONDAS_ANUAL : PRECO_RONDAS_MENSAL) : 0;
+76:                         const valorEmpresa = valor + valorContratos + valorFrota + valorArmazem + valorCrm + valorErp + valorRondas;
+77:                         const dataExp = admin.licenca ? new Date(admin.licenca.dataExpiracao).toLocaleDateString(
+78:                             'pt-PT') : '-';
+79:                         const planoLabel = admin.licenca ? PLANOS[admin.licenca.plano]?.label || admin.licenca.plano :
+80:                             'Sem licença';
+81:                         const maxFunc = admin.licenca ? admin.licenca.maxFuncionarios : 0;
+82:                         const atingiuLimite = funcs >= maxFunc && maxFunc > 0;
+83:                         const rowClass = atingiuLimite ? 'tr-limite-atingido' : '';
+
+--- context line 73 ---
+65:                         const valorFrota = temFrota ? (admin.frotaPlano === 'anual' ? PRECO_FROTA_ANUAL : PRECO_FROTA_MENSAL) : 0;
+66:                         const temArmazem = moduloArmazemAtivo(admin);
+67:                         const valorArmazem = temArmazem ? (admin.armazemPlano === 'anual' ? PRECO_ARMAZEM_ANUAL : PRECO_ARMAZEM_MENSAL) : 0;
+68:                         const temCrm = moduloCrmAtivo(admin);
+69:                         const valorCrm = temCrm ? (admin.crmPlano === 'anual' ? PRECO_CRM_ANUAL : PRECO_CRM_MENSAL) : 0;
+70:                         const temErp = moduloErpAtivo(admin);
+71:                         const valorErp = temErp ? (admin.erpPlano === 'anual' ? PRECO_ERP_ANUAL : PRECO_ERP_MENSAL) : 0;
+72:                         // Rondas: grátis por agora (fase de lançamento) — a soma já está pronta para
+73:                         // quando passar a ter preço, só é preciso mudar PRECO_RONDAS_MENSAL/ANUAL.
+74:                         const temRondas = moduloRondasAtivo(admin);
+75:                         const valorRondas = temRondas ? (admin.rondasPlano === 'anual' ? PRECO_RONDAS_ANUAL : PRECO_RONDAS_MENSAL) : 0;
+76:                         const valorEmpresa = valor + valorContratos + valorFrota + valorArmazem + valorCrm + valorErp + valorRondas;
+77:                         const dataExp = admin.licenca ? new Date(admin.licenca.dataExpiracao).toLocaleDateString(
+78:                             'pt-PT') : '-';
+79:                         const planoLabel = admin.licenca ? PLANOS[admin.licenca.plano]?.label || admin.licenca.plano :
+80:                             'Sem licença';
+81:                         const maxFunc = admin.licenca ? admin.licenca.maxFuncionarios : 0;
+82:                         const atingiuLimite = funcs >= maxFunc && maxFunc > 0;
+83:                         const rowClass = atingiuLimite ? 'tr-limite-atingido' : '';
+84:                         totalReceitaGlobal += valorEmpresa;
+
+--- context line 74 ---
+66:                         const temArmazem = moduloArmazemAtivo(admin);
+67:                         const valorArmazem = temArmazem ? (admin.armazemPlano === 'anual' ? PRECO_ARMAZEM_ANUAL : PRECO_ARMAZEM_MENSAL) : 0;
+68:                         const temCrm = moduloCrmAtivo(admin);
+69:                         const valorCrm = temCrm ? (admin.crmPlano === 'anual' ? PRECO_CRM_ANUAL : PRECO_CRM_MENSAL) : 0;
+70:                         const temErp = moduloErpAtivo(admin);
+71:                         const valorErp = temErp ? (admin.erpPlano === 'anual' ? PRECO_ERP_ANUAL : PRECO_ERP_MENSAL) : 0;
+72:                         // Rondas: grátis por agora (fase de lançamento) — a soma já está pronta para
+73:                         // quando passar a ter preço, só é preciso mudar PRECO_RONDAS_MENSAL/ANUAL.
+74:                         const temRondas = moduloRondasAtivo(admin);
+75:                         const valorRondas = temRondas ? (admin.rondasPlano === 'anual' ? PRECO_RONDAS_ANUAL : PRECO_RONDAS_MENSAL) : 0;
+76:                         const valorEmpresa = valor + valorContratos + valorFrota + valorArmazem + valorCrm + valorErp + valorRondas;
+77:                         const dataExp = admin.licenca ? new Date(admin.licenca.dataExpiracao).toLocaleDateString(
+78:                             'pt-PT') : '-';
+79:                         const planoLabel = admin.licenca ? PLANOS[admin.licenca.plano]?.label || admin.licenca.plano :
+80:                             'Sem licença';
+81:                         const maxFunc = admin.licenca ? admin.licenca.maxFuncionarios : 0;
+82:                         const atingiuLimite = funcs >= maxFunc && maxFunc > 0;
+83:                         const rowClass = atingiuLimite ? 'tr-limite-atingido' : '';
+84:                         totalReceitaGlobal += valorEmpresa;
+85:                         totalFuncGlobal += funcs;
+
+--- context line 75 ---
+67:                         const valorArmazem = temArmazem ? (admin.armazemPlano === 'anual' ? PRECO_ARMAZEM_ANUAL : PRECO_ARMAZEM_MENSAL) : 0;
+68:                         const temCrm = moduloCrmAtivo(admin);
+69:                         const valorCrm = temCrm ? (admin.crmPlano === 'anual' ? PRECO_CRM_ANUAL : PRECO_CRM_MENSAL) : 0;
+70:                         const temErp = moduloErpAtivo(admin);
+71:                         const valorErp = temErp ? (admin.erpPlano === 'anual' ? PRECO_ERP_ANUAL : PRECO_ERP_MENSAL) : 0;
+72:                         // Rondas: grátis por agora (fase de lançamento) — a soma já está pronta para
+73:                         // quando passar a ter preço, só é preciso mudar PRECO_RONDAS_MENSAL/ANUAL.
+74:                         const temRondas = moduloRondasAtivo(admin);
+75:                         const valorRondas = temRondas ? (admin.rondasPlano === 'anual' ? PRECO_RONDAS_ANUAL : PRECO_RONDAS_MENSAL) : 0;
+76:                         const valorEmpresa = valor + valorContratos + valorFrota + valorArmazem + valorCrm + valorErp + valorRondas;
+77:                         const dataExp = admin.licenca ? new Date(admin.licenca.dataExpiracao).toLocaleDateString(
+78:                             'pt-PT') : '-';
+79:                         const planoLabel = admin.licenca ? PLANOS[admin.licenca.plano]?.label || admin.licenca.plano :
+80:                             'Sem licença';
+81:                         const maxFunc = admin.licenca ? admin.licenca.maxFuncionarios : 0;
+82:                         const atingiuLimite = funcs >= maxFunc && maxFunc > 0;
+83:                         const rowClass = atingiuLimite ? 'tr-limite-atingido' : '';
+84:                         totalReceitaGlobal += valorEmpresa;
+85:                         totalFuncGlobal += funcs;
+86:                         totalEncarregadosGlobal += encarregados;
+
+--- context line 76 ---
+68:                         const temCrm = moduloCrmAtivo(admin);
+69:                         const valorCrm = temCrm ? (admin.crmPlano === 'anual' ? PRECO_CRM_ANUAL : PRECO_CRM_MENSAL) : 0;
+70:                         const temErp = moduloErpAtivo(admin);
+71:                         const valorErp = temErp ? (admin.erpPlano === 'anual' ? PRECO_ERP_ANUAL : PRECO_ERP_MENSAL) : 0;
+72:                         // Rondas: grátis por agora (fase de lançamento) — a soma já está pronta para
+73:                         // quando passar a ter preço, só é preciso mudar PRECO_RONDAS_MENSAL/ANUAL.
+74:                         const temRondas = moduloRondasAtivo(admin);
+75:                         const valorRondas = temRondas ? (admin.rondasPlano === 'anual' ? PRECO_RONDAS_ANUAL : PRECO_RONDAS_MENSAL) : 0;
+76:                         const valorEmpresa = valor + valorContratos + valorFrota + valorArmazem + valorCrm + valorErp + valorRondas;
+77:                         const dataExp = admin.licenca ? new Date(admin.licenca.dataExpiracao).toLocaleDateString(
+78:                             'pt-PT') : '-';
+79:                         const planoLabel = admin.licenca ? PLANOS[admin.licenca.plano]?.label || admin.licenca.plano :
+80:                             'Sem licença';
+81:                         const maxFunc = admin.licenca ? admin.licenca.maxFuncionarios : 0;
+82:                         const atingiuLimite = funcs >= maxFunc && maxFunc > 0;
+83:                         const rowClass = atingiuLimite ? 'tr-limite-atingido' : '';
+84:                         totalReceitaGlobal += valorEmpresa;
+85:                         totalFuncGlobal += funcs;
+86:                         totalEncarregadosGlobal += encarregados;
+87:                         if (temContratos) totalContratosGlobal++;
+
+--- context line 91 ---
+83:                         const rowClass = atingiuLimite ? 'tr-limite-atingido' : '';
+84:                         totalReceitaGlobal += valorEmpresa;
+85:                         totalFuncGlobal += funcs;
+86:                         totalEncarregadosGlobal += encarregados;
+87:                         if (temContratos) totalContratosGlobal++;
+88:                         if (temFrota) totalFrotaGlobal++;
+89:                         if (temArmazem) totalArmazemGlobal++;
+90:                         if (temCrm) totalCrmGlobal++;
+91:                         if (temErp) totalErpGlobal++;
+92:                         if (temRondas) totalRondasGlobal++;
+93:                         html += `<tr class="${rowClass}">
+94:                                     <td>${admin.empresa || 'Sem empresa'}</td>
+95:                                     <td>${admin.nome}</td>
+96:                                     <td>${planoLabel}</td>
+97:                                     <td>${dataExp}</td>
+98:                                     <td>${funcs}${atingiuLimite ? ' ⚠️' : ''}</td>
+99:                                     <td>${encarregados}</td>
+100:                                     <td style="text-align:center; color:${temContratos ? '#16a34a' : '#cbd5e1'};">${temContratos ? '✓' : '—'}</td>
+101:                                     <td style="text-align:center; color:${temFrota ? '#16a34a' : '#cbd5e1'};">${temFrota ? '✓' : '—'}</td>
+102:                                     <td style="text-align:center; color:${temArmazem ? '#16a34a' : '#cbd5e1'};">${temArmazem ? '✓' : '—'}</td>
+
+--- context line 92 ---
+84:                         totalReceitaGlobal += valorEmpresa;
+85:                         totalFuncGlobal += funcs;
+86:                         totalEncarregadosGlobal += encarregados;
+87:                         if (temContratos) totalContratosGlobal++;
+88:                         if (temFrota) totalFrotaGlobal++;
+89:                         if (temArmazem) totalArmazemGlobal++;
+90:                         if (temCrm) totalCrmGlobal++;
+91:                         if (temErp) totalErpGlobal++;
+92:                         if (temRondas) totalRondasGlobal++;
+93:                         html += `<tr class="${rowClass}">
+94:                                     <td>${admin.empresa || 'Sem empresa'}</td>
+95:                                     <td>${admin.nome}</td>
+96:                                     <td>${planoLabel}</td>
+97:                                     <td>${dataExp}</td>
+98:                                     <td>${funcs}${atingiuLimite ? ' ⚠️' : ''}</td>
+99:                                     <td>${encarregados}</td>
+100:                                     <td style="text-align:center; color:${temContratos ? '#16a34a' : '#cbd5e1'};">${temContratos ? '✓' : '—'}</td>
+101:                                     <td style="text-align:center; color:${temFrota ? '#16a34a' : '#cbd5e1'};">${temFrota ? '✓' : '—'}</td>
+102:                                     <td style="text-align:center; color:${temArmazem ? '#16a34a' : '#cbd5e1'};">${temArmazem ? '✓' : '—'}</td>
+103:                                     <td style="text-align:center; color:${temCrm ? '#16a34a' : '#cbd5e1'};">${temCrm ? '✓' : '—'}</td>
+
+--- context line 104 ---
+96:                                     <td>${planoLabel}</td>
+97:                                     <td>${dataExp}</td>
+98:                                     <td>${funcs}${atingiuLimite ? ' ⚠️' : ''}</td>
+99:                                     <td>${encarregados}</td>
+100:                                     <td style="text-align:center; color:${temContratos ? '#16a34a' : '#cbd5e1'};">${temContratos ? '✓' : '—'}</td>
+101:                                     <td style="text-align:center; color:${temFrota ? '#16a34a' : '#cbd5e1'};">${temFrota ? '✓' : '—'}</td>
+102:                                     <td style="text-align:center; color:${temArmazem ? '#16a34a' : '#cbd5e1'};">${temArmazem ? '✓' : '—'}</td>
+103:                                     <td style="text-align:center; color:${temCrm ? '#16a34a' : '#cbd5e1'};">${temCrm ? '✓' : '—'}</td>
+104:                                     <td style="text-align:center; color:${temErp ? '#16a34a' : '#cbd5e1'};">${temErp ? '✓' : '—'}</td>
+105:                                     <td style="text-align:center; color:${temRondas ? '#16a34a' : '#cbd5e1'};">${temRondas ? '✓' : '—'}</td>
+106:                                     <td>${valorEmpresa.toFixed(2)}</td>
+107:                                 </tr>`;
+108:                     });
+109:                     html += `<tr style="font-weight:bold; background:#f1f5f9;">
+110:                                 <td colspan="4">Total Geral</td>
+111:                                 <td>${totalFuncGlobal}</td>
+112:                                 <td>${totalEncarregadosGlobal}</td>
+113:                                 <td style="text-align:center;">${totalContratosGlobal}</td>
+114:                                 <td style="text-align:center;">${totalFrotaGlobal}</td>
+115:                                 <td style="text-align:center;">${totalArmazemGlobal}</td>
+
+--- context line 105 ---
+97:                                     <td>${dataExp}</td>
+98:                                     <td>${funcs}${atingiuLimite ? ' ⚠️' : ''}</td>
+99:                                     <td>${encarregados}</td>
+100:                                     <td style="text-align:center; color:${temContratos ? '#16a34a' : '#cbd5e1'};">${temContratos ? '✓' : '—'}</td>
+101:                                     <td style="text-align:center; color:${temFrota ? '#16a34a' : '#cbd5e1'};">${temFrota ? '✓' : '—'}</td>
+102:                                     <td style="text-align:center; color:${temArmazem ? '#16a34a' : '#cbd5e1'};">${temArmazem ? '✓' : '—'}</td>
+103:                                     <td style="text-align:center; color:${temCrm ? '#16a34a' : '#cbd5e1'};">${temCrm ? '✓' : '—'}</td>
+104:                                     <td style="text-align:center; color:${temErp ? '#16a34a' : '#cbd5e1'};">${temErp ? '✓' : '—'}</td>
+105:                                     <td style="text-align:center; color:${temRondas ? '#16a34a' : '#cbd5e1'};">${temRondas ? '✓' : '—'}</td>
+106:                                     <td>${valorEmpresa.toFixed(2)}</td>
+107:                                 </tr>`;
+108:                     });
+109:                     html += `<tr style="font-weight:bold; background:#f1f5f9;">
+110:                                 <td colspan="4">Total Geral</td>
+111:                                 <td>${totalFuncGlobal}</td>
+112:                                 <td>${totalEncarregadosGlobal}</td>
+113:                                 <td style="text-align:center;">${totalContratosGlobal}</td>
+114:                                 <td style="text-align:center;">${totalFrotaGlobal}</td>
+115:                                 <td style="text-align:center;">${totalArmazemGlobal}</td>
+116:                                 <td style="text-align:center;">${totalCrmGlobal}</td>
+
+--- context line 117 ---
+109:                     html += `<tr style="font-weight:bold; background:#f1f5f9;">
+110:                                 <td colspan="4">Total Geral</td>
+111:                                 <td>${totalFuncGlobal}</td>
+112:                                 <td>${totalEncarregadosGlobal}</td>
+113:                                 <td style="text-align:center;">${totalContratosGlobal}</td>
+114:                                 <td style="text-align:center;">${totalFrotaGlobal}</td>
+115:                                 <td style="text-align:center;">${totalArmazemGlobal}</td>
+116:                                 <td style="text-align:center;">${totalCrmGlobal}</td>
+117:                                 <td style="text-align:center;">${totalErpGlobal}</td>
+118:                                 <td style="text-align:center;">${totalRondasGlobal}</td>
+119:                                 <td>${totalReceitaGlobal.toFixed(2)}</td>
+120:                             </tr>`;
+121:                     html += `</tbody></table></div>`;
+122:                 }
+123:                 html += `</div>`;
+124:                 // Licenças de Manutenção (módulo Contratos)
+125:                 const _contratosMetrics = window.TotalGestReportsModuleMetrics.calculateContracts({
+126:                     admins: admins,
+127:                     monthlyPrice: PRECO_CONTRATOS_MENSAL,
+128:                     annualPrice: PRECO_CONTRATOS_ANUAL
+
+--- context line 118 ---
+110:                                 <td colspan="4">Total Geral</td>
+111:                                 <td>${totalFuncGlobal}</td>
+112:                                 <td>${totalEncarregadosGlobal}</td>
+113:                                 <td style="text-align:center;">${totalContratosGlobal}</td>
+114:                                 <td style="text-align:center;">${totalFrotaGlobal}</td>
+115:                                 <td style="text-align:center;">${totalArmazemGlobal}</td>
+116:                                 <td style="text-align:center;">${totalCrmGlobal}</td>
+117:                                 <td style="text-align:center;">${totalErpGlobal}</td>
+118:                                 <td style="text-align:center;">${totalRondasGlobal}</td>
+119:                                 <td>${totalReceitaGlobal.toFixed(2)}</td>
+120:                             </tr>`;
+121:                     html += `</tbody></table></div>`;
+122:                 }
+123:                 html += `</div>`;
+124:                 // Licenças de Manutenção (módulo Contratos)
+125:                 const _contratosMetrics = window.TotalGestReportsModuleMetrics.calculateContracts({
+126:                     admins: admins,
+127:                     monthlyPrice: PRECO_CONTRATOS_MENSAL,
+128:                     annualPrice: PRECO_CONTRATOS_ANUAL
+129:                 });
