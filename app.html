@@ -18364,11 +18364,17 @@
                             <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Receita do módulo</span><span>${receitaNotif.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span></div>
                         </div>`;
                 // Licenças de CRM Comercial + Assist
-                const comCrm = admins.filter(a => a.id !== 'superadmin' && moduloCrmAtivo(a));
-                const crmMensais = comCrm.filter(a => a.crmPlano === 'mensal').length;
-                const crmAnuais = comCrm.filter(a => a.crmPlano === 'anual').length;
-                const crmDemos = comCrm.filter(a => a.crmPlano === 'demo').length;
-                const receitaCrm = crmMensais * PRECO_CRM_MENSAL + crmAnuais * PRECO_CRM_ANUAL;
+                const _crmMetrics = window.TotalGestReportsModuleMetrics.calculateCrm({
+                    admins: admins,
+                    isActive: moduloCrmAtivo,
+                    monthlyPrice: PRECO_CRM_MENSAL,
+                    annualPrice: PRECO_CRM_ANUAL
+                });
+                const comCrm = _crmMetrics.active;
+                const crmMensais = _crmMetrics.monthly;
+                const crmAnuais = _crmMetrics.annual;
+                const crmDemos = _crmMetrics.demos;
+                const receitaCrm = _crmMetrics.revenue;
                 html += `<div class="report-card">
                             <h4><i class="fas fa-bullseye"></i> Licenças de CRM Comercial + Assist</h4>
                             <div class="report-item"><span>Empresas com módulo ativo</span><span>${comCrm.length}</span></div>
