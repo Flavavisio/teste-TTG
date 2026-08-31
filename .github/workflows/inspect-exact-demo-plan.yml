@@ -1,4 +1,4 @@
-name: Inspect profile admin branch
+name: Migrate profile admin branch
 
 on:
   push:
@@ -6,42 +6,25 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear ramo admin/subadmin do perfil
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          fn = text.index('        function abrirEditarPerfil() {')
-          start = text.index("            } else if (usuarioLogado.role === 'admin' || usuarioLogado.role === 'subadmin') {", fn)
-          candidates = [
-              "            } else if (usuarioLogado.role === 'funcionario') {",
-              "            } else if (usuarioLogado.role === 'encarregado') {",
-              "            } else {"
-          ]
-          ends = []
-          for marker in candidates:
-              try:
-                  ends.append((text.index(marker, start + 1), marker))
-              except ValueError:
-                  pass
-          assert ends, 'sem fronteira seguinte'
-          end, marker = min(ends)
-          block = text[start:end]
-          print('next_marker', marker)
-          print('linhas_admin', block.count('\n') + 1)
-          print(block)
-          print('\n=== contagens ===')
-          for token in ['campos.innerHTML', 'dados.', 'usuarioLogado', 'adminAtual(', 'document.', 'obterConfig(', 'onclick=', 'onchange=', 'perf_']:
-              print(token, block.count(token))
-          PY
-      - run: echo 'perfil-admin-audit'
+      - run: python3 .github/scripts/migrate-profile-admin.py
+      - run: |
+          node --check assets/js/app-profile-modal-admin.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-shell.js assets/js/app-profile-modal-admin.js sw.js
+          git commit -m 'Extrair perfil admin e subadmin'
+          git push origin HEAD:refactor/separar-index-app
