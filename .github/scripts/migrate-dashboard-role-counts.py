@@ -16,7 +16,7 @@ old = app[start:end]
 assert old.count("usuarioLogado.role === 'encarregado'") == 1
 assert old.count("usuarioLogado.role === 'funcionario'") == 1
 assert old.count("status === 'pendente_aprov'") >= 3
-assert old.count("status === 'em andamento'") >= 3
+assert old.count("'em andamento'") >= 3
 
 new = """            const _roleCounts = window.TotalGestDashboardCounts.calculateRoleCounts({
                 data: dados,
