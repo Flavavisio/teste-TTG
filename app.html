@@ -24038,60 +24038,26 @@ async function salvarAdmin(e) {
                     obj.numeroRegisto = await gerarNumeroRegistoServidor();
                 }
             } else if (ent === 'folha') {
-                const _foDescricao = document.getElementById('fo_descricao').value.trim();
-                if (!_foDescricao || _foDescricao.length < 3) {
-                    mostrarErro('Descreve o trabalho realizado (pelo menos 3 caracteres).');
-                    document.getElementById('fo_descricao')?.focus();
-                    return;
-                }
-                // As horas mostradas no ecrã foram calculadas quando o modal abriu — se
-                // entretanto (enquanto a pessoa preenchia o resto) apareceu alguma picagem nova
-                // por fechar para esta mesma OS/obra, ela ia ser marcada como "já usada" ao
-                // gravar sem nunca ter sido somada a lado nenhum (horas perdidas para sempre, em
-                // nenhum Auto de Medição). Por isso, a não ser que a pessoa tenha corrigido as
-                // horas à mão (nesse caso respeita-se o valor dela), recalcula-se aqui mesmo,
-                // em cima da hora, para o valor gravado ser sempre exatamente o mesmo que vai
-                // ser marcado como consumido a seguir.
-                const _fo_servicoIdCampo = document.getElementById('fo_servico_id')?.value || '';
-                const _fo_obraIdCampo = document.getElementById('fo_obra')?.value || '';
-                let horas = parseFloat(document.getElementById('fo_horas').value) || 0;
-                if (!_foHorasCorrigidasManualmente) {
-                    if (_fo_servicoIdCampo) horas = _horasPicadasOS(_fo_servicoIdCampo);
-                    else if (_fo_obraIdCampo) horas = _horasPicadasObra(_fo_obraIdCampo);
-                }
-                if (horas < 0) {
-                    alert('Horas não podem ser negativas.');
-                    return;
-                }
-                let funcionarioId = document.getElementById('fo_funcionario')?.value || usuarioLogado?.id || '';
-                const _foAdminId = usuarioLogado?.role === 'admin' ? usuarioLogado.id : (usuarioLogado?.role === 'encarregado' ?
-                    usuarioLogado.adminId : usuarioLogado?.adminId);
-
-                const _temCampoCliente = !!document.getElementById('fo_cliente');
-                let _foClienteId = '', _foCliente = null, _foLocalId = '', _foLocalNome = 'Sede', _foObraDescricao = '';
-
-                if (_temCampoCliente) {
-                    _foClienteId = document.getElementById('fo_cliente')?.value || '';
-                    if (!_foClienteId) { alert('Selecione o cliente.'); return; }
-                    _foCliente = dados.clientes?.find(c => c.id === _foClienteId);
-                    _foLocalId = document.getElementById('fo_local')?.value || '';
-                    if (_foLocalId === '__novo__') {
-                        const nomeNovoLocal = (document.getElementById('fo_local_nome')?.value || '').trim();
-                        if (!nomeNovoLocal) { alert('Indique o nome do novo local.'); return; }
-                        const novoLocalId = gerarId();
-                        dados.locais = dados.locais || [];
-                        dados.locais.push({ id: novoLocalId, adminId: _foAdminId, clienteId: _foClienteId, nome: nomeNovoLocal, morada: _foCliente?.morada || '', dataCriacao: Date.now() });
-                        _foLocalId = novoLocalId;
-                        _foLocalNome = nomeNovoLocal;
-                    } else if (_foLocalId) {
-                        _foLocalNome = dados.locais?.find(l => l.id === _foLocalId)?.nome || 'Sede';
-                    }
-                    _foObraDescricao = (_foCliente?.nome || '') + ' / ' + _foLocalNome;
-                } else {
-                    // fluxo vindo de uma OS (Fila de Relatórios/Agenda) — usa o campo de descrição livre já existente
-                    _foObraDescricao = document.getElementById('fo_obra_desc')?.value.trim() || '';
-                }
-
+                const _foContexto = window.TotalGestSaveFormFolhaContext.prepare({
+                    document: document,
+                    data: dados,
+                    user: usuarioLogado,
+                    generateId: gerarId,
+                    showError: mostrarErro,
+                    showAlert: alert,
+                    hoursCorrectedManually: _foHorasCorrigidasManualmente,
+                    hoursForServiceOrder: _horasPicadasOS,
+                    hoursForWork: _horasPicadasObra
+                });
+                if (!_foContexto.ok) return;
+                const _fo_servicoIdCampo = _foContexto.serviceOrderId;
+                const _fo_obraIdCampo = _foContexto.workId;
+                const horas = _foContexto.hours;
+                const funcionarioId = _foContexto.employeeId;
+                const _foAdminId = _foContexto.adminId;
+                const _foClienteId = _foContexto.clientId;
+                const _foLocalId = _foContexto.localId;
+                const _foObraDescricao = _foContexto.workDescription;
                 const _foAssinaturaBase64 = capturarAssinatura() || null;
                 const _foFolhaId = idEditando || gerarId();
                 let _foAssinaturaPath = null;
@@ -31091,6 +31057,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
