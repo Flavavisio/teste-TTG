@@ -1,4 +1,4 @@
-name: Inspect period loading
+name: Migrate period loading
 
 on:
   push:
@@ -7,36 +7,30 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear carregamento por períodos
+      - name: Extrair carregamento incremental por períodos
+        run: python3 .github/scripts/migrate-period-loading.py
+      - name: Validar JavaScript
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          lines = Path('app.html').read_text(encoding='utf-8').splitlines()
-          terms = [
-              '_dataCorteMeses',
-              '_pontoCarregadoDesde',
-              'garantirPontoCarregado',
-              '_servicosCarregadoDesde',
-              'garantirServicosCarregados',
-              '_folhasCarregadoDesde',
-              'garantirFolhasCarregadas'
-          ]
-          for term in terms:
-              hits = [i for i,l in enumerate(lines) if term in l]
-              print(f'\n=== {term}: {len(hits)} ===')
-              for i in hits:
-                  print(f'{i+1}: {lines[i]}')
-          print('\n=== BLOCO 2895-2995 ===')
-          for i in range(2894, min(len(lines),2995)):
-              print(f'{i+1}: {lines[i]}')
-          PY
+          node --check assets/js/app-period-loading.js
+          node --check assets/js/app-shell.js
+          node --check sw.js
+      - name: Validar e gravar
+        run: |
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/scripts/migrate-period-loading.py
+          git add app.html assets/js/app-period-loading.js assets/js/app-shell.js sw.js .github/scripts/migrate-period-loading.py
+          git diff --cached --check
+          git commit -m "Extrair carregamento incremental por períodos"
+          git push origin HEAD:refactor/separar-index-app
