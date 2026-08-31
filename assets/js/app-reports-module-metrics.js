@@ -51,9 +51,28 @@
     };
   }
 
+
+  function calculateNotifications(options) {
+    const opts = options || {};
+    const admins = opts.admins || [];
+    const isActive = opts.isActive;
+    const active = admins.filter(a => a.id !== 'superadmin' && isActive(a));
+    const monthly = active.filter(a => a.notificacoesPlano === 'mensal').length;
+    const annual = active.filter(a => a.notificacoesPlano === 'anual').length;
+    const demos = active.filter(a => a.notificacoesPlano === 'demo').length;
+    return {
+      active: active,
+      monthly: monthly,
+      annual: annual,
+      demos: demos,
+      revenue: monthly * opts.monthlyPrice + annual * opts.annualPrice
+    };
+  }
+
   window.TotalGestReportsModuleMetrics = {
     calculateContracts: calculateContracts,
     calculateFleet: calculateFleet,
-    calculateWarehouse: calculateWarehouse
+    calculateWarehouse: calculateWarehouse,
+    calculateNotifications: calculateNotifications
   };
 })();
