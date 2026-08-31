@@ -1,34 +1,42 @@
-name: Migrate servico object
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Extrair objeto do serviço
-        run: python3 .github/scripts/migrate-save-servico-object.py
-      - name: Validar
+      - name: Estado dos módulos principais
         run: |
-          node --check assets/js/app-save-form-servico-object.js
-          for f in assets/js/app-*.js; do node --check "$f"; done
-          node --check sw.js
-          git diff --check
-      - name: Gravar migração
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app.html assets/js/app-shell.js sw.js
-          git commit -m 'Extrair objeto da gravação de serviço'
-          git push origin HEAD:refactor/separar-index-app
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('app.html').read_text(encoding='utf-8')
+          checks = [
+              'window.TotalGestApp.init',
+              'function abrirModal(',
+              'function _salvarFormularioInterno(',
+              'window.TotalGestSaveFormFornecedor.run({',
+              'window.TotalGestSaveFormArtigo.run({',
+              'window.TotalGestSaveFormRequisicao.run({',
+              'window.TotalGestSaveFormObra.run({',
+              'window.TotalGestSaveFormFolha.run({',
+              'window.TotalGestSaveFormCliente.prepare({',
+              'window.TotalGestSaveFormFuncionarioOrchestrator.run({',
+              'window.TotalGestSaveFormServicoValidation.validate({',
+              'window.TotalGestSaveFormServicoContext.prepare({',
+              'window.TotalGestSaveFormServicoObject.prepare({',
+              'function guardarDados()',
+              'async function _sincronizar()',
+              'function bootstrapSupabase()',
+              'async function carregarDados('
+          ]
+          for item in checks:
+              print(item, text.count(item))
+          PY
