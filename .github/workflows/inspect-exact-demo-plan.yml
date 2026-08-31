@@ -17,16 +17,24 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspecionar fecho de picagem
+      - name: Localizar fecho de picagem
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
-          start = text.index('                // Fecha automaticamente uma picagem aberta da mesma OS')
+          start = text.index("            } else if (ent === 'folha') {")
           end = text.index("            } else if (ent === 'requisicao') {", start)
           block = text[start:end]
-          print(block)
-          print('\n=== contagens ===')
-          for token in ['dados.ponto', 'dataSaida', 'horaSaida', 'guardarDados(', '_folhaConsumoPendente', 'renderizar', 'Date.now()', 'getDataHoje()']:
-              print(token, block.count(token))
+          lines = block.splitlines()
+          for i, line in enumerate(lines):
+              low = line.lower()
+              if 'picag' in low or 'datasaida' in low or 'horasaida' in low:
+                  a=max(0,i-5); b=min(len(lines),i+9)
+                  print('\n'.join(lines[a:b]))
+                  print('---')
+          print('dados.ponto', block.count('dados.ponto'))
+          print('dataSaida', block.count('dataSaida'))
+          print('horaSaida', block.count('horaSaida'))
+          print('guardarDados(', block.count('guardarDados('))
+          print('renderizar', block.count('renderizar'))
           PY
