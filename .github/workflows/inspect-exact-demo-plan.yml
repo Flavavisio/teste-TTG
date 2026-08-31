@@ -1,4 +1,4 @@
-name: Inspect sync boundary
+name: Migrate sync diff
 
 on:
   push:
@@ -7,23 +7,30 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear sincronização
+      - name: Extrair cálculo de diferenças
+        run: python3 .github/scripts/migrate-sync-diff.py
+      - name: Validar módulos JavaScript
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          lines = Path('app.html').read_text(encoding='utf-8').splitlines()
-          start = next(i for i,l in enumerate(lines) if 'async function _sincronizar()' in l)
-          end = next(i for i in range(start + 1, len(lines)) if '// -------- bootstrap --------' in lines[i])
-          for i in range(start, end):
-              print(f'{i+1}: {lines[i]}')
-          PY
+          node --check assets/js/app-sync-diff.js
+          node --check assets/js/app-shell.js
+          node --check sw.js
+      - name: Validar e gravar
+        run: |
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/scripts/migrate-sync-diff.py
+          git add app.html assets/js/app-sync-diff.js assets/js/app-shell.js sw.js .github/scripts/migrate-sync-diff.py
+          git diff --cached --check
+          git commit -m "Extrair cálculo de diferenças de sincronização"
+          git push origin HEAD:refactor/separar-index-app
