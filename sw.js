@@ -1,5 +1,5 @@
 // Service Worker — Total Gest PWA
-const CACHE = 'totalgest-v73';
+const CACHE = 'totalgest-v74';
 const ASSETS = [
   './index.html',
   './app.html',
@@ -64,6 +64,7 @@ const ASSETS = [
   './assets/js/app-save-form-servico.js',
   './assets/js/app-save-form-persist.js',
   './assets/js/app-save-form-servico-notifications.js',
+  './assets/js/app-save-form-folha-usage.js',
   './assets/js/app-sync-prepare.js',
   './assets/js/app-sync-files.js',
   './assets/js/app-sync-collections.js',
