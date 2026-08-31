@@ -30,3 +30,4 @@ jobs:
           for token in ['campos.innerHTML', 'dados.', 'usuarioLogado', 'obterConfig(', 'adminAtual(', 'document.', 'onclick=', 'onchange=']:
               print(token, block.count(token))
           PY
+      - run: echo 'perfil-distribuidor-audit'
