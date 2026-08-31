@@ -1,4 +1,4 @@
-name: Inspect reports KPI block
+name: Migrate reports superadmin metrics
 
 on:
   push:
@@ -6,14 +6,25 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - run: python3 .github/scripts/inspect-reports-kpis.py
+      - run: python3 .github/scripts/migrate-reports-superadmin-metrics.py
+      - run: |
+          node --check assets/js/app-reports-superadmin-metrics.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-shell.js assets/js/app-reports-superadmin-metrics.js sw.js
+          git commit -m 'Extrair métricas de superadmin dos relatórios'
+          git push origin HEAD:refactor/separar-index-app
