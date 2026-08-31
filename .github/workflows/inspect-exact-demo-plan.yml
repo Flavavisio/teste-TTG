@@ -21,8 +21,14 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
-          start = text.index('        async function _salvarFormularioInterno() {')
-          end = text.index('        function salvarFormulario()', start)
+          start_token = 'async function _salvarFormularioInterno('
+          end_token = 'function salvarFormulario('
+          print('start count', text.count(start_token))
+          print('end count', text.count(end_token))
+          start = text.index(start_token)
+          start = text.rfind('\n', 0, start) + 1
+          end = text.index(end_token, start)
+          end = text.rfind('\n', 0, end) + 1
           block = text[start:end]
           print(block)
           print('\n=== linhas ===', len(block.splitlines()))
@@ -45,4 +51,4 @@ jobs:
           ]:
               print(token, block.count(token))
           PY
-          echo 'auditoria-salvar-formulario'
+          echo 'auditoria-salvar-formulario-robusta'
