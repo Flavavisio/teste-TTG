@@ -1,6 +1,9 @@
-name: Inspect app migration boundary
+name: Inspect remaining modal entities
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,28 +11,43 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Mapear entidades restantes de abrirModal
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestApp.init',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'function bootstrapSupabase()',
-              'async function carregarDados(',
-              'const FICHEIRO_CAMPOS = {',
-              'async function uploadDataURL(dataUrl, pasta)',
-              'function registarHistoricoLicenca(',
-              'window.TotalGestModalFuncionario.render({',
-              'window.TotalGestModalCliente.render({'
+          import re
+          text=Path('app.html').read_text(encoding='utf-8')
+          modal_start=text.index('        function abrirModal(')
+          markers=[
+            ('servico', "            } else if (entidade === 'servico') {\n", "            } else if (entidade === 'folha') {\n"),
+            ('folha', "            } else if (entidade === 'folha') {\n", "            } else if (entidade === 'requisicao') {\n"),
+            ('requisicao', "            } else if (entidade === 'requisicao') {\n", "            } else if (entidade === 'fornecedor') {\n"),
+            ('fornecedor', "            } else if (entidade === 'fornecedor') {\n", "            } else if (entidade === 'artigo') {\n"),
+            ('artigo', "            } else if (entidade === 'artigo') {\n", "            } else if (entidade === 'obra') {\n"),
           ]
-          for item in checks:
-              print(item, text.count(item))
+          for name,a,b in markers:
+              s=text.index(a,modal_start); e=text.index(b,s); block=text[s:e]
+              print(f'\n=== {name}: {block.count(chr(10))+1} linhas ===')
+              for term in ['dados.','usuarioLogado','adminAtual(','_tenantId(','item','isEdit','idEditando','document.','supa.','guardarDados(','escapeHtml','opcoes','gerarId(']:
+                  print(term,block.count(term))
+              calls=sorted(set(re.findall(r'(?<![\w.])([A-Za-z_$][\w$]*)\s*\(',block)))
+              ignore={'if','for','while','switch','catch','function','return','map','filter','join','some','find','includes','Number','String','Date','setTimeout'}
+              print('calls=', ', '.join(c for c in calls if c not in ignore))
+          # obra termina antes da pós-inicialização do modal
+          a="            } else if (entidade === 'obra') {\n"
+          s=text.index(a,modal_start)
+          # primeira linha de pós-processamento depois do ramo obra
+          e=text.index("            document.getElementById('modalTitle')",s)
+          block=text[s:e]
+          print(f'\n=== obra: {block.count(chr(10))+1} linhas ===')
+          for term in ['dados.','usuarioLogado','adminAtual(','_tenantId(','item','isEdit','idEditando','document.','supa.','guardarDados(','escapeHtml','opcoes','gerarId(']: print(term,block.count(term))
+          calls=sorted(set(re.findall(r'(?<![\w.])([A-Za-z_$][\w$]*)\s*\(',block)))
+          ignore={'if','for','while','switch','catch','function','return','map','filter','join','some','find','includes','Number','String','Date','setTimeout'}
+          print('calls=', ', '.join(c for c in calls if c not in ignore))
           PY
