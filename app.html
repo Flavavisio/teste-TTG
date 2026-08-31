@@ -23764,60 +23764,23 @@ async function salvarAdmin(e) {
                     showError: mostrarErro
                 });
                 if (!_servicoValidacao.ok) return;
-                let funcionarioId = document.getElementById('s_funcionario').value || null;
-                if (funcionarioId === '') funcionarioId = null;
-                const _funcCheckCont = document.getElementById('s_func_checkboxes');
-                const funcionariosIds = _funcCheckCont
-                    ? [...(_funcCheckCont.querySelectorAll('input.s-func-check:checked'))].map(c => c.value)
-                    : (funcionarioId ? [funcionarioId] : []);
-                let adminId = null;
-                if (usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin') {
-                    adminId = _tenantId();
-                } else if (usuarioLogado?.role === 'encarregado') {
-                    const enc = dados.encarregados?.find(e => e.id === usuarioLogado.id);
-                    if (enc) adminId = enc.adminId;
-                } else if (usuarioLogado?.role === 'funcionario') {
-                    const funcObj = dados.funcionarios?.find(f => f.id === usuarioLogado.id);
-                    if (funcObj) adminId = funcObj.adminId;
-                }
-                const _osExist = isEdit ? (dados.servicos || []).find(x => x.id === idEditando) : null;
-                let _sLocalIdResolvido = document.getElementById('s_local') ? document.getElementById('s_local').value : (_osExist ? _osExist.localId : null);
-                if (_sLocalIdResolvido === '__novo__') {
-                    const nomeNovoLocal = (document.getElementById('s_local_nome')?.value || '').trim();
-                    if (!nomeNovoLocal) { alert('Indique o nome do novo local.'); return; }
-                    const clienteIdNovoLocal = document.getElementById('s_cliente').value;
-                    // Evita criar um local repetido por engano (ex.: escolheste sempre "Criar novo
-                    // local" em vez de escolher o já existente na lista) — isso estava a fazer
-                    // aparecer vários locais com o mesmo nome, cada um com o seu próprio historial
-                    // de relatórios do zero, e a numeração a "saltar" sem sentido aparente.
-                    const localJaExiste = (dados.locais || []).find(l => l.clienteId === clienteIdNovoLocal && l.nome.trim().toLowerCase() === nomeNovoLocal.toLowerCase());
-                    if (localJaExiste) {
-                        if (!confirm(`Já existe um local chamado "${nomeNovoLocal}" para este cliente. Usar esse local existente (recomendado), em vez de criar um novo com o mesmo nome?\n\nOK = usar o existente · Cancelar = criar mesmo assim um novo (não recomendado)`)) {
-                            // segue para criar mesmo assim, se a pessoa confirmar que quer duplicar de propósito
-                        } else {
-                            _sLocalIdResolvido = localJaExiste.id;
-                        }
-                    }
-                }
-                if (_sLocalIdResolvido === '__novo__') {
-                    const nomeNovoLocal = (document.getElementById('s_local_nome')?.value || '').trim();
-                    const novoLocalId = gerarId();
-                    dados.locais = dados.locais || [];
-                    dados.locais.push({
-                        id: novoLocalId,
-                        adminId: (usuarioLogado.role === 'admin' ? usuarioLogado.id : usuarioLogado.adminId),
-                        clienteId: document.getElementById('s_cliente').value,
-                        nome: nomeNovoLocal,
-                        morada: document.getElementById('s_morada')?.value.trim() || '',
-                        numeroPorta: document.getElementById('s_numero_porta')?.value.trim() || null,
-                        codigoPostal: document.getElementById('s_codigo_postal')?.value.trim() || null,
-                        cidade: document.getElementById('s_cidade')?.value.trim() || null,
-                        freguesia: document.getElementById('s_freguesia')?.value.trim() || null,
-                        pinMapa: document.getElementById('s_local_pin_mapa')?.value.trim() || null,
-                        dataCriacao: Date.now()
-                    });
-                    _sLocalIdResolvido = novoLocalId;
-                }
+                const _servicoContexto = window.TotalGestSaveFormServicoContext.prepare({
+                    document: document,
+                    data: dados,
+                    user: usuarioLogado,
+                    isEdit: isEdit,
+                    editingId: idEditando,
+                    tenantId: _tenantId,
+                    generateId: gerarId,
+                    showAlert: alert,
+                    showConfirm: confirm
+                });
+                if (!_servicoContexto.ok) return;
+                let funcionarioId = _servicoContexto.employeeId;
+                const funcionariosIds = _servicoContexto.employeeIds;
+                const adminId = _servicoContexto.adminId;
+                const _osExist = _servicoContexto.existingOrder;
+                const _sLocalIdResolvido = _servicoContexto.localId;
                 obj = {
                     clienteId: document.getElementById('s_cliente').value,
                     funcionarioId: funcionarioId,
@@ -30827,6 +30790,6 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
