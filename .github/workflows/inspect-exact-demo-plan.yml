@@ -17,116 +17,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Extrair formulário de funcionário
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          APP=Path('app.html')
-          SHELL=Path('assets/js/app-shell.js')
-          SW=Path('sw.js')
-          MOD=Path('assets/js/app-modal-funcionario.js')
-          app=APP.read_text(encoding='utf-8')
-          shell=SHELL.read_text(encoding='utf-8')
-          sw=SW.read_text(encoding='utf-8')
-
-          modal_start=app.index('        function abrirModal(')
-          start_token="            if (entidade === 'funcionario') {\n"
-          end_token="            } else if (entidade === 'cliente') {\n"
-          start=app.index(start_token, modal_start)
-          end=app.index(end_token, start)
-          block=app[start:end]
-          assert block.count('html = `') == 1
-          assert 'getFuncionariosByAdmin(_tenantId())' in block
-          assert 'opcoesVeiculos(item?.veiculoId)' in block
-          rhs=block[block.index('html = ')+len('html = '):].strip()
-          assert rhs.startswith('`') and rhs.endswith('`;')
-          expression=rhs[:-1]
-
-          module="""/* Total Gest — formulário do modal de funcionário. */
-          (function () {
-            'use strict';
-
-            function render(options) {
-              const opts = options || {};
-              const item = opts.item || null;
-              const usuarioLogado = opts.user || null;
-              const adminAtual = function () { return opts.admin || null; };
-              const moduloRondasAtivo = opts.moduloRondasAtivo;
-              const getFuncionariosByAdmin = opts.getFuncionariosByAdmin;
-              const _tenantId = function () { return opts.tenantId; };
-              const escapeHtmlSimples = opts.escapeHtmlSimples;
-              const opcoesVeiculos = opts.opcoesVeiculos;
-
-              return __EXPRESSION__;
-            }
-
-            window.TotalGestModalFuncionario = { render: render };
-          })();
-          """.replace('__EXPRESSION__', expression)
-          MOD.write_text(module, encoding='utf-8')
-
-          replacement="""            if (entidade === 'funcionario') {
-              html = window.TotalGestModalFuncionario.render({
-                item: item,
-                user: usuarioLogado,
-                admin: adminAtual(),
-                moduloRondasAtivo: moduloRondasAtivo,
-                getFuncionariosByAdmin: getFuncionariosByAdmin,
-                tenantId: _tenantId(),
-                escapeHtmlSimples: escapeHtmlSimples,
-                opcoesVeiculos: opcoesVeiculos
-              });
-"""
-          app=app[:start]+replacement+app[end:]
-
-          if app.count('modalFuncionario: true') != 0:
-              raise SystemExit('modalFuncionario já registado em app.html')
-          anchor='loadOrchestrator: true'
-          if app.count(anchor) != 1:
-              raise SystemExit(f'Âncora init inesperada: {app.count(anchor)}')
-          app=app.replace(anchor, anchor+', modalFuncionario: true', 1)
-
-          shell_anchor="    loadOrchestrator: './assets/js/app-load-orchestrator.js',\n"
-          assert shell.count(shell_anchor)==1
-          shell=shell.replace(shell_anchor, shell_anchor+"    modalFuncionario: './assets/js/app-modal-funcionario.js',\n",1)
-          load_anchor="    if (options.loadOrchestrator === true) pedidos.push(MODULOS.loadOrchestrator);\n"
-          assert shell.count(load_anchor)==1
-          shell=shell.replace(load_anchor, load_anchor+"    if (options.modalFuncionario === true) pedidos.push(MODULOS.modalFuncionario);\n",1)
-
-          assert "const CACHE = 'totalgest-v41';" in sw
-          sw=sw.replace("const CACHE = 'totalgest-v41';", "const CACHE = 'totalgest-v42';", 1)
-          sw_anchor="  './assets/js/app-load-orchestrator.js',\n"
-          assert sw.count(sw_anchor)==1
-          sw=sw.replace(sw_anchor, sw_anchor+"  './assets/js/app-modal-funcionario.js',\n",1)
-
-          assert app.count('window.TotalGestModalFuncionario.render({')==1
-          assert app.count(start_token)==1
-          assert app.count('class="ff-wrap"')==0
-          assert shell.count("./assets/js/app-modal-funcionario.js")==1
-          assert sw.count("./assets/js/app-modal-funcionario.js")==1
-
-          APP.write_text(app, encoding='utf-8')
-          SHELL.write_text(shell, encoding='utf-8')
-          SW.write_text(sw, encoding='utf-8')
-          PY
-      - name: Validar JavaScript e diff
+      - name: Extrair modal de funcionário
+        run: python3 .github/scripts/migrate-modal-funcionario.py
+      - name: Validar
         run: |
           node --check assets/js/app-modal-funcionario.js
           for f in assets/js/app-*.js; do node --check "$f"; done
           node --check sw.js
           git diff --check
-          python3 - <<'PY'
-          from pathlib import Path
-          app=Path('app.html').read_text(encoding='utf-8')
-          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
-          sw=Path('sw.js').read_text(encoding='utf-8')
-          assert app.count('window.TotalGestModalFuncionario.render({') == 1
-          assert app.count('modalFuncionario: true') == 1
-          assert shell.count("./assets/js/app-modal-funcionario.js") == 1
-          assert sw.count("./assets/js/app-modal-funcionario.js") == 1
-          assert "const CACHE = 'totalgest-v42';" in sw
-          PY
       - name: Gravar migração
         run: |
           git config user.name 'github-actions[bot]'
