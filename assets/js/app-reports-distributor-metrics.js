@@ -76,10 +76,27 @@
     return { contracts: contracts, emDia: emDia, aVencer: aVencer, vencidos: vencidos, valor: valor };
   }
 
+  function calculateAdminOperations(options) {
+    const opts = options || {}, data = opts.data || {}, admin = opts.admin || {}, adminId = admin.id;
+    const totalLocais = (data.locais || []).filter(l => l.adminId === adminId).length;
+    const totalEquip = (data.equipamentos || []).filter(e => e.adminId === adminId).length;
+    const totalRegistos = (data.registosManutencao || []).filter(r => r.adminId === adminId).length;
+    const moduloAtivoTxt = opts.contractsActive(admin) ? ('Ativo (' + (admin.contratosPlano === 'demo' ? 'Demo' : admin.contratosPlano === 'anual' ? 'Anual' : 'Mensal') + ')') : 'Inativo';
+    const folhasOT = (data.folhasObra || []).filter(f => f.adminId === adminId && f.contratoId).length;
+    const frotaStats = opts.countFleet((data.veiculos || []).filter(v => v.adminId === adminId));
+    const intervencoes = (data.veiculoIntervencoes || []).filter(i => i.adminId === adminId);
+    const totalIntervencoes = intervencoes.length;
+    const gastoVeiculos = intervencoes.reduce((s, i) => s + (Number(i.custo) || 0), 0);
+    const totalSinistros = (data.veiculoSinistros || []).filter(s => s.adminId === adminId).length;
+    const ajudasAdmin = (data.ajudas || []).filter(a => a.adminId === adminId);
+    return { totalLocais,totalEquip,totalRegistos,moduloAtivoTxt,folhasOT,frotaStats,totalIntervencoes,gastoVeiculos,totalSinistros,ajudasAdmin,ajPend:ajudasAdmin.filter(a=>a.status==='pendente').length,ajConcl:ajudasAdmin.filter(a=>(a.status||'').toLowerCase().includes('conclu')).length };
+  }
+
   window.TotalGestReportsDistributorMetrics = {
     calculateOverview: calculateOverview,
     calculateClient: calculateClient,
     calculateAdminOverview: calculateAdminOverview,
-    calculateAdminContracts: calculateAdminContracts
+    calculateAdminContracts: calculateAdminContracts,
+    calculateAdminOperations: calculateAdminOperations
   };
 })();

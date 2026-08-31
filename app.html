@@ -18526,18 +18526,24 @@
             const ctAVencer = _adminContracts.aVencer;
             const ctVencidos = _adminContracts.vencidos;
             const ctValor = _adminContracts.valor;
-            const totalLocais = (dados.locais || []).filter(l => l.adminId === admin.id).length;
-            const totalEquip = (dados.equipamentos || []).filter(e => e.adminId === admin.id).length;
-            const totalRegistos = (dados.registosManutencao || []).filter(r => r.adminId === admin.id).length;
-            const moduloAtivoTxt = moduloContratosAtivo(admin) ? ('Ativo (' + (admin.contratosPlano === 'demo' ? 'Demo' : admin.contratosPlano === 'anual' ? 'Anual' : 'Mensal') + ')') : 'Inativo';
-            const folhasOT = (dados.folhasObra || []).filter(f => f.adminId === admin.id && f.contratoId).length;
-            const frotaStats = contarFrota((dados.veiculos || []).filter(v => v.adminId === admin.id));
-            const totalIntervencoes = (dados.veiculoIntervencoes || []).filter(i => i.adminId === admin.id).length;
-            const gastoVeiculos = (dados.veiculoIntervencoes || []).filter(i => i.adminId === admin.id).reduce((s, i) => s + (Number(i.custo) || 0), 0);
-            const totalSinistros = (dados.veiculoSinistros || []).filter(s => s.adminId === admin.id).length;
-            const ajudasAdmin = (dados.ajudas || []).filter(a => a.adminId === admin.id);
-            const ajPend = ajudasAdmin.filter(a => a.status === 'pendente').length;
-            const ajConcl = ajudasAdmin.filter(a => (a.status || '').toLowerCase().includes('conclu')).length;
+            const _adminOperations = window.TotalGestReportsDistributorMetrics.calculateAdminOperations({
+                data: dados,
+                admin: admin,
+                contractsActive: moduloContratosAtivo,
+                countFleet: contarFrota
+            });
+            const totalLocais = _adminOperations.totalLocais;
+            const totalEquip = _adminOperations.totalEquip;
+            const totalRegistos = _adminOperations.totalRegistos;
+            const moduloAtivoTxt = _adminOperations.moduloAtivoTxt;
+            const folhasOT = _adminOperations.folhasOT;
+            const frotaStats = _adminOperations.frotaStats;
+            const totalIntervencoes = _adminOperations.totalIntervencoes;
+            const gastoVeiculos = _adminOperations.gastoVeiculos;
+            const totalSinistros = _adminOperations.totalSinistros;
+            const ajudasAdmin = _adminOperations.ajudasAdmin;
+            const ajPend = _adminOperations.ajPend;
+            const ajConcl = _adminOperations.ajConcl;
             container.innerHTML = `
                     <div class="report-card">
                         <h4><i class="fas fa-users"></i> Recursos Humanos</h4>
