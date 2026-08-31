@@ -61,6 +61,7 @@
     saveFormContactValidation: './assets/js/app-save-form-contact-validation.js',
     saveFormDispatch: './assets/js/app-save-form-dispatch.js',
     saveFormPostPersist: './assets/js/app-save-form-post-persist.js',
+    profileModalSuperadmin: './assets/js/app-profile-modal-superadmin.js',
     syncPrepare: './assets/js/app-sync-prepare.js',
     syncFiles: './assets/js/app-sync-files.js',
     syncCollections: './assets/js/app-sync-collections.js',
@@ -155,6 +156,7 @@
     if (options.saveFormContactValidation === true) pedidos.push(MODULOS.saveFormContactValidation);
     if (options.saveFormDispatch === true) pedidos.push(MODULOS.saveFormDispatch);
     if (options.saveFormPostPersist === true) pedidos.push(MODULOS.saveFormPostPersist);
+    if (options.profileModalSuperadmin === true) pedidos.push(MODULOS.profileModalSuperadmin);
     if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncFiles === true) pedidos.push(MODULOS.syncFiles);
     if (options.syncCollections === true) pedidos.push(MODULOS.syncCollections);
