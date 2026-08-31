@@ -7,10 +7,11 @@ app = app_path.read_text(encoding='utf-8')
 shell = shell_path.read_text(encoding='utf-8')
 sw = sw_path.read_text(encoding='utf-8')
 
-start_at = app.index('        function _salvarFormularioInterno(')
 start_token = "            } else if (ent === 'fornecedor') {\n"
 end_token = "            } else if (ent === 'artigo') {\n"
-start = app.index(start_token, start_at)
+assert app.count(start_token) == 1, app.count(start_token)
+assert app.count(end_token) == 1, app.count(end_token)
+start = app.index(start_token)
 end = app.index(end_token, start)
 old = app[start:end]
 assert "document.getElementById('fr_nome')" in old
@@ -46,6 +47,10 @@ assert sw.count(sw_anchor) == 1
 sw = sw.replace(sw_anchor, sw_anchor + "  './assets/js/app-save-form-fornecedor.js',\n", 1)
 
 assert app.count('window.TotalGestSaveFormFornecedor.run({') == 1
+new_end = app.index(end_token, start)
+new_branch = app[start:new_end]
+assert "document.getElementById('fr_nome')" not in new_branch
+assert "_guardarArmazem('fornecedores'" not in new_branch
 assert shell.count('./assets/js/app-save-form-fornecedor.js') == 1
 assert sw.count('./assets/js/app-save-form-fornecedor.js') == 1
 
