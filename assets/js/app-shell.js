@@ -71,6 +71,7 @@
     profileSaveDistributor: './assets/js/app-profile-save-distributor.js',
     profileSaveAdmin: './assets/js/app-profile-save-admin.js',
     profileSaveWorker: './assets/js/app-profile-save-worker.js',
+    profileSave: './assets/js/app-profile-save.js',
     syncPrepare: './assets/js/app-sync-prepare.js',
     syncFiles: './assets/js/app-sync-files.js',
     syncCollections: './assets/js/app-sync-collections.js',
@@ -175,6 +176,7 @@
     if (options.profileSaveDistributor === true) pedidos.push(MODULOS.profileSaveDistributor);
     if (options.profileSaveAdmin === true) pedidos.push(MODULOS.profileSaveAdmin);
     if (options.profileSaveWorker === true) pedidos.push(MODULOS.profileSaveWorker);
+    if (options.profileSave === true) pedidos.push(MODULOS.profileSave);
     if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncFiles === true) pedidos.push(MODULOS.syncFiles);
     if (options.syncCollections === true) pedidos.push(MODULOS.syncCollections);
