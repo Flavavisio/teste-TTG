@@ -1,4 +1,4 @@
-name: Inspect profile superadmin branch
+name: Migrate profile superadmin branch
 
 on:
   push:
@@ -6,28 +6,25 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear ramo superadmin do perfil
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          fn = text.index('        function abrirEditarPerfil() {')
-          start = text.index("            if (usuarioLogado.role === 'superadmin') {", fn)
-          end = text.index("            } else if (usuarioLogado.role === 'admin' && adminAtual()?.ehDistribuidor) {", start)
-          block = text[start:end]
-          print('linhas_superadmin', block.count('\n') + 1)
-          print(block)
-          for token in ['campos.innerHTML', 'dados.', 'usuarioLogado', 'obterConfig(', 'adminAtual(', 'document.', 'onclick=', 'onchange=']:
-              print(token, block.count(token))
-          PY
-      - run: echo 'perfil-superadmin-audit'
+      - run: python3 .github/scripts/migrate-profile-superadmin.py
+      - run: |
+          node --check assets/js/app-profile-modal-superadmin.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-shell.js sw.js
+          git commit -m 'Extrair perfil de superadmin'
+          git push origin HEAD:refactor/separar-index-app
