@@ -1,39 +1,34 @@
-name: Inspect app migration boundary
+name: Migrate funcionario encarregado
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Extrair criação de encarregado
+        run: python3 .github/scripts/migrate-save-funcionario-encarregado.py
+      - name: Validar
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestApp.init',
-              'function abrirModal(',
-              'function _salvarFormularioInterno(',
-              'window.TotalGestSaveFormFornecedor.run({',
-              'window.TotalGestSaveFormArtigo.run({',
-              'window.TotalGestSaveFormRequisicao.run({',
-              'window.TotalGestSaveFormObra.run({',
-              'window.TotalGestSaveFormFolha.run({',
-              'window.TotalGestSaveFormCliente.prepare({',
-              'window.TotalGestSaveFormFuncionario.prepare({',
-              'function guardarDados()',
-              'async function _sincronizar()',
-              'function bootstrapSupabase()',
-              'async function carregarDados('
-          ]
-          for item in checks:
-              print(item, text.count(item))
-          PY
+          node --check assets/js/app-save-form-funcionario-encarregado.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check sw.js
+          git diff --check
+      - name: Gravar migração
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-shell.js sw.js
+          git commit -m 'Extrair criação de encarregado do formulário de funcionário'
+          git push origin HEAD:refactor/separar-index-app
