@@ -3206,57 +3206,25 @@
                 fields: FICHEIRO_CAMPOS,
                 uploadDataURL: uploadDataURL
             });
-            // 1) UPSERTS na ordem das FKs
-            for (const col of ORDEM) {
-                const meta = M[col];
-                const lista = dados[col] || [];
-                const diffUpsert = window.TotalGestSyncDiff.changedRows(lista, meta.to, _snap[col]);
-                const upserts = diffUpsert.rows;
-                const upsertsJson = diffUpsert.states;
-                if (col === 'obraPontoLonga' && lista.length) console.log('[obraPontoLonga] a sincronizar:', upserts.length, 'de', lista.length, 'registo(s) local(is)');
-                if (upserts.length) {
-                    const resultadoUpsert = await window.TotalGestSyncUpsert.run({
-                        supabase: supa,
-                        table: meta.tabela,
-                        rows: upserts,
-                        states: upsertsJson,
-                        snapshot: _snap[col],
-                        missingColumn: _colunaEmFalta
-                    });
-                    const erroNesteTabela = resultadoUpsert.error;
-                    if (erroNesteTabela) {
-                        if (!_tabelaInexistente(erroNesteTabela) && col !== 'auditoria') { erros++; if (!primeiroErro) primeiroErro = meta.tabela + ' — ' + (erroNesteTabela.message || erroNesteTabela.code || 'erro'); }
-                        // As linhas cujo lote falhou não ficaram marcadas como sincronizadas — ficam pendentes para a próxima tentativa, nada se perde
-                    }
-                }
-
-                // licenças (a seguir aos administradores)
-                if (col === 'administradores') {
-                    const licResult = await window.TotalGestSyncLicenses.run({
-                        supabase: supa,
-                        admins: lista,
-                        snapshot: _snapLic,
-                        toRow: licToRow
-                    });
-                    if (licResult.error && !_tabelaInexistente(licResult.error)) {
-                        erros++;
-                        if (!primeiroErro) primeiroErro = 'licencas — ' + (licResult.error.message || licResult.error.code || 'erro');
-                    }
-                }
-
-                // junção encarregado_funcionarios (a seguir aos encarregados)
-                if (col === 'encarregados') {
-                    const juncResult = await window.TotalGestSyncEncarregados.run({
-                        supabase: supa,
-                        encarregados: lista,
-                        snapshot: _snapJunc,
-                        missingTable: _tabelaInexistente
-                    });
-                    erros += juncResult.errors;
-                    if (!primeiroErro && juncResult.firstError) primeiroErro = juncResult.firstError;
-                }
-            }
-
+            // 1) sincronizar coleções na ordem das FKs
+            const collectionsResult = await window.TotalGestSyncCollections.run({
+                supabase: supa,
+                order: ORDEM,
+                metadata: M,
+                data: dados,
+                snapshots: _snap,
+                licenseSnapshot: _snapLic,
+                junctionSnapshot: _snapJunc,
+                changedRows: window.TotalGestSyncDiff.changedRows,
+                runUpsert: window.TotalGestSyncUpsert.run,
+                runLicenses: window.TotalGestSyncLicenses.run,
+                runEncarregados: window.TotalGestSyncEncarregados.run,
+                licenseToRow: licToRow,
+                missingColumn: _colunaEmFalta,
+                missingTable: _tabelaInexistente
+            });
+            erros += collectionsResult.errors;
+            if (!primeiroErro && collectionsResult.firstError) primeiroErro = collectionsResult.firstError;
             // 2) DELETES na ordem inversa
             const deleteResult = await window.TotalGestSyncDelete.run({
                 supabase: supa,
@@ -32026,6 +31994,6 @@ window._relPrefill = function(msg){
 </div>
 
   <script src="./assets/js/app-shell.js"></script>
-  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true, syncPrepare: true, syncFiles: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
