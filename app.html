@@ -2882,20 +2882,15 @@
         let _snapJunc = new Map();  // encarregadoId -> json ids ordenados
 
         function _reconstruirSnapshots() {
-            _snap = {};
-            for (const col of ORDEM) {
-                const m = new Map();
-                for (const o of (dados[col] || [])) m.set(o.id, JSON.stringify(M[col].to(o)));
-                _snap[col] = m;
-            }
-            _snapLic = new Map();
-            for (const a of (dados.administradores || [])) {
-                if (a.licenca) _snapLic.set(a.id, JSON.stringify(licToRow(a.id, a.licenca)));
-            }
-            _snapJunc = new Map();
-            for (const e of (dados.encarregados || [])) {
-                _snapJunc.set(e.id, JSON.stringify((e.funcionariosIds || []).slice().sort()));
-            }
+            window.TotalGestSyncSnapshots.rebuild({
+                data: dados,
+                order: ORDEM,
+                metadata: M,
+                licenseToRow: licToRow,
+                setSnapshots: value => { _snap = value; },
+                setLicenseSnapshot: value => { _snapLic = value; },
+                setJunctionSnapshot: value => { _snapJunc = value; }
+            });
         }
 
         // -------- carregamento inicial --------
@@ -31968,6 +31963,7 @@ window._relPrefill = function(msg){
 </div>
 
   <script src="./assets/js/app-shell.js"></script>
-  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+  <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
+                syncSnapshots: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>

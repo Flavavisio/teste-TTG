@@ -14,6 +14,7 @@
     syncStatus: './assets/js/app-sync-status.js',
     syncHelpers: './assets/js/app-sync-helpers.js',
     syncDiff: './assets/js/app-sync-diff.js',
+    syncSnapshots: './assets/js/app-sync-snapshots.js',
     syncPrepare: './assets/js/app-sync-prepare.js',
     syncFiles: './assets/js/app-sync-files.js',
     syncCollections: './assets/js/app-sync-collections.js',
@@ -61,6 +62,7 @@
     if (options.syncStatus === true) pedidos.push(MODULOS.syncStatus);
     if (options.syncHelpers === true) pedidos.push(MODULOS.syncHelpers);
     if (options.syncDiff === true) pedidos.push(MODULOS.syncDiff);
+    if (options.syncSnapshots === true) pedidos.push(MODULOS.syncSnapshots);
     if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncFiles === true) pedidos.push(MODULOS.syncFiles);
     if (options.syncCollections === true) pedidos.push(MODULOS.syncCollections);
