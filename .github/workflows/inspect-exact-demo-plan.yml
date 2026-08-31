@@ -1,9 +1,6 @@
-name: Inspect form blocks
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -11,39 +8,26 @@ permissions:
 
 jobs:
   inspect:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear abrirModal e guardar formulário
+      - name: Estado dos módulos principais
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
-          lines = Path('app.html').read_text(encoding='utf-8').splitlines()
-
-          def extract(name):
-              start = next(i for i,l in enumerate(lines) if re.search(r'\bfunction\s+'+re.escape(name)+r'\s*\(', l))
-              depth=0; started=False; end=None
-              for i in range(start,len(lines)):
-                  s=lines[i]
-                  if '{' in s: started=True
-                  depth += s.count('{')-s.count('}')
-                  if started and depth==0:
-                      end=i; break
-              return start,end,lines[start:end+1]
-
-          for name in ['abrirModal','_salvarFormularioInterno']:
-              start,end,block=extract(name)
-              print(f'=== {name}: {start+1}-{end+1} ({end-start+1} linhas) ===')
-              for idx,line in enumerate(block,start=start+1):
-                  if re.search(r'\bcase\s+[\'\"]', line) or re.search(r"entidadeAtual\s*===|entidade\s*===|tipo\s*===", line):
-                      print(f'{idx}: {line.strip()}')
-              print('\n-- chamadas/efeitos principais --')
-              text='\n'.join(block)
-              for term in ['supa.', 'guardarDados(', 'document.getElementById', 'innerHTML', 'dados.', 'renderizar', 'alert(', 'confirm(', 'fecharModal', 'gerarId(', 'uploadDataURL']:
-                  print(term, text.count(term))
-              print()
+          text = Path('app.html').read_text(encoding='utf-8')
+          checks = [
+              'window.TotalGestApp.init',
+              'function guardarDados()',
+              'async function _sincronizar()',
+              'function bootstrapSupabase()',
+              'async function carregarDados(',
+              'const FICHEIRO_CAMPOS = {',
+              'async function uploadDataURL(dataUrl, pasta)',
+              'function registarHistoricoLicenca('
+          ]
+          for item in checks:
+              print(item, text.count(item))
           PY
