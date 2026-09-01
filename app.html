@@ -18690,13 +18690,13 @@
                 if (!moduloContratosAtivo(adminAtual())) {
                     elCtResumo.innerHTML = '<span style="color:#94a3b8;">Bloqueado</span>';
                 } else {
-                    const cts = (dados.contratos || []).filter(c => c.adminId === aId);
-                    let ed = 0, av = 0, vc = 0;
-                    cts.forEach(c => {
-                        const ch = estadoManutencao(calcularProximaManutencao(c)).chave;
-                        if (ch === 'vencido') vc++; else if (ch === 'a_vencer') av++; else if (ch === 'em_dia') ed++;
+                    const _contractSummary = window.TotalGestDashboardCounts.calculateContractSummary({
+                        contracts: dados.contratos,
+                        adminId: aId,
+                        getNextMaintenance: calcularProximaManutencao,
+                        maintenanceState: estadoManutencao
                     });
-                    elCtResumo.innerHTML = `<span class="count">${cts.length}</span> total · <span style="color:#16a34a;">${ed}</span> em dia · <span style="color:#f59e0b;">${av}</span> a vencer · <span style="color:#dc2626;">${vc}</span> venc.`;
+                    elCtResumo.innerHTML = `<span class="count">${_contractSummary.total}</span> total · <span style="color:#16a34a;">${_contractSummary.emDia}</span> em dia · <span style="color:#f59e0b;">${_contractSummary.aVencer}</span> a vencer · <span style="color:#dc2626;">${_contractSummary.vencido}</span> venc.`;
                 }
             }
             document.getElementById('countServPend').textContent = osPend;
