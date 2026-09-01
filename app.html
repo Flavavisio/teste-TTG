@@ -6721,24 +6721,24 @@
                                         paid: s.pago === true,
                                         receiptMoloniId: s.reciboMoloniId || ''
                                     })}
-                                        ${(() => {
-                                            if (s.status !== 'concluído' || s.valor == null || (usuarioLogado?.role !== 'admin' && usuarioLogado?.role !== 'subadmin')) return '';
-                                            const _adminVerOs = dados.administradores?.find(a => a.id === s.adminId);
-                                            if (!moduloErpAtivo(_adminVerOs)) return '';
-                                            const _provVerOs = _adminVerOs?.integracaoFaturacao?.provider;
-                                            if (_provVerOs === 'toconline') {
-                                                return `<button class="btn btn-sm" style="background:${s.faturaTOConlineId ? '#64748b' : '#0f766e'};color:#fff;" onclick="faturarOSViaTOConline('${s.id}')" title="${s.faturaTOConlineId ? 'Já faturado — clica para faturar de novo' : 'Faturar via TOConline'}"><i class="fas fa-file-invoice"></i> ${s.faturaTOConlineId ? 'Faturado' : 'Faturar'}</button>`;
-                                            }
-                                            return `<button class="btn btn-sm" style="background:${s.faturaMoloniId ? '#64748b' : '#7c3aed'};color:#fff;" onclick="faturarOSViaMoloni('${s.id}')" title="${s.faturaMoloniId ? 'Já faturado — clica para faturar de novo' : 'Faturar via Moloni'}"><i class="fas fa-file-invoice"></i> ${s.faturaMoloniId ? 'Faturado' : 'Faturar'}</button>`;
-                                        })()}
-                                        ${s.faturaMoloniUrl ? `<a href="${s.faturaMoloniUrl}" target="_blank" class="btn btn-sm btn-outline" title="Abrir o PDF da fatura na Moloni"><i class="fas fa-file-pdf"></i> Fatura</a>` : ''}
-                                        ${(s.faturaMoloniId && !s.reciboMoloniId && !s.pagamentoLocal && (usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin')) ? `<button class="btn btn-sm btn-outline" onclick="_verificarPagamentoMoloni('${s.id}')" title="Ir verificar à Moloni se esta fatura já foi paga"><i class="fas fa-rotate"></i> Verificar pagamento</button>` : ''}
-                                        ${s.reciboMoloniUrl ? `<a href="${s.reciboMoloniUrl}" target="_blank" class="btn btn-sm btn-outline" title="Abrir o PDF do recibo na Moloni"><i class="fas fa-receipt"></i> Recibo</a>` : ''}
-                                        ${(s.valor != null && (usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin') && moduloErpAtivo(dados.administradores?.find(a => a.id === s.adminId))) ? `<button class="btn btn-sm" style="background:${s.guiaMoloniId ? '#64748b' : '#0e7490'};color:#fff;" onclick="emitirGuiaTransporteMoloni('${s.id}')" title="${s.guiaMoloniId ? 'Já tem guia — clica para emitir outra' : 'Emitir Guia de Transporte na Moloni (materiais desta OS)'}"><i class="fas fa-truck"></i> ${s.guiaMoloniId ? 'Guia emitida' : 'Guia de Transporte'}</button>` : ''}
-                                        ${s.guiaMoloniUrl ? `<a href="${s.guiaMoloniUrl}" target="_blank" class="btn btn-sm btn-outline" title="Abrir o PDF da guia de transporte na Moloni"><i class="fas fa-file-pdf"></i> Guia</a>` : ''}
-                                        ${s.faturaMoloniId && !s.notaCreditoMoloniId ? `<button class="btn btn-sm btn-danger" onclick="emitirNotaCreditoMoloni('${s.id}')" title="Anula esta fatura por completo, emitindo uma Nota de Crédito na Moloni"><i class="fas fa-rotate-left"></i> Anular fatura</button>` : ''}
-                                        ${s.notaCreditoMoloniUrl ? `<a href="${s.notaCreditoMoloniUrl}" target="_blank" class="btn btn-sm btn-outline" title="Abrir o PDF da nota de crédito na Moloni"><i class="fas fa-file-pdf"></i> Nota Créd.</a>` : ''}
-                                    ` : ''}
+                                        ${window.TotalGestServicesView.erpRowActions({
+                                            serviceId: s.id,
+                                            status: s.status,
+                                            canManage: usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin',
+                                            hasValue: s.valor != null,
+                                            erpActive: moduloErpAtivo(dados.administradores?.find(a => a.id === s.adminId)),
+                                            provider: dados.administradores?.find(a => a.id === s.adminId)?.integracaoFaturacao?.provider || '',
+                                            invoiceTOId: s.faturaTOConlineId || '',
+                                            invoiceMoloniId: s.faturaMoloniId || '',
+                                            invoiceMoloniUrl: s.faturaMoloniUrl || '',
+                                            receiptMoloniId: s.reciboMoloniId || '',
+                                            receiptMoloniUrl: s.reciboMoloniUrl || '',
+                                            localPayment: s.pagamentoLocal === true,
+                                            guideMoloniId: s.guiaMoloniId || '',
+                                            guideMoloniUrl: s.guiaMoloniUrl || '',
+                                            creditNoteMoloniId: s.notaCreditoMoloniId || '',
+                                            creditNoteMoloniUrl: s.notaCreditoMoloniUrl || ''
+                                        })}
 
                                     ${usuarioLogado?.role === 'admin' ? `
                                         <button class="btn btn-sm btn-danger" onclick="excluirEntidade('servico','${s.id}')"><i class="fas fa-trash"></i></button>
