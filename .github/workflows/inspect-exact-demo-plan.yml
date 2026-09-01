@@ -1,56 +1,54 @@
-name: Inspect app migration boundary
+name: Migrate brand theme
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - refactor/separar-index-app
+    paths:
+      - '.github/scripts/migrate-brand-theme.py'
+      - '.github/workflows/inspect-exact-demo-plan.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Confirmar branch e HEAD
         run: |
+          test "$(git branch --show-current)" = "refactor/separar-index-app"
+          git rev-parse HEAD
+      - name: Ativar tema de marca
+        run: python3 .github/scripts/migrate-brand-theme.py
+      - name: Validar tema
+        run: |
+          node --check assets/js/index.js
+          node --check assets/js/app-ui.js
+          node --check sw.js
+          git diff --check
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          start = text.index('        function renderizarReports() {')
-          end = text.index('\n        function ', start + 1)
-          reports = text[start:end]
-          alert_start = text.index('        function renderizarAlertas() {')
-          alert_end = text.index('\n        function ', alert_start + 1)
-          alertas = text[alert_start:alert_end]
-          checks = [
-              'window.TotalGestDashboardAnalyticsMetrics.calculate({',
-              'window.TotalGestDashboardCounts.calculateContractSummary({',
-              'window.TotalGestDashboardCounts.calculateCrmCounts({',
-              'window.TotalGestLicenseAddons.renderAddon({',
-              'window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({',
-              'window.TotalGestReportsDistributorMetrics.calculateClientSummary({',
-              'window.TotalGestReportsView.superadminHeader({',
-              'window.TotalGestReportsView.distributorHeader({',
-              'window.TotalGestReportsView.moduleLicenseCard({',
-              'window.TotalGestReportsView.revenueBars({',
-              'window.TotalGestReportsView.superadminCompanySummary(_companySummary)',
-              'window.TotalGestReportsView.distributorClientSummary(_clientSummary)',
-              'window.TotalGestReportsView.adminOverviewCards({',
-              'window.TotalGestAlertsView.alertsCard({',
-              'function renderizarDashboardAnalitico()',
-              'function renderizarAuditoria()',
-              'function renderizarMinhaLicenca()',
-              'function renderizarReports()',
-              'function renderizarAlertas()'
-          ]
-          for item in checks: print(item, text.count(item))
-          assert 'if (!usuarioLogado                container.innerHTML = html;' not in reports
-          assert reports.count('window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({') == 1
-          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateClientSummary({') == 1
-          assert reports.count('window.TotalGestReportsView.superadminHeader({') == 1
-          assert reports.count('window.TotalGestReportsView.distributorHeader({') == 1
-          assert alertas.count('window.TotalGestAlertsView.alertsCard({') == 1
-          print('reports_access_guard', reports.count("if (!usuarioLogado || usuarioLogado.role !== 'admin' && usuarioLogado.role !== 'subadmin') {"))
+          index_js = Path('assets/js/index.js').read_text(encoding='utf-8')
+          app_ui = Path('assets/js/app-ui.js').read_text(encoding='utf-8')
+          sw = Path('sw.js').read_text(encoding='utf-8')
+          theme = Path('assets/css/brand-theme.css').read_text(encoding='utf-8')
+          assert theme.count('#243B8F') >= 2
+          assert theme.count('#FFF0C9') >= 2
+          assert index_js.count("link.href = './assets/css/brand-theme.css';") == 1
+          assert app_ui.count("link.href = './assets/css/brand-theme.css';") == 1
+          assert sw.count("'./assets/css/brand-theme.css',") == 1
+          assert "const CACHE = 'totalgest-v122';" in sw
+          print('BRAND_THEME_VALIDATION=OK')
           PY
+      - name: Commit do tema
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/js/index.js assets/js/app-ui.js sw.js
+          git commit -m "Ativar tema Blueberry e Cream Soda"
+          git push origin refactor/separar-index-app
