@@ -6711,40 +6711,26 @@
                                 workTypesHtml: _tiposTrabalhoBadgesHTML(s),
                                 statusHtml
                             })}
-                            <td>
-                                <div class="acoes">
-                                    ${window.TotalGestServicesView.primaryRowActions({
-                                        serviceId: s.id,
-                                        status: s.status,
-                                        role: usuarioLogado?.role || '',
-                                        localPayment: s.pagamentoLocal === true,
-                                        paid: s.pago === true,
-                                        receiptMoloniId: s.reciboMoloniId || ''
-                                    })}
-                                        ${window.TotalGestServicesView.erpRowActions({
-                                            serviceId: s.id,
-                                            status: s.status,
-                                            canManage: usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin',
-                                            hasValue: s.valor != null,
-                                            erpActive: moduloErpAtivo(dados.administradores?.find(a => a.id === s.adminId)),
-                                            provider: dados.administradores?.find(a => a.id === s.adminId)?.integracaoFaturacao?.provider || '',
-                                            invoiceTOId: s.faturaTOConlineId || '',
-                                            invoiceMoloniId: s.faturaMoloniId || '',
-                                            invoiceMoloniUrl: s.faturaMoloniUrl || '',
-                                            receiptMoloniId: s.reciboMoloniId || '',
-                                            receiptMoloniUrl: s.reciboMoloniUrl || '',
-                                            localPayment: s.pagamentoLocal === true,
-                                            guideMoloniId: s.guiaMoloniId || '',
-                                            guideMoloniUrl: s.guiaMoloniUrl || '',
-                                            creditNoteMoloniId: s.notaCreditoMoloniId || '',
-                                            creditNoteMoloniUrl: s.notaCreditoMoloniUrl || ''
-                                        })}
-
-                                    ${usuarioLogado?.role === 'admin' ? `
-                                        <button class="btn btn-sm btn-danger" onclick="excluirEntidade('servico','${s.id}')"><i class="fas fa-trash"></i></button>
-                                    ` : ''}
-                                </div>
-                            </td>
+                            ${window.TotalGestServicesView.rowActions({
+                                serviceId: s.id,
+                                status: s.status,
+                                role: usuarioLogado?.role || '',
+                                localPayment: s.pagamentoLocal === true,
+                                paid: s.pago === true,
+                                receiptMoloniId: s.reciboMoloniId || '',
+                                canManage: usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin',
+                                hasValue: s.valor != null,
+                                erpActive: moduloErpAtivo(dados.administradores?.find(a => a.id === s.adminId)),
+                                provider: dados.administradores?.find(a => a.id === s.adminId)?.integracaoFaturacao?.provider || '',
+                                invoiceTOId: s.faturaTOConlineId || '',
+                                invoiceMoloniId: s.faturaMoloniId || '',
+                                invoiceMoloniUrl: s.faturaMoloniUrl || '',
+                                receiptMoloniUrl: s.reciboMoloniUrl || '',
+                                guideMoloniId: s.guiaMoloniId || '',
+                                guideMoloniUrl: s.guiaMoloniUrl || '',
+                                creditNoteMoloniId: s.notaCreditoMoloniId || '',
+                                creditNoteMoloniUrl: s.notaCreditoMoloniUrl || ''
+                            })}
                         </tr>
                     `;
             }).join('');
