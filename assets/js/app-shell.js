@@ -80,6 +80,7 @@
     reportsDistributorMetrics: './assets/js/app-reports-distributor-metrics.js',
     dashboardCounts: './assets/js/app-dashboard-counts.js',
     dashboardAnalyticsMetrics: './assets/js/app-dashboard-analytics-metrics.js',
+    licenseAddons: './assets/js/app-license-addons.js',
     syncPrepare: './assets/js/app-sync-prepare.js',
     syncFiles: './assets/js/app-sync-files.js',
     syncCollections: './assets/js/app-sync-collections.js',
@@ -193,6 +194,7 @@
     if (options.reportsDistributorMetrics === true) pedidos.push(MODULOS.reportsDistributorMetrics);
     if (options.dashboardCounts === true) pedidos.push(MODULOS.dashboardCounts);
     if (options.dashboardAnalyticsMetrics === true) pedidos.push(MODULOS.dashboardAnalyticsMetrics);
+    if (options.licenseAddons === true) pedidos.push(MODULOS.licenseAddons);
     if (options.syncPrepare === true) pedidos.push(MODULOS.syncPrepare);
     if (options.syncFiles === true) pedidos.push(MODULOS.syncFiles);
     if (options.syncCollections === true) pedidos.push(MODULOS.syncCollections);
