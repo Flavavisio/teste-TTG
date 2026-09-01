@@ -30,7 +30,50 @@
     return html;
   }
 
+  function statusControl(options) {
+    const opts = options || {};
+    const status = opts.status || 'pendente';
+    const serviceId = opts.serviceId || '';
+
+    if (status === 'por aprovar') {
+      return '<span style="background:#fde68a;color:#92400e;padding:3px 10px;border-radius:999px;font-size:.74rem;font-weight:700;"><i class="fas fa-clock"></i> por aprovar</span>';
+    }
+
+    if (opts.canEdit === true && status !== 'concluído') {
+      return `
+        <select class="status-select" onchange="alterarStatusOS('${serviceId}', this.value)">
+          <option value="pendente" ${status === 'pendente' ? 'selected' : ''}>pendente</option>
+          <option value="em andamento" ${status === 'em andamento' ? 'selected' : ''}>em andamento</option>
+          <option value="stand by" ${status === 'stand by' ? 'selected' : ''}>stand by</option>
+          <option value="concluído" ${status === 'concluído' ? 'selected' : ''}>concluído</option>
+        </select>
+      `;
+    }
+
+    return `<span class="${opts.badgeClass || ''}">${status}</span>`;
+  }
+
+  function workSheetActions(options) {
+    const opts = options || {};
+    if (opts.status !== 'concluído') return '';
+
+    const serviceId = opts.serviceId || '';
+    if (opts.sheetId) {
+      let html = `<button class="btn btn-sm" style="background:#0ea5e9;color:#fff;" onclick="abrirFolhaDetalhe('${opts.sheetId}')" title="Ver folha de obra e gerar PDF"><i class="fas fa-eye"></i></button>`;
+      if (opts.workId) {
+        html += ` <button class="btn btn-sm btn-success" onclick="criarFolhaDaOS('${serviceId}')" title="Criar mais uma folha de obra para esta OS"><i class="fas fa-plus"></i></button>`;
+      } else {
+        html += ` <button class="btn btn-sm" style="background:#16a34a;color:#fff;opacity:.55;cursor:not-allowed;" onclick="alert('Já existe uma folha de obra para esta OS.')" title="Já existe uma folha de obra para esta OS"><i class="fas fa-clipboard-check"></i></button>`;
+      }
+      return html;
+    }
+
+    return `<button class="btn btn-sm btn-success" onclick="criarFolhaDaOS('${serviceId}')"><i class="fas fa-clipboard-list"></i> Folha</button>`;
+  }
+
   window.TotalGestServicesView = {
-    specialtyAndHistoryNotice
+    specialtyAndHistoryNotice,
+    statusControl,
+    workSheetActions
   };
 })();
