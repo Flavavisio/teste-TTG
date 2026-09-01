@@ -75,6 +75,60 @@
   }
 
 
+  function calculateCompanySummary(options) {
+    const opts = options || {};
+    const admins = opts.admins || [];
+    const rows = [];
+    const totals = {
+      funcionarios: 0,
+      encarregados: 0,
+      contratos: 0,
+      frota: 0,
+      armazem: 0,
+      crm: 0,
+      erp: 0,
+      rondas: 0,
+      receita: 0
+    };
+
+    admins.forEach(function (admin) {
+      const company = calculateCompany(Object.assign({}, opts, { admin: admin }));
+      const maxFunc = admin.licenca ? admin.licenca.maxFuncionarios : 0;
+      const atingiuLimite = company.funcionarios >= maxFunc && maxFunc > 0;
+
+      totals.receita += company.valorEmpresa;
+      totals.funcionarios += company.funcionarios;
+      totals.encarregados += company.encarregados;
+      if (company.temContratos) totals.contratos++;
+      if (company.temFrota) totals.frota++;
+      if (company.temArmazem) totals.armazem++;
+      if (company.temCrm) totals.crm++;
+      if (company.temErp) totals.erp++;
+      if (company.temRondas) totals.rondas++;
+
+      rows.push({
+        rowClass: atingiuLimite ? 'tr-limite-atingido' : '',
+        empresa: admin.empresa || 'Sem empresa',
+        nome: admin.nome,
+        planoLabel: typeof opts.planLabel === 'function' ? opts.planLabel(admin) : '',
+        dataExp: typeof opts.expiryLabel === 'function' ? opts.expiryLabel(admin) : '-',
+        funcionarios: company.funcionarios,
+        atingiuLimite: atingiuLimite,
+        encarregados: company.encarregados,
+        temContratos: company.temContratos,
+        temFrota: company.temFrota,
+        temArmazem: company.temArmazem,
+        temCrm: company.temCrm,
+        temErp: company.temErp,
+        temRondas: company.temRondas,
+        valorEmpresa: company.valorEmpresa
+      });
+    });
+
+    return { rows: rows, totals: totals };
+  }
+
+
   function calculateRevenueSummary(options) {
     const opts = options || {};
     const admins = (opts.admins || []).filter(a => a.id !== 'superadmin');
@@ -97,5 +151,10 @@
     };
   }
 
-  window.TotalGestReportsSuperadminMetrics = { calculate: calculate, calculateCompany: calculateCompany, calculateRevenueSummary: calculateRevenueSummary };
+  window.TotalGestReportsSuperadminMetrics = {
+    calculate: calculate,
+    calculateCompany: calculateCompany,
+    calculateCompanySummary: calculateCompanySummary,
+    calculateRevenueSummary: calculateRevenueSummary
+  };
 })();
