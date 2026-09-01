@@ -1,34 +1,47 @@
-name: Inspect app migration boundary
+name: Migrate reports summary tables
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - refactor/separar-index-app
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Confirmar HEAD esperado
+        run: test "$(git rev-parse HEAD)" = "6528bb675d90a4a91f3aa677330dc5ce63106f7e"
+      - name: Migrar tabelas de resumo
+        run: python3 .github/scripts/migrate-reports-summary-tables.py
+      - name: Validar migração
         run: |
+          node --check assets/js/app-reports-view.js
+          git diff --check
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestDashboardAnalyticsMetrics.calculate({',
-              'window.TotalGestDashboardCounts.calculateContractSummary({',
-              'window.TotalGestDashboardCounts.calculateCrmCounts({',
-              'window.TotalGestLicenseAddons.renderAddon({',
-              'window.TotalGestReportsView.moduleLicenseCard({',
-              'window.TotalGestReportsView.revenueBars({',
-              'function renderizarDashboardAnalitico()',
-              'function renderizarAuditoria()',
-              'function renderizarMinhaLicenca()',
-              'function renderizarReports()'
-          ]
-          for item in checks: print(item, text.count(item))
+          app = Path('app.html').read_text(encoding='utf-8')
+          view = Path('assets/js/app-reports-view.js').read_text(encoding='utf-8')
+          sw = Path('sw.js').read_text(encoding='utf-8')
+          assert app.count('window.TotalGestReportsView.superadminCompanySummary({') == 1
+          assert app.count('window.TotalGestReportsView.distributorClientSummary({') == 1
+          assert app.count('window.TotalGestReportsSuperadminMetrics.calculateCompany({') == 1
+          assert app.count('window.TotalGestReportsDistributorMetrics.calculateClient({') == 1
+          assert view.count('function superadminCompanySummary(options)') == 1
+          assert view.count('function distributorClientSummary(options)') == 1
+          assert "const CACHE = 'totalgest-v115';" in sw
+          print('REPORT_SUMMARY_TABLE_VALIDATION=OK')
           PY
+      - name: Commit da migração
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.html assets/js/app-reports-view.js sw.js
+          git commit -m "Extrair tabelas de resumo dos relatórios"
+          git push origin refactor/separar-index-app
