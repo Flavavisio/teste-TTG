@@ -1,20 +1,34 @@
-name: Audit reports summary tables
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   inspect:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Auditar tabelas de resumo dos relatórios
-        run: python3 .github/scripts/audit-reports-tables.py
+      - name: Estado dos módulos principais
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('app.html').read_text(encoding='utf-8')
+          checks = [
+              'window.TotalGestDashboardAnalyticsMetrics.calculate({',
+              'window.TotalGestDashboardCounts.calculateContractSummary({',
+              'window.TotalGestDashboardCounts.calculateCrmCounts({',
+              'window.TotalGestLicenseAddons.renderAddon({',
+              'window.TotalGestReportsView.moduleLicenseCard({',
+              'window.TotalGestReportsView.revenueBars({',
+              'function renderizarDashboardAnalitico()',
+              'function renderizarAuditoria()',
+              'function renderizarMinhaLicenca()',
+              'function renderizarReports()'
+          ]
+          for item in checks: print(item, text.count(item))
+          PY
