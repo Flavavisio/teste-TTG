@@ -1,25 +1,26 @@
-name: Audit services next boundary
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches: [refactor/separar-index-app]
-    paths:
-      - '.github/workflows/inspect-exact-demo-plan.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  audit:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Confirmar branch e HEAD
+      - name: Estado dos módulos principais
         run: |
-          test "$(git branch --show-current)" = "refactor/separar-index-app"
-          git rev-parse HEAD
-      - name: Auditar próxima fronteira
-        run: python3 .github/scripts/audit-services-next-boundary.py
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('app.html').read_text(encoding='utf-8'); sw=Path('sw.js').read_text(encoding='utf-8')
+          s=text.index('        function renderizarServicos() {'); e=text.index('\n        function ',s+1); servicos=text[s:e]
+          for x in ['selectVisibleServices({','specialtyAndHistoryNotice({','statusControl({','workSheetActions({','rowLeadingCells({','primaryRowActions({']: assert servicos.count(x)==1,(x,servicos.count(x))
+          for x in ['faturarOSViaTOConline(','faturarOSViaMoloni(','_verificarPagamentoMoloni(','emitirGuiaTransporteMoloni(','emitirNotaCreditoMoloni(']: assert servicos.count(x)==1,(x,servicos.count(x))
+          assert "const CACHE = 'totalgest-v131';" in sw
+          print('APP_MIGRATION_BOUNDARY=OK')
+          PY
