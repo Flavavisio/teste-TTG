@@ -6680,12 +6680,6 @@
             if (!hasRows) return;
 
             tbody.innerHTML = servicos.map(s => {
-                const statusHtml = window.TotalGestServicesView.serviceStatusControl({
-                    serviceId: s.id,
-                    status: s.status || 'pendente',
-                    role: usuarioLogado?.role || '',
-                    badgeClass: statusBadge(s.status)
-                });
                 const rowData = window.TotalGestServicesSelection.prepareServiceRow({
                     service: s,
                     administrators: dados.administradores || [],
@@ -6698,9 +6692,10 @@
                 return window.TotalGestServicesView.serviceRowFromData({
                     service: s,
                     rowData,
+                    role: usuarioLogado?.role || '',
+                    badgeClass: statusBadge(s.status),
                     descriptionHtml: escapeHtmlSimples(s.descricao || '-'),
                     workTypesHtml: _tiposTrabalhoBadgesHTML(s),
-                    statusHtml,
                     actions: {
                         serviceId: s.id,
                         status: s.status,

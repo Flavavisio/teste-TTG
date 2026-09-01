@@ -124,6 +124,12 @@
     const opts = options || {};
     const service = opts.service || {};
     const rowData = opts.rowData || {};
+    const statusHtml = opts.statusHtml != null ? opts.statusHtml : serviceStatusControl({
+      serviceId: service.id || '',
+      status: service.status || 'pendente',
+      role: opts.role || '',
+      badgeClass: opts.badgeClass || ''
+    });
     return serviceRow({
       leadingCells: {
         number: rowData.number,
@@ -134,7 +140,7 @@
         time: service.hora || '-',
         description: opts.descriptionHtml || '-',
         workTypesHtml: opts.workTypesHtml,
-        statusHtml: opts.statusHtml
+        statusHtml
       },
       actions: opts.actions || {}
     });
