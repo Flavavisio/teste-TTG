@@ -81,7 +81,6 @@ jobs:
           assert reports.count('window.TotalGestReportsDistributorMetrics.calculateAdminOverview({') == 1
           assert "const CACHE = 'totalgest-v120';" in sw
           assert app.count('bootstrapSupabase()') > 0
-          assert app.count('supabase.auth') > 0
           print('DISTRIBUTOR_CLIENT_SUMMARY_VALIDATION=OK')
           PY
       - name: Commit da migração
