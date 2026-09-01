@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 APP = Path('app.html')
 SHELL = Path('assets/js/app-shell.js')
@@ -39,9 +40,12 @@ replacement = '''            cont.innerHTML = window.TotalGestAlertsView.alertsC
 body = body[:start_rel] + replacement + body[end_rel:]
 app = app[:start] + body + app[end:]
 
-init_anchor = '            reportsView: true,\n'
-assert app.count(init_anchor) == 1, app.count(init_anchor)
-app = app.replace(init_anchor, init_anchor + '            alertsView: true,\n', 1)
+init_pattern = re.compile(r'(?m)^(\s*)reportsView\s*:\s*true,\s*$')
+init_hits = list(init_pattern.finditer(app))
+assert len(init_hits) == 1, len(init_hits)
+match = init_hits[0]
+insert = match.group(0) + '\n' + match.group(1) + 'alertsView: true,'
+app = app[:match.start()] + insert + app[match.end():]
 
 module_anchor = "    reportsView: './assets/js/app-reports-view.js',\n"
 assert shell.count(module_anchor) == 1, shell.count(module_anchor)
@@ -64,7 +68,7 @@ _, _, after = alertas_region(app)
 assert after.count('window.TotalGestAlertsView.alertsCard({') == 1
 assert 'const linhasHtml = alertas.map' not in after
 assert "const icone = t => t === 'danger'" not in after
-assert app.count('alertsView: true,') == 1
+assert len(list(re.finditer(r'(?m)^\s*alertsView\s*:\s*true,\s*$', app))) == 1
 assert shell.count("alertsView: './assets/js/app-alerts-view.js',") == 1
 assert shell.count('if (options.alertsView === true) pedidos.push(MODULOS.alertsView);') == 1
 assert sw.count("'./assets/js/app-alerts-view.js',") == 1
