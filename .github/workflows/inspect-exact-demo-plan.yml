@@ -22,7 +22,6 @@ jobs:
         run: |
           python3 - <<'PY'
           import base64
-          import re
           import subprocess
           from pathlib import Path
 
@@ -35,9 +34,11 @@ jobs:
               '/tmp/validate-services-table.py': 'validate-services-table.py',
           }
           for target, marker in targets.items():
-              matches = re.findall(r"echo '([A-Za-z0-9+/=]+)' \\| base64 -d > /tmp/" + re.escape(marker), old)
-              assert len(matches) == 1, (marker, len(matches))
-              Path(target).write_bytes(base64.b64decode(matches[0]))
+              lines = [line for line in old.splitlines() if "echo '" in line and f'> /tmp/{marker}' in line]
+              assert len(lines) == 1, (marker, len(lines))
+              payload = lines[0].split("echo '", 1)[1].split("' | base64 -d", 1)[0]
+              assert payload, marker
+              Path(target).write_bytes(base64.b64decode(payload))
           PY
           python3 /tmp/migrate-services-table.py
           node /tmp/test-services-table.js
@@ -53,6 +54,6 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add app.html assets/js/app-services-selection.js assets/js/app-services-view.js sw.js
           git diff --cached --check
-          test -n "$(git status --porcelain)"
+          test -n "$(git diff --cached --name-only)"
           git commit -m "Extrair estado da tabela de serviços"
           git push origin HEAD:refactor/separar-index-app
