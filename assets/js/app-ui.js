@@ -4,6 +4,17 @@
 (function () {
   'use strict';
 
+  function carregarTemaMarca() {
+    if (document.querySelector('link[data-tg-brand-theme]')) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = './assets/css/brand-theme.css';
+    link.dataset.tgBrandTheme = '1';
+    document.head.appendChild(link);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', '#243B8F');
+  }
+
   const NIVEIS_ZOOM = [100, 90, 80];
 
   function alternarTema() {
@@ -92,5 +103,6 @@
   };
 
   // O módulo é carregado no fim do body, quando os clones do logótipo já existem.
+  carregarTemaMarca();
   aplicarBranding();
 })();

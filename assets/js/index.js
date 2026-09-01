@@ -1,6 +1,19 @@
 (function(){
   'use strict';
 
+  function carregarTemaMarca() {
+    if (document.querySelector('link[data-tg-brand-theme]')) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = './assets/css/brand-theme.css';
+    link.dataset.tgBrandTheme = '1';
+    document.head.appendChild(link);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', '#243B8F');
+  }
+
+  carregarTemaMarca();
+
   var ano=document.getElementById('ano');
   if(ano)ano.textContent=new Date().getFullYear();
 
