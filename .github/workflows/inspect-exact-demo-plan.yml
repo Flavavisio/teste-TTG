@@ -19,249 +19,32 @@ jobs:
           ref: refactor/separar-index-app
       - name: Extrair filtro, ordenação, toolbar e estado vazio
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          app_path = Path('app.html')
-          selection_path = Path('assets/js/app-services-selection.js')
-          view_path = Path('assets/js/app-services-view.js')
-          sw_path = Path('sw.js')
-          workflow_path = Path('.github/workflows/inspect-exact-demo-plan.yml')
-
-          selection = selection_path.read_text(encoding='utf-8')
-          selection_marker = '  window.TotalGestServicesSelection = {'
-          assert selection.count(selection_marker) == 1, selection.count(selection_marker)
-          assert 'function filterAndSortServices(options)' not in selection
-          selection_helper = r'''  function filterAndSortServices(options) {
-            options = options || {};
-            const services = Array.isArray(options.services) ? options.services : [];
-            const applyFilterSort = typeof options.applyFilterSort === 'function' ? options.applyFilterSort : function (_, items) { return items; };
-            const getTableState = typeof options.getTableState === 'function' ? options.getTableState : function () { return {}; };
-            const getClientName = typeof options.getClientName === 'function' ? options.getClientName : function (id) { return id || ''; };
-            let visibleServices = applyFilterSort('servicos', services,
-              ['numeroRegisto', 'descricao', 'status', service => getClientName(service.clienteId)],
-              {
-                data: (a, b) => (a.data || '') + (a.hora || '') < (b.data || '') + (b.hora || '') ? -1 : 1,
-                status: (a, b) => (a.status || '').localeCompare(b.status || '')
-              });
-            if (!getTableState('servicos').sortCol) {
-              visibleServices.sort((a, b) => (a.data + a.hora) < (b.data + b.hora) ? 1 : -1);
-            }
-            return visibleServices;
-          }
-
-'''
-          selection = selection.replace(selection_marker, selection_helper + selection_marker)
-          old_selection_export = '''  window.TotalGestServicesSelection = {
-            selectVisibleServices: selectVisibleServices,
-            selectPendingSpecialtyServices: selectPendingSpecialtyServices,
-            prepareServiceRow: prepareServiceRow
-          };'''
-          new_selection_export = '''  window.TotalGestServicesSelection = {
-            selectVisibleServices: selectVisibleServices,
-            selectPendingSpecialtyServices: selectPendingSpecialtyServices,
-            prepareServiceRow: prepareServiceRow,
-            filterAndSortServices: filterAndSortServices
-          };'''
-          assert selection.count(old_selection_export) == 1, selection.count(old_selection_export)
-          selection = selection.replace(old_selection_export, new_selection_export)
-          selection_path.write_text(selection, encoding='utf-8')
-
-          view = view_path.read_text(encoding='utf-8')
-          view_marker = '  function statusControl(options) {'
-          assert view.count(view_marker) == 1, view.count(view_marker)
-          assert 'function servicesTableState(options)' not in view
-          view_helper = r'''  function servicesTableState(options) {
-            const opts = options || {};
-            const totalCount = Number(opts.totalCount) || 0;
-            const visibleCount = Number(opts.visibleCount) || 0;
-            const renderToolbar = typeof opts.renderToolbar === 'function' ? opts.renderToolbar : function () { return ''; };
-            return {
-              hasRows: visibleCount > 0,
-              toolbarHtml: totalCount ? renderToolbar('servicos', 'Pesquisar por Nº, cliente, descrição, estado…', visibleCount, totalCount) : '',
-              emptyRowsHtml: visibleCount === 0 && totalCount ? '<tr><td colspan="9" style="text-align:center;color:#94a3b8;">Sem resultados para essa pesquisa.</td></tr>' : '',
-              emptyDisplay: visibleCount === 0 && totalCount === 0 ? 'block' : 'none'
-            };
-          }
-
-'''
-          view = view.replace(view_marker, view_helper + view_marker)
-          old_view_export = '  window.TotalGestServicesView = { specialtyAndHistoryNotice, statusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions };'
-          new_view_export = '  window.TotalGestServicesView = { specialtyAndHistoryNotice, servicesTableState, statusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions };'
-          assert view.count(old_view_export) == 1, view.count(old_view_export)
-          view = view.replace(old_view_export, new_view_export)
-          view_path.write_text(view, encoding='utf-8')
-
-          app = app_path.read_text(encoding='utf-8')
-          function_marker = '        function renderizarServicos() {'
-          assert app.count(function_marker) == 1, app.count(function_marker)
-          fs = app.index(function_marker)
-          fe = app.index('\n        function ', fs + len(function_marker))
-          before_block = app[fs:fe]
-          start_marker = "            servicos = _aplicarFiltroOrdenacao('servicos', servicos,"
-          end_marker = "            empty.style.display = 'none';"
-          assert before_block.count(start_marker) == 1, before_block.count(start_marker)
-          assert before_block.count(end_marker) == 1, before_block.count(end_marker)
-          target_start = app.index(start_marker, fs, fe)
-          target_end = app.index(end_marker, target_start, fe) + len(end_marker)
-          target = app[target_start:target_end]
-          for marker in ["_aplicarFiltroOrdenacao('servicos'", "_getTableState('servicos')", 'servicos.sort(', "document.getElementById('servicosToolbar')", '_toolbarHtml(', 'servicos.length === 0', 'Sem resultados para essa pesquisa.']:
-            assert target.count(marker) == 1, (marker, target.count(marker))
-          replacement = r'''            servicos = window.TotalGestServicesSelection.filterAndSortServices({
-              services: servicos,
-              applyFilterSort: _aplicarFiltroOrdenacao,
-              getTableState: _getTableState,
-              getClientName: obterNomeCliente
-            });
-            const tableState = window.TotalGestServicesView.servicesTableState({
-              totalCount: totalGeralOS,
-              visibleCount: servicos.length,
-              renderToolbar: _toolbarHtml
-            });
-            const tbOS = document.getElementById('servicosToolbar');
-            if (tbOS) tbOS.innerHTML = tableState.toolbarHtml;
-            if (!tableState.hasRows) {
-              tbody.innerHTML = tableState.emptyRowsHtml;
-              empty.style.display = tableState.emptyDisplay;
-              return;
-            }
-            empty.style.display = tableState.emptyDisplay;'''
-          app = app[:target_start] + replacement + app[target_end:]
-          app_path.write_text(app, encoding='utf-8')
-
-          sw = sw_path.read_text(encoding='utf-8')
-          assert sw.count("const CACHE = 'totalgest-v135';") == 1, sw.count("const CACHE = 'totalgest-v135';")
-          sw = sw.replace("const CACHE = 'totalgest-v135';", "const CACHE = 'totalgest-v136';")
-          sw_path.write_text(sw, encoding='utf-8')
-
-          final_app = app_path.read_text(encoding='utf-8')
-          fs = final_app.index(function_marker)
-          fe = final_app.index('\n        function ', fs + len(function_marker))
-          final_block = final_app[fs:fe]
-          for marker in ['filterAndSortServices({', 'servicesTableState({', 'selectVisibleServices({', 'selectPendingSpecialtyServices({', 'prepareServiceRow({', 'specialtyAndHistoryNotice({', 'statusControl({', 'workSheetActions({', 'rowLeadingCells({', 'rowActions({']:
-            assert final_block.count(marker) == 1, (marker, final_block.count(marker))
-          for marker in ["_aplicarFiltroOrdenacao('servicos'", "_getTableState('servicos')", 'servicos.sort(', '_toolbarHtml(', 'servicos.length === 0', 'Sem resultados para essa pesquisa.']:
-            assert final_block.count(marker) == 0, (marker, final_block.count(marker))
-          assert final_block.count("document.getElementById('servicosToolbar')") == 1
-          assert len(final_block) < len(before_block), (len(before_block), len(final_block))
-          print('RENDERIZAR_SERVICOS_BEFORE_CHARS=', len(before_block))
-          print('RENDERIZAR_SERVICOS_AFTER_CHARS=', len(final_block))
-          print('RENDERIZAR_SERVICOS_AFTER_LINES=', len(final_block.splitlines()))
-
-          restored_workflow = '''name: Inspect app migration boundary
-
-on:
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-jobs:
-  inspect:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
-        run: |
-          python3 - <<'PY2'
-          from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8'); sw=Path('sw.js').read_text(encoding='utf-8')
-          s=text.index('        function renderizarServicos() {'); e=text.index('\\n        function ',s+1); b=text[s:e]
-          for x in ['selectVisibleServices({','selectPendingSpecialtyServices({','prepareServiceRow({','filterAndSortServices({','specialtyAndHistoryNotice({','servicesTableState({','statusControl({','workSheetActions({','rowLeadingCells({','rowActions({']:
-              assert b.count(x)==1,(x,b.count(x))
-          for x in ["_aplicarFiltroOrdenacao('servicos'","_getTableState('servicos')",'servicos.sort(','_toolbarHtml(','servicos.length === 0','Sem resultados para essa pesquisa.','obterNomeFuncionario(','gerarNumeroRegisto()','_osTemMateriais(','moduloErpAtivo(']:
-              assert b.count(x)==0,(x,b.count(x))
-          assert "const CACHE = 'totalgest-v136';" in sw
-          print('APP_MIGRATION_BOUNDARY=OK')
-          PY2
-'''
-          workflow_path.write_text(restored_workflow, encoding='utf-8')
-          PY
+          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCgphcHBfcGF0aCA9IFBhdGgoJ2FwcC5odG1sJykKc2VsZWN0aW9uX3BhdGggPSBQYXRoKCdhc3NldHMvanMvYXBwLXNlcnZpY2VzLXNlbGVjdGlvbi5qcycpCnZpZXdfcGF0aCA9IFBhdGgoJ2Fzc2V0cy9qcy9hcHAtc2VydmljZXMtdmlldy5qcycpCnN3X3BhdGggPSBQYXRoKCdzdy5qcycpCgpzZWxlY3Rpb24gPSBzZWxlY3Rpb25fcGF0aC5yZWFkX3RleHQoZW5jb2Rpbmc9J3V0Zi04JykKc2VsZWN0aW9uX21hcmtlciA9ICcgIHdpbmRvdy5Ub3RhbEdlc3RTZXJ2aWNlc1NlbGVjdGlvbiA9IHsnCmFzc2VydCBzZWxlY3Rpb24uY291bnQoc2VsZWN0aW9uX21hcmtlcikgPT0gMSwgc2VsZWN0aW9uLmNvdW50KHNlbGVjdGlvbl9tYXJrZXIpCmFzc2VydCAnZnVuY3Rpb24gZmlsdGVyQW5kU29ydFNlcnZpY2VzKG9wdGlvbnMpJyBub3QgaW4gc2VsZWN0aW9uCgpzZWxlY3Rpb25faGVscGVyID0gIiIiICBmdW5jdGlvbiBmaWx0ZXJBbmRTb3J0U2VydmljZXMob3B0aW9ucykgewogICAgb3B0aW9ucyA9IG9wdGlvbnMgfHwge307CiAgICBjb25zdCBzZXJ2aWNlcyA9IEFycmF5LmlzQXJyYXkob3B0aW9ucy5zZXJ2aWNlcykgPyBvcHRpb25zLnNlcnZpY2VzIDogW107CiAgICBjb25zdCBhcHBseUZpbHRlclNvcnQgPSB0eXBlb2Ygb3B0aW9ucy5hcHBseUZpbHRlclNvcnQgPT09ICdmdW5jdGlvbicgPyBvcHRpb25zLmFwcGx5RmlsdGVyU29ydCA6IGZ1bmN0aW9uIChfLCBpdGVtcykgeyByZXR1cm4gaXRlbXM7IH07CiAgICBjb25zdCBnZXRUYWJsZVN0YXRlID0gdHlwZW9mIG9wdGlvbnMuZ2V0VGFibGVTdGF0ZSA9PT0gJ2Z1bmN0aW9uJyA/IG9wdGlvbnMuZ2V0VGFibGVTdGF0ZSA6IGZ1bmN0aW9uICgpIHsgcmV0dXJuIHt9OyB9OwogICAgY29uc3QgZ2V0Q2xpZW50TmFtZSA9IHR5cGVvZiBvcHRpb25zLmdldENsaWVudE5hbWUgPT09ICdmdW5jdGlvbicgPyBvcHRpb25zLmdldENsaWVudE5hbWUgOiBmdW5jdGlvbiAoaWQpIHsgcmV0dXJuIGlkIHx8ICcnOyB9OwogICAgbGV0IHZpc2libGVTZXJ2aWNlcyA9IGFwcGx5RmlsdGVyU29ydCgnc2Vydmljb3MnLCBzZXJ2aWNlcywKICAgICAgWydudW1lcm9SZWdpc3RvJywgJ2Rlc2NyaWNhbycsICdzdGF0dXMnLCBzZXJ2aWNlID0+IGdldENsaWVudE5hbWUoc2VydmljZS5jbGllbnRlSWQpXSwKICAgICAgewogICAgICAgIGRhdGE6IChhLCBiKSA9PiAoYS5kYXRhIHx8ICcnKSArIChhLmhvcmEgfHwgJycpIDwgKGIuZGF0YSB8fCAnJykgKyAoYi5ob3JhIHx8ICcnKSA/IC0xIDogMSwKICAgICAgICBzdGF0dXM6IChhLCBiKSA9PiAoYS5zdGF0dXMgfHwgJycpLmxvY2FsZUNvbXBhcmUoYi5zdGF0dXMgfHwgJycpCiAgICAgIH0pOwogICAgaWYgKCFnZXRUYWJsZVN0YXRlKCdzZXJ2aWNvcycpLnNvcnRDb2wpIHsKICAgICAgdmlzaWJsZVNlcnZpY2VzLnNvcnQoKGEsIGIpID0+IChhLmRhdGEgKyBhLmhvcmEpIDwgKGIuZGF0YSArIGIuaG9yYSkgPyAxIDogLTEpOwogICAgfQogICAgcmV0dXJuIHZpc2libGVTZXJ2aWNlczsKICB9CgoiIiIKc2VsZWN0aW9uID0gc2VsZWN0aW9uLnJlcGxhY2Uoc2VsZWN0aW9uX21hcmtlciwgc2VsZWN0aW9uX2hlbHBlciArIHNlbGVjdGlvbl9tYXJrZXIpCm9sZF9zZWxlY3Rpb25fZXhwb3J0ID0gIiIiICB3aW5kb3cuVG90YWxHZXN0U2VydmljZXNTZWxlY3Rpb24gPSB7CiAgICBzZWxlY3RWaXNpYmxlU2VydmljZXM6IHNlbGVjdFZpc2libGVTZXJ2aWNlcywKICAgIHNlbGVjdFBlbmRpbmdTcGVjaWFsdHlTZXJ2aWNlczogc2VsZWN0UGVuZGluZ1NwZWNpYWx0eVNlcnZpY2VzLAogICAgcHJlcGFyZVNlcnZpY2VSb3c6IHByZXBhcmVTZXJ2aWNlUm93CiAgfTsiIiIKbmV3X3NlbGVjdGlvbl9leHBvcnQgPSAiIiIgIHdpbmRvdy5Ub3RhbEdlc3RTZXJ2aWNlc1NlbGVjdGlvbiA9IHsKICAgIHNlbGVjdFZpc2libGVTZXJ2aWNlczogc2VsZWN0VmlzaWJsZVNlcnZpY2VzLAogICAgc2VsZWN0UGVuZGluZ1NwZWNpYWx0eVNlcnZpY2VzOiBzZWxlY3RQZW5kaW5nU3BlY2lhbHR5U2VydmljZXMsCiAgICBwcmVwYXJlU2VydmljZVJvdzogcHJlcGFyZVNlcnZpY2VSb3csCiAgICBmaWx0ZXJBbmRTb3J0U2VydmljZXM6IGZpbHRlckFuZFNvcnRTZXJ2aWNlcwogIH07IiIiCmFzc2VydCBzZWxlY3Rpb24uY291bnQob2xkX3NlbGVjdGlvbl9leHBvcnQpID09IDEsIHNlbGVjdGlvbi5jb3VudChvbGRfc2VsZWN0aW9uX2V4cG9ydCkKc2VsZWN0aW9uID0gc2VsZWN0aW9uLnJlcGxhY2Uob2xkX3NlbGVjdGlvbl9leHBvcnQsIG5ld19zZWxlY3Rpb25fZXhwb3J0KQpzZWxlY3Rpb25fcGF0aC53cml0ZV90ZXh0KHNlbGVjdGlvbiwgZW5jb2Rpbmc9J3V0Zi04JykKCnZpZXcgPSB2aWV3X3BhdGgucmVhZF90ZXh0KGVuY29kaW5nPSd1dGYtOCcpCnZpZXdfbWFya2VyID0gJyAgZnVuY3Rpb24gc3RhdHVzQ29udHJvbChvcHRpb25zKSB7Jwphc3NlcnQgdmlldy5jb3VudCh2aWV3X21hcmtlcikgPT0gMSwgdmlldy5jb3VudCh2aWV3X21hcmtlcikKYXNzZXJ0ICdmdW5jdGlvbiBzZXJ2aWNlc1RhYmxlU3RhdGUob3B0aW9ucyknIG5vdCBpbiB2aWV3Cgp2aWV3X2hlbHBlciA9ICIiIiAgZnVuY3Rpb24gc2VydmljZXNUYWJsZVN0YXRlKG9wdGlvbnMpIHsKICAgIGNvbnN0IG9wdHMgPSBvcHRpb25zIHx8IHt9OwogICAgY29uc3QgdG90YWxDb3VudCA9IE51bWJlcihvcHRzLnRvdGFsQ291bnQpIHx8IDA7CiAgICBjb25zdCB2aXNpYmxlQ291bnQgPSBOdW1iZXIob3B0cy52aXNpYmxlQ291bnQpIHx8IDA7CiAgICBjb25zdCByZW5kZXJUb29sYmFyID0gdHlwZW9mIG9wdHMucmVuZGVyVG9vbGJhciA9PT0gJ2Z1bmN0aW9uJyA/IG9wdHMucmVuZGVyVG9vbGJhciA6IGZ1bmN0aW9uICgpIHsgcmV0dXJuICcnOyB9OwogICAgcmV0dXJuIHsKICAgICAgaGFzUm93czogdmlzaWJsZUNvdW50ID4gMCwKICAgICAgdG9vbGJhckh0bWw6IHRvdGFsQ291bnQgPyByZW5kZXJUb29sYmFyKCdzZXJ2aWNvcycsICdQZXNxdWlzYXIgcG9yIE7CuiwgY2xpZW50ZSwgZGVzY3Jpw6fDo28sIGVzdGFkb+KApicsIHZpc2libGVDb3VudCwgdG90YWxDb3VudCkgOiAnJywKICAgICAgZW1wdHlSb3dzSHRtbDogdmlzaWJsZUNvdW50ID09PSAwICYmIHRvdGFsQ291bnQgPyAnPHRyPjx0ZCBjb2xzcGFuPSI5IiBzdHlsZT0idGV4dC1hbGlnbjpjZW50ZXI7Y29sb3I6Izk0YTNiODsiPlNlbSByZXN1bHRhZG9zIHBhcmEgZXNzYSBwZXNxdWlzYS48L3RkPjwvdHI+JyA6ICcnLAogICAgICBlbXB0eURpc3BsYXk6IHZpc2libGVDb3VudCA9PT0gMCAmJiB0b3RhbENvdW50ID09PSAwID8gJ2Jsb2NrJyA6ICdub25lJwogICAgfTsKICB9CgoiIiIKdmlldyA9IHZpZXcucmVwbGFjZSh2aWV3X21hcmtlciwgdmlld19oZWxwZXIgKyB2aWV3X21hcmtlcikKb2xkX3ZpZXdfZXhwb3J0ID0gJyAgd2luZG93LlRvdGFsR2VzdFNlcnZpY2VzVmlldyA9IHsgc3BlY2lhbHR5QW5kSGlzdG9yeU5vdGljZSwgc3RhdHVzQ29udHJvbCwgd29ya1NoZWV0QWN0aW9ucywgcm93TGVhZGluZ0NlbGxzLCBwcmltYXJ5Um93QWN0aW9ucywgZXJwUm93QWN0aW9ucywgcm93QWN0aW9ucyB9OycKbmV3X3ZpZXdfZXhwb3J0ID0gJyAgd2luZG93LlRvdGFsR2VzdFNlcnZpY2VzVmlldyA9IHsgc3BlY2lhbHR5QW5kSGlzdG9yeU5vdGljZSwgc2VydmljZXNUYWJsZVN0YXRlLCBzdGF0dXNDb250cm9sLCB3b3JrU2hlZXRBY3Rpb25zLCByb3dMZWFkaW5nQ2VsbHMsIHByaW1hcnlSb3dBY3Rpb25zLCBlcnBSb3dBY3Rpb25zLCByb3dBY3Rpb25zIH07Jwphc3NlcnQgdmlldy5jb3VudChvbGRfdmlld19leHBvcnQpID09IDEsIHZpZXcuY291bnQob2xkX3ZpZXdfZXhwb3J0KQp2aWV3ID0gdmlldy5yZXBsYWNlKG9sZF92aWV3X2V4cG9ydCwgbmV3X3ZpZXdfZXhwb3J0KQp2aWV3X3BhdGgud3JpdGVfdGV4dCh2aWV3LCBlbmNvZGluZz0ndXRmLTgnKQoKYXBwID0gYXBwX3BhdGgucmVhZF90ZXh0KGVuY29kaW5nPSd1dGYtOCcpCmZ1bmN0aW9uX21hcmtlciA9ICcgICAgICAgIGZ1bmN0aW9uIHJlbmRlcml6YXJTZXJ2aWNvcygpIHsnCmFzc2VydCBhcHAuY291bnQoZnVuY3Rpb25fbWFya2VyKSA9PSAxLCBhcHAuY291bnQoZnVuY3Rpb25fbWFya2VyKQpmcyA9IGFwcC5pbmRleChmdW5jdGlvbl9tYXJrZXIpCmZlID0gYXBwLmluZGV4KCdcbiAgICAgICAgZnVuY3Rpb24gJywgZnMgKyBsZW4oZnVuY3Rpb25fbWFya2VyKSkKYmVmb3JlX2Jsb2NrID0gYXBwW2ZzOmZlXQoKc3RhcnRfbWFya2VyID0gIiAgICAgICAgICAgIHNlcnZpY29zID0gX2FwbGljYXJGaWx0cm9PcmRlbmFjYW8oJ3NlcnZpY29zJywgc2Vydmljb3MsIgplbmRfbWFya2VyID0gIiAgICAgICAgICAgIGVtcHR5LnN0eWxlLmRpc3BsYXkgPSAnbm9uZSc7Igphc3NlcnQgYmVmb3JlX2Jsb2NrLmNvdW50KHN0YXJ0X21hcmtlcikgPT0gMSwgYmVmb3JlX2Jsb2NrLmNvdW50KHN0YXJ0X21hcmtlcikKYXNzZXJ0IGJlZm9yZV9ibG9jay5jb3VudChlbmRfbWFya2VyKSA9PSAxLCBiZWZvcmVfYmxvY2suY291bnQoZW5kX21hcmtlcikKCnRhcmdldF9zdGFydCA9IGFwcC5pbmRleChzdGFydF9tYXJrZXIsIGZzLCBmZSkKdGFyZ2V0X2VuZCA9IGFwcC5pbmRleChlbmRfbWFya2VyLCB0YXJnZXRfc3RhcnQsIGZlKSArIGxlbihlbmRfbWFya2VyKQp0YXJnZXQgPSBhcHBbdGFyZ2V0X3N0YXJ0OnRhcmdldF9lbmRdCmZvciBtYXJrZXIgaW4gWwogICAgIl9hcGxpY2FyRmlsdHJvT3JkZW5hY2FvKCdzZXJ2aWNvcyciLAogICAgIl9nZXRUYWJsZVN0YXRlKCdzZXJ2aWNvcycpIiwKICAgICdzZXJ2aWNvcy5zb3J0KCcsCiAgICAiZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3NlcnZpY29zVG9vbGJhcicpIiwKICAgICdfdG9vbGJhckh0bWwoJywKICAgICdzZXJ2aWNvcy5sZW5ndGggPT09IDAnLAogICAgJ1NlbSByZXN1bHRhZG9zIHBhcmEgZXNzYSBwZXNxdWlzYS4nCl06CiAgICBhc3NlcnQgdGFyZ2V0LmNvdW50KG1hcmtlcikgPT0gMSwgKG1hcmtlciwgdGFyZ2V0LmNvdW50KG1hcmtlcikpCgpyZXBsYWNlbWVudCA9ICIiIiAgICAgICAgICAgIHNlcnZpY29zID0gd2luZG93LlRvdGFsR2VzdFNlcnZpY2VzU2VsZWN0aW9uLmZpbHRlckFuZFNvcnRTZXJ2aWNlcyh7CiAgICAgICAgICAgICAgICBzZXJ2aWNlczogc2Vydmljb3MsCiAgICAgICAgICAgICAgICBhcHBseUZpbHRlclNvcnQ6IF9hcGxpY2FyRmlsdHJvT3JkZW5hY2FvLAogICAgICAgICAgICAgICAgZ2V0VGFibGVTdGF0ZTogX2dldFRhYmxlU3RhdGUsCiAgICAgICAgICAgICAgICBnZXRDbGllbnROYW1lOiBvYnRlck5vbWVDbGllbnRlCiAgICAgICAgICAgIH0pOwogICAgICAgICAgICBjb25zdCB0YWJsZVN0YXRlID0gd2luZG93LlRvdGFsR2VzdFNlcnZpY2VzVmlldy5zZXJ2aWNlc1RhYmxlU3RhdGUoewogICAgICAgICAgICAgICAgdG90YWxDb3VudDogdG90YWxHZXJhbE9TLAogICAgICAgICAgICAgICAgdmlzaWJsZUNvdW50OiBzZXJ2aWNvcy5sZW5ndGgsCiAgICAgICAgICAgICAgICByZW5kZXJUb29sYmFyOiBfdG9vbGJhckh0bWwKICAgICAgICAgICAgfSk7CiAgICAgICAgICAgIGNvbnN0IHRiT1MgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnc2Vydmljb3NUb29sYmFyJyk7CiAgICAgICAgICAgIGlmICh0Yk9TKSB0Yk9TLmlubmVySFRNTCA9IHRhYmxlU3RhdGUudG9vbGJhckh0bWw7CiAgICAgICAgICAgIGlmICghdGFibGVTdGF0ZS5oYXNSb3dzKSB7CiAgICAgICAgICAgICAgICB0Ym9keS5pbm5lckhUTUwgPSB0YWJsZVN0YXRlLmVtcHR5Um93c0h0bWw7CiAgICAgICAgICAgICAgICBlbXB0eS5zdHlsZS5kaXNwbGF5ID0gdGFibGVTdGF0ZS5lbXB0eURpc3BsYXk7CiAgICAgICAgICAgICAgICByZXR1cm47CiAgICAgICAgICAgIH0KICAgICAgICAgICAgZW1wdHkuc3R5bGUuZGlzcGxheSA9IHRhYmxlU3RhdGUuZW1wdHlEaXNwbGF5OyIiIgphcHAgPSBhcHBbOnRhcmdldF9zdGFydF0gKyByZXBsYWNlbWVudCArIGFwcFt0YXJnZXRfZW5kOl0KYXBwX3BhdGgud3JpdGVfdGV4dChhcHAsIGVuY29kaW5nPSd1dGYtOCcpCgpzdyA9IHN3X3BhdGgucmVhZF90ZXh0KGVuY29kaW5nPSd1dGYtOCcpCmFzc2VydCBzdy5jb3VudCgiY29uc3QgQ0FDSEUgPSAndG90YWxnZXN0LXYxMzUnOyIpID09IDEsIHN3LmNvdW50KCJjb25zdCBDQUNIRSA9ICd0b3RhbGdlc3QtdjEzNSc7IikKc3cgPSBzdy5yZXBsYWNlKCJjb25zdCBDQUNIRSA9ICd0b3RhbGdlc3QtdjEzNSc7IiwgImNvbnN0IENBQ0hFID0gJ3RvdGFsZ2VzdC12MTM2JzsiKQpzd19wYXRoLndyaXRlX3RleHQoc3csIGVuY29kaW5nPSd1dGYtOCcpCgpmaW5hbF9hcHAgPSBhcHBfcGF0aC5yZWFkX3RleHQoZW5jb2Rpbmc9J3V0Zi04JykKZnMgPSBmaW5hbF9hcHAuaW5kZXgoZnVuY3Rpb25fbWFya2VyKQpmZSA9IGZpbmFsX2FwcC5pbmRleCgnXG4gICAgICAgIGZ1bmN0aW9uICcsIGZzICsgbGVuKGZ1bmN0aW9uX21hcmtlcikpCmZpbmFsX2Jsb2NrID0gZmluYWxfYXBwW2ZzOmZlXQoKZm9yIG1hcmtlciBpbiBbCiAgICAnZmlsdGVyQW5kU29ydFNlcnZpY2VzKHsnLAogICAgJ3NlcnZpY2VzVGFibGVTdGF0ZSh7JywKICAgICdzZWxlY3RWaXNpYmxlU2VydmljZXMoeycsCiAgICAnc2VsZWN0UGVuZGluZ1NwZWNpYWx0eVNlcnZpY2VzKHsnLAogICAgJ3ByZXBhcmVTZXJ2aWNlUm93KHsnLAogICAgJ3NwZWNpYWx0eUFuZEhpc3RvcnlOb3RpY2UoeycsCiAgICAnc3RhdHVzQ29udHJvbCh7JywKICAgICd3b3JrU2hlZXRBY3Rpb25zKHsnLAogICAgJ3Jvd0xlYWRpbmdDZWxscyh7JywKICAgICdyb3dBY3Rpb25zKHsnCl06CiAgICBhc3NlcnQgZmluYWxfYmxvY2suY291bnQobWFya2VyKSA9PSAxLCAobWFya2VyLCBmaW5hbF9ibG9jay5jb3VudChtYXJrZXIpKQoKZm9yIG1hcmtlciBpbiBbCiAgICAiX2FwbGljYXJGaWx0cm9PcmRlbmFjYW8oJ3NlcnZpY29zJyIsCiAgICAiX2dldFRhYmxlU3RhdGUoJ3NlcnZpY29zJykiLAogICAgJ3NlcnZpY29zLnNvcnQoJywKICAgICdfdG9vbGJhckh0bWwoJywKICAgICdzZXJ2aWNvcy5sZW5ndGggPT09IDAnLAogICAgJ1NlbSByZXN1bHRhZG9zIHBhcmEgZXNzYSBwZXNxdWlzYS4nCl06CiAgICBhc3NlcnQgZmluYWxfYmxvY2suY291bnQobWFya2VyKSA9PSAwLCAobWFya2VyLCBmaW5hbF9ibG9jay5jb3VudChtYXJrZXIpKQoKYXNzZXJ0IGZpbmFsX2Jsb2NrLmNvdW50KCJkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnc2Vydmljb3NUb29sYmFyJykiKSA9PSAxCmFzc2VydCBsZW4oZmluYWxfYmxvY2spIDwgbGVuKGJlZm9yZV9ibG9jayksIChsZW4oYmVmb3JlX2Jsb2NrKSwgbGVuKGZpbmFsX2Jsb2NrKSkKcHJpbnQoJ1JFTkRFUklaQVJfU0VSVklDT1NfQkVGT1JFX0NIQVJTPScsIGxlbihiZWZvcmVfYmxvY2spKQpwcmludCgnUkVOREVSSVpBUl9TRVJWSUNPU19BRlRFUl9DSEFSUz0nLCBsZW4oZmluYWxfYmxvY2spKQpwcmludCgnUkVOREVSSVpBUl9TRVJWSUNPU19BRlRFUl9MSU5FUz0nLCBsZW4oZmluYWxfYmxvY2suc3BsaXRsaW5lcygpKSkK' | base64 -d > /tmp/migrate-services-table.py
+          python3 /tmp/migrate-services-table.py
+          rm /tmp/migrate-services-table.py
       - name: Testes unitários dos helpers
         run: |
-          node <<'NODE'
-          const fs = require('fs');
-          const vm = require('vm');
-          const assert = require('assert');
-          const context = { window: {} };
-          vm.createContext(context);
-          vm.runInContext(fs.readFileSync('assets/js/app-services-selection.js', 'utf8'), context);
-          vm.runInContext(fs.readFileSync('assets/js/app-services-view.js', 'utf8'), context);
-          const selection = context.window.TotalGestServicesSelection;
-          const view = context.window.TotalGestServicesView;
-          let captured = null;
-          const older = { id: 'old', data: '2026-01-01', hora: '09:00', clienteId: 'c1' };
-          const newer = { id: 'new', data: '2026-02-01', hora: '08:00', clienteId: 'c2' };
-          const sorted = selection.filterAndSortServices({
-            services: [older, newer],
-            applyFilterSort: (key, items, fields, comparators) => {
-              captured = { key, fields, comparators };
-              return items.slice();
-            },
-            getTableState: key => ({ sortCol: '' }),
-            getClientName: id => 'Cliente ' + id
-          });
-          assert.deepStrictEqual(Array.from(sorted, x => x.id), ['new', 'old']);
-          assert.strictEqual(captured.key, 'servicos');
-          assert.strictEqual(captured.fields.length, 4);
-          assert.strictEqual(captured.fields[3](older), 'Cliente c1');
-          assert.strictEqual(typeof captured.comparators.data, 'function');
-          assert.strictEqual(typeof captured.comparators.status, 'function');
-          const custom = selection.filterAndSortServices({
-            services: [older, newer],
-            applyFilterSort: (_key, items) => items.slice(),
-            getTableState: () => ({ sortCol: 'status' })
-          });
-          assert.deepStrictEqual(Array.from(custom, x => x.id), ['old', 'new']);
-          let toolbarArgs = null;
-          const empty = view.servicesTableState({ totalCount: 0, visibleCount: 0, renderToolbar: () => 'bad' });
-          assert.deepStrictEqual(JSON.parse(JSON.stringify(empty)), { hasRows: false, toolbarHtml: '', emptyRowsHtml: '', emptyDisplay: 'block' });
-          const noResults = view.servicesTableState({
-            totalCount: 2,
-            visibleCount: 0,
-            renderToolbar: (...args) => { toolbarArgs = args; return 'toolbar'; }
-          });
-          assert.strictEqual(noResults.hasRows, false);
-          assert.strictEqual(noResults.toolbarHtml, 'toolbar');
-          assert.ok(noResults.emptyRowsHtml.includes('Sem resultados para essa pesquisa.'));
-          assert.strictEqual(noResults.emptyDisplay, 'none');
-          assert.deepStrictEqual(toolbarArgs, ['servicos', 'Pesquisar por Nº, cliente, descrição, estado…', 0, 2]);
-          const populated = view.servicesTableState({ totalCount: 2, visibleCount: 1, renderToolbar: () => 'toolbar' });
-          assert.strictEqual(populated.hasRows, true);
-          assert.strictEqual(populated.emptyRowsHtml, '');
-          assert.strictEqual(populated.emptyDisplay, 'none');
-          console.log('HELPERS_UNIT=OK');
-          NODE
+          echo 'Y29uc3QgZnMgPSByZXF1aXJlKCdmcycpOwpjb25zdCB2bSA9IHJlcXVpcmUoJ3ZtJyk7CmNvbnN0IGFzc2VydCA9IHJlcXVpcmUoJ2Fzc2VydCcpOwoKY29uc3QgY29udGV4dCA9IHsgd2luZG93OiB7fSB9Owp2bS5jcmVhdGVDb250ZXh0KGNvbnRleHQpOwp2bS5ydW5JbkNvbnRleHQoZnMucmVhZEZpbGVTeW5jKCdhc3NldHMvanMvYXBwLXNlcnZpY2VzLXNlbGVjdGlvbi5qcycsICd1dGY4JyksIGNvbnRleHQpOwp2bS5ydW5JbkNvbnRleHQoZnMucmVhZEZpbGVTeW5jKCdhc3NldHMvanMvYXBwLXNlcnZpY2VzLXZpZXcuanMnLCAndXRmOCcpLCBjb250ZXh0KTsKCmNvbnN0IHNlbGVjdGlvbiA9IGNvbnRleHQud2luZG93LlRvdGFsR2VzdFNlcnZpY2VzU2VsZWN0aW9uOwpjb25zdCB2aWV3ID0gY29udGV4dC53aW5kb3cuVG90YWxHZXN0U2VydmljZXNWaWV3OwoKbGV0IGNhcHR1cmVkID0gbnVsbDsKY29uc3Qgb2xkZXIgPSB7IGlkOiAnb2xkJywgZGF0YTogJzIwMjYtMDEtMDEnLCBob3JhOiAnMDk6MDAnLCBjbGllbnRlSWQ6ICdjMScgfTsKY29uc3QgbmV3ZXIgPSB7IGlkOiAnbmV3JywgZGF0YTogJzIwMjYtMDItMDEnLCBob3JhOiAnMDg6MDAnLCBjbGllbnRlSWQ6ICdjMicgfTsKCmNvbnN0IHNvcnRlZCA9IHNlbGVjdGlvbi5maWx0ZXJBbmRTb3J0U2VydmljZXMoewogIHNlcnZpY2VzOiBbb2xkZXIsIG5ld2VyXSwKICBhcHBseUZpbHRlclNvcnQ6IChrZXksIGl0ZW1zLCBmaWVsZHMsIGNvbXBhcmF0b3JzKSA9PiB7CiAgICBjYXB0dXJlZCA9IHsga2V5LCBmaWVsZHMsIGNvbXBhcmF0b3JzIH07CiAgICByZXR1cm4gaXRlbXMuc2xpY2UoKTsKICB9LAogIGdldFRhYmxlU3RhdGU6ICgpID0+ICh7IHNvcnRDb2w6ICcnIH0pLAogIGdldENsaWVudE5hbWU6IGlkID0+ICdDbGllbnRlICcgKyBpZAp9KTsKYXNzZXJ0LmRlZXBTdHJpY3RFcXVhbChBcnJheS5mcm9tKHNvcnRlZCwgeCA9PiB4LmlkKSwgWyduZXcnLCAnb2xkJ10pOwphc3NlcnQuc3RyaWN0RXF1YWwoY2FwdHVyZWQua2V5LCAnc2Vydmljb3MnKTsKYXNzZXJ0LnN0cmljdEVxdWFsKGNhcHR1cmVkLmZpZWxkcy5sZW5ndGgsIDQpOwphc3NlcnQuc3RyaWN0RXF1YWwoY2FwdHVyZWQuZmllbGRzWzNdKG9sZGVyKSwgJ0NsaWVudGUgYzEnKTsKYXNzZXJ0LnN0cmljdEVxdWFsKHR5cGVvZiBjYXB0dXJlZC5jb21wYXJhdG9ycy5kYXRhLCAnZnVuY3Rpb24nKTsKYXNzZXJ0LnN0cmljdEVxdWFsKHR5cGVvZiBjYXB0dXJlZC5jb21wYXJhdG9ycy5zdGF0dXMsICdmdW5jdGlvbicpOwoKY29uc3QgY3VzdG9tID0gc2VsZWN0aW9uLmZpbHRlckFuZFNvcnRTZXJ2aWNlcyh7CiAgc2VydmljZXM6IFtvbGRlciwgbmV3ZXJdLAogIGFwcGx5RmlsdGVyU29ydDogKF9rZXksIGl0ZW1zKSA9PiBpdGVtcy5zbGljZSgpLAogIGdldFRhYmxlU3RhdGU6ICgpID0+ICh7IHNvcnRDb2w6ICdzdGF0dXMnIH0pCn0pOwphc3NlcnQuZGVlcFN0cmljdEVxdWFsKEFycmF5LmZyb20oY3VzdG9tLCB4ID0+IHguaWQpLCBbJ29sZCcsICduZXcnXSk7CgpsZXQgdG9vbGJhckFyZ3MgPSBudWxsOwpjb25zdCBlbXB0eSA9IHZpZXcuc2VydmljZXNUYWJsZVN0YXRlKHsKICB0b3RhbENvdW50OiAwLAogIHZpc2libGVDb3VudDogMCwKICByZW5kZXJUb29sYmFyOiAoKSA9PiAnYmFkJwp9KTsKYXNzZXJ0LmRlZXBTdHJpY3RFcXVhbCgKICBKU09OLnBhcnNlKEpTT04uc3RyaW5naWZ5KGVtcHR5KSksCiAgeyBoYXNSb3dzOiBmYWxzZSwgdG9vbGJhckh0bWw6ICcnLCBlbXB0eVJvd3NIdG1sOiAnJywgZW1wdHlEaXNwbGF5OiAnYmxvY2snIH0KKTsKCmNvbnN0IG5vUmVzdWx0cyA9IHZpZXcuc2VydmljZXNUYWJsZVN0YXRlKHsKICB0b3RhbENvdW50OiAyLAogIHZpc2libGVDb3VudDogMCwKICByZW5kZXJUb29sYmFyOiAoLi4uYXJncykgPT4gewogICAgdG9vbGJhckFyZ3MgPSBhcmdzOwogICAgcmV0dXJuICd0b29sYmFyJzsKICB9Cn0pOwphc3NlcnQuc3RyaWN0RXF1YWwobm9SZXN1bHRzLmhhc1Jvd3MsIGZhbHNlKTsKYXNzZXJ0LnN0cmljdEVxdWFsKG5vUmVzdWx0cy50b29sYmFySHRtbCwgJ3Rvb2xiYXInKTsKYXNzZXJ0Lm9rKG5vUmVzdWx0cy5lbXB0eVJvd3NIdG1sLmluY2x1ZGVzKCdTZW0gcmVzdWx0YWRvcyBwYXJhIGVzc2EgcGVzcXVpc2EuJykpOwphc3NlcnQuc3RyaWN0RXF1YWwobm9SZXN1bHRzLmVtcHR5RGlzcGxheSwgJ25vbmUnKTsKYXNzZXJ0LmRlZXBTdHJpY3RFcXVhbCh0b29sYmFyQXJncywgWydzZXJ2aWNvcycsICdQZXNxdWlzYXIgcG9yIE7CuiwgY2xpZW50ZSwgZGVzY3Jpw6fDo28sIGVzdGFkb+KApicsIDAsIDJdKTsKCmNvbnN0IHBvcHVsYXRlZCA9IHZpZXcuc2VydmljZXNUYWJsZVN0YXRlKHsKICB0b3RhbENvdW50OiAyLAogIHZpc2libGVDb3VudDogMSwKICByZW5kZXJUb29sYmFyOiAoKSA9PiAndG9vbGJhcicKfSk7CmFzc2VydC5zdHJpY3RFcXVhbChwb3B1bGF0ZWQuaGFzUm93cywgdHJ1ZSk7CmFzc2VydC5zdHJpY3RFcXVhbChwb3B1bGF0ZWQuZW1wdHlSb3dzSHRtbCwgJycpOwphc3NlcnQuc3RyaWN0RXF1YWwocG9wdWxhdGVkLmVtcHR5RGlzcGxheSwgJ25vbmUnKTsKCmNvbnNvbGUubG9nKCdIRUxQRVJTX1VOSVQ9T0snKTsK' | base64 -d > /tmp/test-services-table.js
+          node /tmp/test-services-table.js
+          rm /tmp/test-services-table.js
       - name: Validação sintática e estrutural
         run: |
           node --check assets/js/app-services-selection.js
           node --check assets/js/app-services-view.js
           node --check sw.js
-          python3 - <<'PY'
-          from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8'); sw=Path('sw.js').read_text(encoding='utf-8')
-          s=text.index('        function renderizarServicos() {'); e=text.index('\n        function ',s+1); b=text[s:e]
-          assert b.count('filterAndSortServices({') == 1
-          assert b.count('servicesTableState({') == 1
-          assert b.count("_aplicarFiltroOrdenacao('servicos'") == 0
-          assert b.count("_getTableState('servicos')") == 0
-          assert b.count('servicos.sort(') == 0
-          assert b.count('_toolbarHtml(') == 0
-          assert b.count('servicos.length === 0') == 0
-          assert b.count('Sem resultados para essa pesquisa.') == 0
-          assert "const CACHE = 'totalgest-v136';" in sw
-          workflow=Path('.github/workflows/inspect-exact-demo-plan.yml').read_text(encoding='utf-8')
-          assert 'workflow_dispatch:' in workflow
-          assert 'push:' not in workflow
-          assert 'contents: read' in workflow
-          assert 'contents: write' not in workflow
-          print('STRUCTURE=OK')
-          PY
+          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnRleHQgPSBQYXRoKCdhcHAuaHRtbCcpLnJlYWRfdGV4dChlbmNvZGluZz0ndXRmLTgnKQpzdyA9IFBhdGgoJ3N3LmpzJykucmVhZF90ZXh0KGVuY29kaW5nPSd1dGYtOCcpCnMgPSB0ZXh0LmluZGV4KCcgICAgICAgIGZ1bmN0aW9uIHJlbmRlcml6YXJTZXJ2aWNvcygpIHsnKQplID0gdGV4dC5pbmRleCgnXG4gICAgICAgIGZ1bmN0aW9uICcsIHMgKyAxKQpiID0gdGV4dFtzOmVdCmFzc2VydCBiLmNvdW50KCdmaWx0ZXJBbmRTb3J0U2VydmljZXMoeycpID09IDEKYXNzZXJ0IGIuY291bnQoJ3NlcnZpY2VzVGFibGVTdGF0ZSh7JykgPT0gMQphc3NlcnQgYi5jb3VudCgiX2FwbGljYXJGaWx0cm9PcmRlbmFjYW8oJ3NlcnZpY29zJyIpID09IDAKYXNzZXJ0IGIuY291bnQoIl9nZXRUYWJsZVN0YXRlKCdzZXJ2aWNvcycpIikgPT0gMAphc3NlcnQgYi5jb3VudCgnc2Vydmljb3Muc29ydCgnKSA9PSAwCmFzc2VydCBiLmNvdW50KCdfdG9vbGJhckh0bWwoJykgPT0gMAphc3NlcnQgYi5jb3VudCgnc2Vydmljb3MubGVuZ3RoID09PSAwJykgPT0gMAphc3NlcnQgYi5jb3VudCgnU2VtIHJlc3VsdGFkb3MgcGFyYSBlc3NhIHBlc3F1aXNhLicpID09IDAKYXNzZXJ0ICJjb25zdCBDQUNIRSA9ICd0b3RhbGdlc3QtdjEzNic7IiBpbiBzdwpwcmludCgnU1RSVUNUVVJFPU9LJykK' | base64 -d > /tmp/validate-services-table.py
+          python3 /tmp/validate-services-table.py
+          rm /tmp/validate-services-table.py
           git diff --check
-      - name: Commit da migração validada
+      - name: Restaurar workflow manual
         run: |
+          echo 'bmFtZTogSW5zcGVjdCBhcHAgbWlncmF0aW9uIGJvdW5kYXJ5CgpvbjoKICB3b3JrZmxvd19kaXNwYXRjaDoKCnBlcm1pc3Npb25zOgogIGNvbnRlbnRzOiByZWFkCgpqb2JzOgogIGluc3BlY3Q6CiAgICBydW5zLW9uOiB1YnVudHUtbGF0ZXN0CiAgICBzdGVwczoKICAgICAgLSB1c2VzOiBhY3Rpb25zL2NoZWNrb3V0QHY0CiAgICAgICAgd2l0aDoKICAgICAgICAgIHJlZjogcmVmYWN0b3Ivc2VwYXJhci1pbmRleC1hcHAKICAgICAgLSBuYW1lOiBFc3RhZG8gZG9zIG3Ds2R1bG9zIHByaW5jaXBhaXMKICAgICAgICBydW46IHwKICAgICAgICAgIHB5dGhvbjMgLSA8PCdQWScKICAgICAgICAgIGZyb20gcGF0aGxpYiBpbXBvcnQgUGF0aAogICAgICAgICAgdGV4dD1QYXRoKCdhcHAuaHRtbCcpLnJlYWRfdGV4dChlbmNvZGluZz0ndXRmLTgnKTsgc3c9UGF0aCgnc3cuanMnKS5yZWFkX3RleHQoZW5jb2Rpbmc9J3V0Zi04JykKICAgICAgICAgIHM9dGV4dC5pbmRleCgnICAgICAgICBmdW5jdGlvbiByZW5kZXJpemFyU2Vydmljb3MoKSB7Jyk7IGU9dGV4dC5pbmRleCgnXG4gICAgICAgIGZ1bmN0aW9uICcscysxKTsgYj10ZXh0W3M6ZV0KICAgICAgICAgIGZvciB4IGluIFsnc2VsZWN0VmlzaWJsZVNlcnZpY2VzKHsnLCdzZWxlY3RQZW5kaW5nU3BlY2lhbHR5U2VydmljZXMoeycsJ3ByZXBhcmVTZXJ2aWNlUm93KHsnLCdmaWx0ZXJBbmRTb3J0U2VydmljZXMoeycsJ3NwZWNpYWx0eUFuZEhpc3RvcnlOb3RpY2UoeycsJ3NlcnZpY2VzVGFibGVTdGF0ZSh7Jywnc3RhdHVzQ29udHJvbCh7Jywnd29ya1NoZWV0QWN0aW9ucyh7Jywncm93TGVhZGluZ0NlbGxzKHsnLCdyb3dBY3Rpb25zKHsnXToKICAgICAgICAgICAgICBhc3NlcnQgYi5jb3VudCh4KT09MSwoeCxiLmNvdW50KHgpKQogICAgICAgICAgZm9yIHggaW4gWyJfYXBsaWNhckZpbHRyb09yZGVuYWNhbygnc2Vydmljb3MnIiwiX2dldFRhYmxlU3RhdGUoJ3NlcnZpY29zJykiLCdzZXJ2aWNvcy5zb3J0KCcsJ190b29sYmFySHRtbCgnLCdzZXJ2aWNvcy5sZW5ndGggPT09IDAnLCdTZW0gcmVzdWx0YWRvcyBwYXJhIGVzc2EgcGVzcXVpc2EuJywnb2J0ZXJOb21lRnVuY2lvbmFyaW8oJywnZ2VyYXJOdW1lcm9SZWdpc3RvKCknLCdfb3NUZW1NYXRlcmlhaXMoJywnbW9kdWxvRXJwQXRpdm8oJ106CiAgICAgICAgICAgICAgYXNzZXJ0IGIuY291bnQoeCk9PTAsKHgsYi5jb3VudCh4KSkKICAgICAgICAgIGFzc2VydCAiY29uc3QgQ0FDSEUgPSAndG90YWxnZXN0LXYxMzYnOyIgaW4gc3cKICAgICAgICAgIHByaW50KCdBUFBfTUlHUkFUSU9OX0JPVU5EQVJZPU9LJykKICAgICAgICAgIFBZCg==' | base64 -d > .github/workflows/inspect-exact-demo-plan.yml
+      - name: Validar cleanup e commit
+        run: |
+          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCndvcmtmbG93ID0gUGF0aCgnLmdpdGh1Yi93b3JrZmxvd3MvaW5zcGVjdC1leGFjdC1kZW1vLXBsYW4ueW1sJykucmVhZF90ZXh0KGVuY29kaW5nPSd1dGYtOCcpCmFzc2VydCB3b3JrZmxvdy5jb3VudCgnd29ya2Zsb3dfZGlzcGF0Y2g6JykgPT0gMQphc3NlcnQgJ3B1c2g6JyBub3QgaW4gd29ya2Zsb3cKYXNzZXJ0ICdjb250ZW50czogcmVhZCcgaW4gd29ya2Zsb3cKYXNzZXJ0ICdjb250ZW50czogd3JpdGUnIG5vdCBpbiB3b3JrZmxvdwphc3NlcnQgImlmOiBnaXRodWIuYWN0b3IgIT0gJ2dpdGh1Yi1hY3Rpb25zW2JvdF0nIiBub3QgaW4gd29ya2Zsb3cKYXNzZXJ0IG5vdCBsaXN0KFBhdGgoJy4nKS5nbG9iKCcqKi8qbWlncmF0Ki5weScpKQpwcmludCgnQ0xFQU5VUD1PSycpCg==' | base64 -d > /tmp/validate-cleanup.py
+          python3 /tmp/validate-cleanup.py
+          rm /tmp/validate-cleanup.py
+          git diff --check
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add app.html assets/js/app-services-selection.js assets/js/app-services-view.js sw.js .github/workflows/inspect-exact-demo-plan.yml
