@@ -1,50 +1,93 @@
-name: Inspect app migration boundary
+name: Migrate distributor client aggregation
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Confirmar branch e HEAD
         run: |
+          test "$(git branch --show-current)" = "refactor/separar-index-app"
+          git rev-parse HEAD
+      - name: Migrar agregação dos clientes do distribuidor
+        run: python3 .github/scripts/migrate-distributor-client-summary.py
+      - name: Validar migração
+        run: |
+          node --check assets/js/app-reports-distributor-metrics.js
+          node --check assets/js/app-reports-view.js
+          node --check sw.js
+          git diff --check
+          node <<'NODE'
+          global.window = {};
+          require('./assets/js/app-reports-distributor-metrics.js');
+          const summary = window.TotalGestReportsDistributorMetrics.calculateClientSummary({
+            clients: [
+              { id: 'c1', nome: 'A', empresa: 'EA', licenca: { plano: 'p1' }, precoDistribuidorCobrado: 100, contratosPlano: 'mensal' },
+              { id: 'c2', nome: 'B', empresa: 'EB', licenca: { plano: 'p2' }, frotaPlano: 'anual' }
+            ],
+            data: { funcionarios: [
+              { adminId: 'c1', role: 'funcionario' },
+              { adminId: 'c2', role: 'funcionario' },
+              { adminId: 'c2', role: 'funcionario' }
+            ] },
+            contractsActive: c => c.id === 'c1',
+            fleetActive: c => c.id === 'c2',
+            warehouseActive: () => false,
+            crmActive: () => false,
+            getPlanValue: plano => plano === 'p2' ? 120 : 0,
+            contractsAnnualPrice: 24,
+            contractsMonthlyPrice: 10,
+            fleetAnnualPrice: 120,
+            fleetMonthlyPrice: 15,
+            warehouseAnnualPrice: 0,
+            warehouseMonthlyPrice: 0,
+            crmAnnualPrice: 0,
+            crmMonthlyPrice: 0,
+            planLabel: c => 'Plano ' + c.licenca.plano,
+            expiryLabel: c => c.id === 'c1' ? '01/01/2030' : '02/01/2030'
+          });
+          if (summary.rows.length !== 2) throw new Error('rows');
+          if (summary.rows[0].funcionarios !== 1 || summary.rows[1].funcionarios !== 2) throw new Error('funcionarios');
+          if (!summary.rows[0].temContratos || !summary.rows[1].temFrota) throw new Error('modules');
+          if (summary.rows[0].planoLabel !== 'Plano p1' || summary.rows[1].dataExp !== '02/01/2030') throw new Error('labels');
+          if (summary.totalCobrado !== 240) throw new Error('total ' + summary.totalCobrado);
+          console.log('DISTRIBUTOR_CLIENT_SUMMARY_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          start = text.index('        function renderizarReports() {')
-          end = text.index('\n        function ', start + 1)
-          reports = text[start:end]
-          alert_start = text.index('        function renderizarAlertas() {')
-          alert_end = text.index('\n        function ', alert_start + 1)
-          alertas = text[alert_start:alert_end]
-          checks = [
-              'window.TotalGestDashboardAnalyticsMetrics.calculate({',
-              'window.TotalGestDashboardCounts.calculateContractSummary({',
-              'window.TotalGestDashboardCounts.calculateCrmCounts({',
-              'window.TotalGestLicenseAddons.renderAddon({',
-              'window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({',
-              'window.TotalGestReportsView.moduleLicenseCard({',
-              'window.TotalGestReportsView.revenueBars({',
-              'window.TotalGestReportsView.superadminCompanySummary(_companySummary)',
-              'window.TotalGestReportsView.distributorClientSummary({',
-              'window.TotalGestReportsView.adminOverviewCards({',
-              'window.TotalGestAlertsView.alertsCard({',
-              'function renderizarDashboardAnalitico()',
-              'function renderizarAuditoria()',
-              'function renderizarMinhaLicenca()',
-              'function renderizarReports()',
-              'function renderizarAlertas()'
-          ]
-          for item in checks: print(item, text.count(item))
-          assert 'if (!usuarioLogado                container.innerHTML = html;' not in reports
+          app = Path('app.html').read_text(encoding='utf-8')
+          sw = Path('sw.js').read_text(encoding='utf-8')
+          start = app.index('        function renderizarReports() {')
+          end = app.index('\n        function ', start + 1)
+          reports = app[start:end]
+          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateClientSummary({') == 1
+          assert reports.count('window.TotalGestReportsView.distributorClientSummary(_clientSummary)') == 1
+          assert 'const _clientRows = [];' not in reports
+          assert 'totalCobradoGlobal' not in reports
+          assert 'window.TotalGestReportsDistributorMetrics.calculateClient({' not in reports
           assert reports.count('window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({') == 1
-          assert alertas.count('window.TotalGestAlertsView.alertsCard({') == 1
-          print('reports_access_guard', reports.count("if (!usuarioLogado || usuarioLogado.role !== 'admin' && usuarioLogado.role !== 'subadmin') {"))
+          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateAdminOverview({') == 1
+          assert "const CACHE = 'totalgest-v120';" in sw
+          assert app.count('bootstrapSupabase()') > 0
+          assert app.count('supabase.auth') > 0
+          print('DISTRIBUTOR_CLIENT_SUMMARY_VALIDATION=OK')
           PY
+      - name: Commit da migração
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.html sw.js
+          git commit -m "Extrair agregação dos clientes do distribuidor"
+          git push origin refactor/separar-index-app
