@@ -36,6 +36,17 @@
     return `<span class="${opts.badgeClass || ''}">${status}</span>`;
   }
 
+  function serviceStatusControl(options) {
+    const opts = options || {};
+    const role = opts.role || '';
+    return statusControl({
+      serviceId: opts.serviceId || '',
+      status: opts.status || 'pendente',
+      canEdit: role === 'admin' || role === 'subadmin' || role === 'encarregado',
+      badgeClass: opts.badgeClass || ''
+    });
+  }
+
   function workSheetActions(options) {
     const opts = options || {};
     if (opts.status !== 'concluído') return '';
@@ -96,5 +107,5 @@
     return `<tr>${rowLeadingCells(opts.leadingCells || {})}${rowActions(opts.actions || {})}</tr>`;
   }
 
-  window.TotalGestServicesView = { specialtyAndHistoryNotice, servicesTableState, statusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRow };
+  window.TotalGestServicesView = { specialtyAndHistoryNotice, servicesTableState, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRow };
 })();

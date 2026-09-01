@@ -6682,11 +6682,10 @@
             empty.style.display = tableState.emptyDisplay;
 
             tbody.innerHTML = servicos.map(s => {
-                const podeEditar = usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin' || usuarioLogado?.role === 'encarregado';
-                const statusHtml = window.TotalGestServicesView.statusControl({
+                const statusHtml = window.TotalGestServicesView.serviceStatusControl({
                     serviceId: s.id,
                     status: s.status || 'pendente',
-                    canEdit: podeEditar,
+                    role: usuarioLogado?.role || '',
                     badgeClass: statusBadge(s.status)
                 });
                 const rowData = window.TotalGestServicesSelection.prepareServiceRow({
