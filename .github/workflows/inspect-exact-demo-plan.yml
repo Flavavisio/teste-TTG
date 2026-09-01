@@ -1,18 +1,44 @@
-name: Audit services row composition
+name: Migrate services row actions
 on:
   push:
     branches: [refactor/separar-index-app]
     paths: ['.github/workflows/inspect-exact-demo-plan.yml']
 permissions:
-  contents: read
+  contents: write
 jobs:
-  audit:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with: { ref: refactor/separar-index-app }
-      - run: |
+      - name: Confirmar branch e HEAD
+        run: |
           test "$(git branch --show-current)" = "refactor/separar-index-app"
           git rev-parse HEAD
-          python3 .github/scripts/audit-services-row-composition.py
+      - name: Migrar
+        run: python3 .github/scripts/migrate-services-row-actions.py
+      - name: Validar
+        run: |
+          node --check assets/js/app-services-view.js
+          node --check sw.js
+          git diff --check
+          test "$(git diff --name-only | sort | tr '\n' ' ')" = "app.html sw.js "
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('app.html').read_text(encoding='utf-8'); sw=Path('sw.js').read_text(encoding='utf-8')
+          s=text.index('        function renderizarServicos() {'); e=text.index('\n        function ',s+1); b=text[s:e]
+          assert b.count('rowActions({')==1
+          assert b.count('primaryRowActions({')==0 and b.count('erpRowActions({')==0
+          assert b.count("excluirEntidade('servico'")==0
+          for x in ['rowLeadingCells({','statusControl({','workSheetActions({')]: assert b.count(x)==1,(x,b.count(x))
+          assert "const CACHE = 'totalgest-v133';" in sw
+          print('SERVICES_ROW_ACTIONS_VALIDATION=OK')
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html sw.js
+          git commit -m "Extrair composição das ações das OS"
+          git push origin HEAD:refactor/separar-index-app
