@@ -1,30 +1,31 @@
-name: Inspect app migration boundary
+name: Migrate dashboard contract summary
 
 on:
+  push:
+    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestDashboardCounts.calculateRoleCounts({',
-              'window.TotalGestDashboardCounts.calculateStatusCounts({',
-              'window.TotalGestDashboardCounts.calculateCrmCounts({',
-              'window.TotalGestReportsDistributorMetrics.calculateAdminOperations({',
-              'function atualizarContagens()',
-              'function renderizarReports('
-          ]
-          for item in checks: print(item, text.count(item))
-          PY
+      - run: python3 .github/scripts/migrate-dashboard-contract-summary.py
+      - run: |
+          node --check assets/js/app-dashboard-counts.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check assets/js/app-shell.js
+          node --check sw.js
+          git diff --check
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-dashboard-counts.js sw.js
+          git commit -m 'Extrair resumo de contratos do dashboard'
+          git push origin HEAD:refactor/separar-index-app
