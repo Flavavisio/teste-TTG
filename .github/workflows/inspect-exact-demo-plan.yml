@@ -1,53 +1,26 @@
-name: Inspect app migration boundary
+name: Audit next services boundary
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [refactor/separar-index-app]
+    paths:
+      - '.github/workflows/inspect-exact-demo-plan.yml'
+      - '.github/scripts/audit-services-next.py'
 
 permissions:
   contents: read
 
 jobs:
-  inspect:
+  audit:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Confirmar branch e HEAD
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          shell = Path('assets/js/app-shell.js').read_text(encoding='utf-8')
-          sw = Path('sw.js').read_text(encoding='utf-8')
-          def fn(name):
-              start = text.index(f'        function {name}() {{')
-              end = text.index('\n        function ', start + 1)
-              return text[start:end]
-          reports = fn('renderizarReports')
-          alertas = fn('renderizarAlertas')
-          licenca = fn('renderizarMinhaLicenca')
-          servicos = fn('renderizarServicos')
-          assert reports.count('window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({') == 1
-          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateClientSummary({') == 1
-          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateAdminSummary({') == 1
-          assert reports.count('window.TotalGestReportsModuleMetrics.calculateOverview({') == 1
-          assert alertas.count('window.TotalGestAlertsView.alertsCard({') == 1
-          assert licenca.count('window.TotalGestLicenseAddons.renderAddon({') == 4
-          assert licenca.count('window.TotalGestLicenseAddons.renderRounds({') == 1
-          assert servicos.count('window.TotalGestServicesSelection.selectVisibleServices({') == 1
-          assert servicos.count('window.TotalGestServicesView.specialtyAndHistoryNotice({') == 1
-          assert servicos.count('window.TotalGestServicesView.statusControl({') == 1
-          assert servicos.count('window.TotalGestServicesView.workSheetActions({') == 1
-          assert servicos.count('tbody.innerHTML = servicos.map(') == 1
-          for item in ['faturarOSViaTOConline(', 'faturarOSViaMoloni(', '_verificarPagamentoMoloni(', 'emitirGuiaTransporteMoloni(', 'emitirNotaCreditoMoloni(']:
-              assert servicos.count(item) == 1, (item, servicos.count(item))
-          assert shell.count("servicesSelection: './assets/js/app-services-selection.js'") == 1
-          assert shell.count("servicesView: './assets/js/app-services-view.js'") == 1
-          assert text.count('servicesSelection: true') == 1
-          assert text.count('servicesView: true') == 1
-          assert sw.count("'./assets/js/app-services-selection.js',") == 1
-          assert sw.count("'./assets/js/app-services-view.js',") == 1
-          assert "const CACHE = 'totalgest-v129';" in sw
-          print('APP_MIGRATION_BOUNDARY=OK')
-          PY
+          test "$(git branch --show-current)" = "refactor/separar-index-app"
+          git rev-parse HEAD
+      - name: Auditar próxima fronteira
+        run: python3 .github/scripts/audit-services-next.py
