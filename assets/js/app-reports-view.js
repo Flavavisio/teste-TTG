@@ -8,6 +8,32 @@
     return `<div style="border:1px solid #e6eaf2;border-left:4px solid ${color};border-radius:10px;padding:12px 14px;background:#fff;"><div style="font-size:.78rem;color:#64748b;"><i class="fas ${icon}" style="color:${color};"></i> ${label}</div><div style="font-size:1.2rem;font-weight:800;color:#0f172a;margin-top:4px;">${value}</div></div>`;
   }
 
+  function superadminHeader(options) {
+    options = options || {};
+    const empresas = Number(options.empresas) || 0;
+    const empresasAtivas = Number(options.empresasAtivas) || 0;
+    const expiram = Number(options.expiramEm10Dias) || 0;
+    const receita = Number(options.receitaRecorrente) || 0;
+    let html = `<div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button class="btn btn-outline" onclick="relSuperAdminPDF()"><i class="fas fa-file-pdf"></i> Exportar PDF</button></div>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:16px;">
+      ${kpi('Empresas', empresas + ` <span style="font-size:.7rem;color:#16a34a;">(${empresasAtivas} ativas)</span>`, '#2563eb', 'fa-building')}
+      ${kpi('Utilizadores', String(Number(options.totalUtilizadores) || 0), '#0e7490', 'fa-users')}
+      ${kpi('Add-ons ativos', String(Number(options.addonsAtivos) || 0), '#b45309', 'fa-puzzle-piece')}
+      ${kpi('A expirar (≤10d)', String(expiram), expiram ? '#dc2626' : '#16a34a', 'fa-hourglass-half')}
+      ${kpi('Receita recorrente', receita.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €', '#16a34a', 'fa-euro-sign')}
+    </div>`;
+    return html;
+  }
+
+  function distributorHeader(options) {
+    options = options || {};
+    const clientes = Number(options.clientes) || 0;
+    const ativos = Number(options.clientesAtivos) || 0;
+    return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:16px;">
+      ${kpi('Clientes', clientes + ` <span style="font-size:.7rem;color:#16a34a;">(${ativos} ativos)</span>`, '#7c3aed', 'fa-user-tie')}
+    </div>`;
+  }
+
   function moduleLicenseCard(options) {
     options = options || {};
     const activeCount = Number(options.activeCount) || 0;
@@ -174,6 +200,8 @@
 
   window.TotalGestReportsView = {
     kpi: kpi,
+    superadminHeader: superadminHeader,
+    distributorHeader: distributorHeader,
     moduleLicenseCard: moduleLicenseCard,
     revenueBars: revenueBars,
     superadminCompanySummary: superadminCompanySummary,

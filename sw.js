@@ -1,5 +1,5 @@
 // Service Worker — Total Gest PWA
-const CACHE = 'totalgest-v120';
+const CACHE = 'totalgest-v121';
 const ASSETS = [
   './index.html',
   './app.html',

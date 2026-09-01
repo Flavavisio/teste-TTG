@@ -18149,15 +18149,14 @@
                 const _totEnc = _metrics.totalEncarregados;
                 const _addons = _metrics.addonsAtivos;
                 const _recT = _metrics.receitaRecorrente;
-                const _kpi = window.TotalGestReportsView.kpi;
-                let html = `<div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button class="btn btn-outline" onclick="relSuperAdminPDF()"><i class="fas fa-file-pdf"></i> Exportar PDF</button></div>`;
-                html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:16px;">
-                    ${_kpi('Empresas', _emp.length + ` <span style=\"font-size:.7rem;color:#16a34a;\">(${_empAtivas} ativas)</span>`, '#2563eb', 'fa-building')}
-                    ${_kpi('Utilizadores', String(_totFunc + _totEnc), '#0e7490', 'fa-users')}
-                    ${_kpi('Add-ons ativos', String(_addons), '#b45309', 'fa-puzzle-piece')}
-                    ${_kpi('A expirar (≤10d)', String(_expira), _expira ? '#dc2626' : '#16a34a', 'fa-hourglass-half')}
-                    ${_kpi('Receita recorrente', _recT.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €', '#16a34a', 'fa-euro-sign')}
-                </div>`;
+                let html = window.TotalGestReportsView.superadminHeader({
+                    empresas: _emp.length,
+                    empresasAtivas: _empAtivas,
+                    totalUtilizadores: _totFunc + _totEnc,
+                    addonsAtivos: _addons,
+                    expiramEm10Dias: _expira,
+                    receitaRecorrente: _recT
+                });
                 const _companySummary = window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({
                     admins: admins,
                     data: dados,
@@ -18316,11 +18315,10 @@
                     isLicenseValid: isLicencaValida
                 });
                 const meusClientes = _distributorOverview.clients;
-                const _kpi = window.TotalGestReportsView.kpi;
-                const ativos = _distributorOverview.active;
-                let html = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:16px;">
-                    ${_kpi('Clientes', meusClientes.length + ` <span style=\"font-size:.7rem;color:#16a34a;\">(${ativos.length} ativos)</span>`, '#7c3aed', 'fa-user-tie')}
-                </div>`;
+                let html = window.TotalGestReportsView.distributorHeader({
+                    clientes: meusClientes.length,
+                    clientesAtivos: ativos.length
+                });
                 const _clientSummary = window.TotalGestReportsDistributorMetrics.calculateClientSummary({
                     clients: meusClientes,
                     data: dados,
