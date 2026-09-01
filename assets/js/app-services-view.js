@@ -70,5 +70,13 @@
     return html;
   }
 
-  window.TotalGestServicesView = { specialtyAndHistoryNotice, statusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions };
+  function rowActions(options) {
+    const o = options || {};
+    let html = primaryRowActions(o);
+    html += erpRowActions(o);
+    if (o.role === 'admin') html += `<button class="btn btn-sm btn-danger" onclick="excluirEntidade('servico','${o.serviceId || ''}')"><i class="fas fa-trash"></i></button>`;
+    return `<td><div class="acoes">${html}</div></td>`;
+  }
+
+  window.TotalGestServicesView = { specialtyAndHistoryNotice, statusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions };
 })();
