@@ -1,25 +1,32 @@
-name: Inspect app migration boundary
+name: Apply services row composition migration
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Verificar estado atual
+      - name: Migrar e validar
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          marker = '        function renderizarServicos() {'
-          assert text.count(marker) == 1
-          assert "const CACHE = 'totalgest-v136';" in Path('sw.js').read_text(encoding='utf-8')
-          print('CURRENT_BOUNDARY=OK')
-          PY
+          python3 scripts/tmp-migrate-services-row.py
+      - name: Commit funcional
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-services-view.js sw.js
+          git diff --cached --check
+          test -n "$(git diff --cached --name-only)"
+          test "$(git diff --cached --name-only | wc -l)" -eq 3
+          git commit -m "Extrair composição das linhas de serviços"
+          git push origin HEAD:refactor/separar-index-app
