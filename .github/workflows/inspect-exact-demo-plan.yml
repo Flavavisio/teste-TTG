@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-          fetch-depth: 2
+          fetch-depth: 6
       - name: Reutilizar scripts já validados
         run: |
           python3 - <<'PY'
@@ -25,9 +25,27 @@ jobs:
           import subprocess
           from pathlib import Path
 
-          old = subprocess.check_output([
-              'git', 'show', 'HEAD^:.github/workflows/inspect-exact-demo-plan.yml'
-          ], text=True)
+          revisions = subprocess.check_output([
+              'git', 'rev-list', '--max-count=6', 'HEAD'
+          ], text=True).splitlines()
+          old = None
+          source_rev = None
+          required = (
+              '> /tmp/migrate-services-table.py',
+              '> /tmp/test-services-table.js',
+              '> /tmp/validate-services-table.py',
+          )
+          for rev in revisions:
+              candidate = subprocess.check_output([
+                  'git', 'show', f'{rev}:.github/workflows/inspect-exact-demo-plan.yml'
+              ], text=True)
+              if all(marker in candidate for marker in required):
+                  old = candidate
+                  source_rev = rev
+                  break
+          assert old is not None, revisions
+          print('VALIDATED_SCRIPT_SOURCE=', source_rev)
+
           targets = {
               '/tmp/migrate-services-table.py': 'migrate-services-table.py',
               '/tmp/test-services-table.js': 'test-services-table.js',
@@ -38,7 +56,9 @@ jobs:
               assert len(lines) == 1, (marker, len(lines))
               payload = lines[0].split("echo '", 1)[1].split("' | base64 -d", 1)[0]
               assert payload, marker
-              Path(target).write_bytes(base64.b64decode(payload))
+              decoded = base64.b64decode(payload)
+              assert len(decoded) > 100, (marker, len(decoded))
+              Path(target).write_bytes(decoded)
           PY
           python3 /tmp/migrate-services-table.py
           node /tmp/test-services-table.js
@@ -55,5 +75,6 @@ jobs:
           git add app.html assets/js/app-services-selection.js assets/js/app-services-view.js sw.js
           git diff --cached --check
           test -n "$(git diff --cached --name-only)"
+          test "$(git diff --cached --name-only | wc -l)" -eq 4
           git commit -m "Extrair estado da tabela de serviços"
           git push origin HEAD:refactor/separar-index-app
