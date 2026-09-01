@@ -1,77 +1,73 @@
-name: Migrate license page view
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
-    paths:
-      - '.github/scripts/migrate-license-page-view.py'
-      - '.github/workflows/inspect-exact-demo-plan.yml'
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Confirmar branch e HEAD
+      - name: Estado dos módulos principais
         run: |
-          test "$(git branch --show-current)" = "refactor/separar-index-app"
-          git rev-parse HEAD
-      - name: Migrar apresentação da licença
-        run: python3 .github/scripts/migrate-license-page-view.py
-      - name: Validar migração
-        run: |
-          node --check assets/js/app-license-addons.js
-          node --check sw.js
-          git diff --check
-          node <<'NODE'
-          global.window = {};
-          require('./assets/js/app-license-addons.js');
-          const view = window.TotalGestLicenseAddons;
-          const activeRounds = view.renderRounds({ active: true, plan: 'anual', expiry: '01/09/2027' });
-          if (!activeRounds.includes('Rondas / Vigilância') || !activeRounds.includes('Anual') || !activeRounds.includes('grátis')) throw new Error('renderRounds active');
-          const inactiveRounds = view.renderRounds({ active: false, pending: false });
-          if (!inactiveRounds.includes('Ativar (Grátis)') || !inactiveRounds.includes("solicitarRondas('mensal')")) throw new Error('renderRounds inactive');
-          const page = view.renderLicensePage({
-            feedback: 'verde', valid: true, name: 'Admin', company: 'Empresa', planLabel: 'Plano', demo: false,
-            value: 49, maxEmployees: 10, currentEmployees: 4, licenseCode: 'ABC', expiry: '01/09/2027',
-            statusClass: 'licenca-ativa', statusText: 'Ativa', remainingDays: 365,
-            baseActionHtml: '<b>BASE</b>', jointRequestHtml: '<b>JOINT</b>', activateAddonsHtml: '<b>ADD</b>',
-            contractsHtml: '<b>CT</b>', fleetHtml: '<b>FR</b>', warehouseHtml: '<b>WH</b>', crmHtml: '<b>CRM</b>',
-            roundsHtml: '<b>ROUNDS</b>', referenceHtml: '<b>REF</b>', cancellationHtml: '<b>CANCEL</b>'
-          });
-          for (const needle of ['Admin','Empresa','ABC','BASE','JOINT','ADD','CT','FR','WH','CRM','ROUNDS','REF','CANCEL','Os teus dados são teus','aprovado']) {
-            if (!page.includes(needle)) throw new Error('renderLicensePage ' + needle);
-          }
-          console.log('LICENSE_PAGE_VIEW_UNIT=OK');
-          NODE
           python3 - <<'PY'
           from pathlib import Path
-          app = Path('app.html').read_text(encoding='utf-8')
+          text = Path('app.html').read_text(encoding='utf-8')
+          start = text.index('        function renderizarReports() {')
+          end = text.index('\n        function ', start + 1)
+          reports = text[start:end]
+          alert_start = text.index('        function renderizarAlertas() {')
+          alert_end = text.index('\n        function ', alert_start + 1)
+          alertas = text[alert_start:alert_end]
+          lic_start = text.index('        function renderizarMinhaLicenca() {')
+          lic_end = text.index('\n        function ', lic_start + 1)
+          licenca = text[lic_start:lic_end]
+          index_js = Path('assets/js/index.js').read_text(encoding='utf-8')
+          app_ui = Path('assets/js/app-ui.js').read_text(encoding='utf-8')
           sw = Path('sw.js').read_text(encoding='utf-8')
-          start = app.index('        function renderizarMinhaLicenca() {')
-          end = app.index('\n        function ', start + 1)
-          block = app[start:end]
-          assert block.count('window.TotalGestLicenseAddons.renderAddon({') == 4
-          assert block.count('window.TotalGestLicenseAddons.renderRounds({') == 1
-          assert block.count('window.TotalGestLicenseAddons.renderLicensePage({') == 1
-          assert block.count('container.innerHTML = `') == 1
-          assert 'const fbBanner =' not in block
-          assert 'const portalBloco =' not in block
+          theme = Path('assets/css/brand-theme.css').read_text(encoding='utf-8')
+          checks = [
+              'window.TotalGestDashboardAnalyticsMetrics.calculate({',
+              'window.TotalGestDashboardCounts.calculateContractSummary({',
+              'window.TotalGestDashboardCounts.calculateCrmCounts({',
+              'window.TotalGestLicenseAddons.renderAddon({',
+              'window.TotalGestLicenseAddons.renderRounds({',
+              'window.TotalGestLicenseAddons.renderLicensePage({',
+              'window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({',
+              'window.TotalGestReportsDistributorMetrics.calculateClientSummary({',
+              'window.TotalGestReportsView.superadminHeader({',
+              'window.TotalGestReportsView.distributorHeader({',
+              'window.TotalGestReportsView.moduleLicenseCard({',
+              'window.TotalGestReportsView.revenueBars({',
+              'window.TotalGestReportsView.superadminCompanySummary(_companySummary)',
+              'window.TotalGestReportsView.distributorClientSummary(_clientSummary)',
+              'window.TotalGestReportsView.adminOverviewCards({',
+              'window.TotalGestAlertsView.alertsCard({',
+              'function renderizarDashboardAnalitico()',
+              'function renderizarAuditoria()',
+              'function renderizarMinhaLicenca()',
+              'function renderizarReports()',
+              'function renderizarAlertas()'
+          ]
+          for item in checks: print(item, text.count(item))
+          assert 'if (!usuarioLogado                container.innerHTML = html;' not in reports
+          assert reports.count('window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({') == 1
+          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateClientSummary({') == 1
+          assert reports.count('window.TotalGestReportsView.superadminHeader({') == 1
+          assert reports.count('window.TotalGestReportsView.distributorHeader({') == 1
+          assert alertas.count('window.TotalGestAlertsView.alertsCard({') == 1
+          assert licenca.count('window.TotalGestLicenseAddons.renderAddon({') == 4
+          assert licenca.count('window.TotalGestLicenseAddons.renderRounds({') == 1
+          assert licenca.count('window.TotalGestLicenseAddons.renderLicensePage({') == 1
+          assert '#243B8F' in theme and '#FFF0C9' in theme
+          assert index_js.count("link.href = './assets/css/brand-theme.css';") == 1
+          assert app_ui.count("link.href = './assets/css/brand-theme.css';") == 1
+          assert sw.count("'./assets/css/brand-theme.css',") == 1
           assert "const CACHE = 'totalgest-v123';" in sw
-          assert app.count('bootstrapSupabase()') > 0
-          print('LICENSE_PAGE_VIEW_VALIDATION=OK')
+          print('reports_access_guard', reports.count("if (!usuarioLogado || usuarioLogado.role !== 'admin' && usuarioLogado.role !== 'subadmin') {"))
           PY
-      - name: Commit da migração
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app.html assets/js/app-license-addons.js sw.js
-          git commit -m "Extrair apresentação da página de licença"
-          git push origin refactor/separar-index-app
