@@ -1,61 +1,27 @@
-name: Migrate services pending specialty selection
+name: Inspect app migration boundary
+
 on:
-  push:
-    branches: [refactor/separar-index-app]
-    paths: ['.github/workflows/inspect-exact-demo-plan.yml']
+  workflow_dispatch:
+
 permissions:
-  contents: write
+  contents: read
+
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { ref: refactor/separar-index-app }
-      - name: Confirmar branch e HEAD
+        with:
+          ref: refactor/separar-index-app
+      - name: Estado dos módulos principais
         run: |
-          test "$(git branch --show-current)" = "refactor/separar-index-app"
-          git rev-parse HEAD
-      - name: Migrar
-        run: python3 .github/scripts/migrate-services-pending-specialty.py
-      - name: Validar
-        run: |
-          node --check assets/js/app-services-selection.js
-          node --check sw.js
-          git diff --check
-          test "$(git diff --name-only | sort | tr '\n' ' ')" = "app.html sw.js "
-          node <<'NODE'
-          global.window = {};
-          require('./assets/js/app-services-selection.js');
-          const fn = window.TotalGestServicesSelection.selectPendingSpecialtyServices;
-          const services = [
-            {id:'a',status:'concluído',numeroRegisto:'OS-1'},
-            {id:'b',status:'concluído',numeroRegisto:'OS-2'},
-            {id:'c',status:'pendente',numeroRegisto:'OS-3'}
-          ];
-          const getPendingTypes = id => id === 'a' ? ['eletricidade'] : [];
-          const admin = fn({services,role:'admin',getPendingTypes});
-          if (!admin.canSeePending || admin.pendingServices.length !== 1 || admin.pendingServices[0].number !== 'OS-1') process.exit(1);
-          const employee = fn({services,role:'funcionario',getPendingTypes});
-          if (employee.canSeePending || employee.pendingServices.length !== 0) process.exit(1);
-          console.log('SERVICES_PENDING_SPECIALTY_UNIT=OK');
-          NODE
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8'); sw=Path('sw.js').read_text(encoding='utf-8')
           s=text.index('        function renderizarServicos() {'); e=text.index('\n        function ',s+1); b=text[s:e]
-          assert b.count('selectPendingSpecialtyServices({')==1
-          assert b.count('_tiposEspecialidadePendentes(')==1
-          assert '_podeVerPendentes' not in b and '_servicosPendentesEspecialidade' not in b
-          for x in ['selectVisibleServices({','specialtyAndHistoryNotice({','statusControl({','workSheetActions({','rowLeadingCells({','rowActions({']:
+          for x in ['selectVisibleServices({','selectPendingSpecialtyServices({','specialtyAndHistoryNotice({','statusControl({','workSheetActions({','rowLeadingCells({','rowActions({']:
               assert b.count(x)==1,(x,b.count(x))
+          assert '_podeVerPendentes' not in b and '_servicosPendentesEspecialidade' not in b
           assert "const CACHE = 'totalgest-v134';" in sw
-          print('SERVICES_PENDING_SPECIALTY_VALIDATION=OK')
+          print('APP_MIGRATION_BOUNDARY=OK')
           PY
-      - name: Commit
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add app.html sw.js
-          git commit -m "Extrair seleção de especialidades pendentes das OS"
-          git push origin HEAD:refactor/separar-index-app
