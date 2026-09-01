@@ -1,79 +1,24 @@
-name: Inspect app migration boundary
+name: Audit next refactor phase
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - refactor/separar-index-app
 
 permissions:
   contents: read
 
 jobs:
-  inspect:
+  audit:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Confirmar branch e HEAD
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          start = text.index('        function renderizarReports() {')
-          end = text.index('\n        function ', start + 1)
-          reports = text[start:end]
-          alert_start = text.index('        function renderizarAlertas() {')
-          alert_end = text.index('\n        function ', alert_start + 1)
-          alertas = text[alert_start:alert_end]
-          lic_start = text.index('        function renderizarMinhaLicenca() {')
-          lic_end = text.index('\n        function ', lic_start + 1)
-          licenca = text[lic_start:lic_end]
-          index_js = Path('assets/js/index.js').read_text(encoding='utf-8')
-          app_ui = Path('assets/js/app-ui.js').read_text(encoding='utf-8')
-          sw = Path('sw.js').read_text(encoding='utf-8')
-          theme = Path('assets/css/brand-theme.css').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestDashboardAnalyticsMetrics.calculate({',
-              'window.TotalGestDashboardCounts.calculateContractSummary({',
-              'window.TotalGestDashboardCounts.calculateCrmCounts({',
-              'window.TotalGestLicenseAddons.renderAddon({',
-              'window.TotalGestLicenseAddons.renderRounds({',
-              'window.TotalGestLicenseAddons.renderLicensePage({',
-              'window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({',
-              'window.TotalGestReportsDistributorMetrics.calculateClientSummary({',
-              'window.TotalGestReportsDistributorMetrics.calculateAdminSummary({',
-              'window.TotalGestReportsModuleMetrics.calculateOverview({',
-              'window.TotalGestReportsView.superadminHeader({',
-              'window.TotalGestReportsView.distributorHeader({',
-              'window.TotalGestReportsView.moduleLicenseCard(card)',
-              'window.TotalGestReportsView.revenueBars({',
-              'window.TotalGestReportsView.superadminCompanySummary(_companySummary)',
-              'window.TotalGestReportsView.distributorClientSummary(_clientSummary)',
-              'window.TotalGestReportsView.adminOverviewCards(_adminSummary)',
-              'window.TotalGestAlertsView.alertsCard({',
-              'function renderizarDashboardAnalitico()',
-              'function renderizarAuditoria()',
-              'function renderizarMinhaLicenca()',
-              'function renderizarReports()',
-              'function renderizarAlertas()'
-          ]
-          for item in checks: print(item, text.count(item))
-          assert 'if (!usuarioLogado                container.innerHTML = html;' not in reports
-          assert reports.count('window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({') == 1
-          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateClientSummary({') == 1
-          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateAdminSummary({') == 1
-          assert reports.count('window.TotalGestReportsModuleMetrics.calculateOverview({') == 1
-          assert reports.count('window.TotalGestReportsView.moduleLicenseCard(card)') == 1
-          assert reports.count('window.TotalGestReportsView.superadminHeader({') == 1
-          assert reports.count('window.TotalGestReportsView.distributorHeader({') == 1
-          assert reports.count('window.TotalGestReportsView.adminOverviewCards(_adminSummary)') == 1
-          assert alertas.count('window.TotalGestAlertsView.alertsCard({') == 1
-          assert licenca.count('window.TotalGestLicenseAddons.renderAddon({') == 4
-          assert licenca.count('window.TotalGestLicenseAddons.renderRounds({') == 1
-          assert licenca.count('window.TotalGestLicenseAddons.renderLicensePage({') == 1
-          assert '#243B8F' in theme and '#FFF0C9' in theme
-          assert index_js.count("link.href = './assets/css/brand-theme.css';") == 1
-          assert app_ui.count("link.href = './assets/css/brand-theme.css';") == 1
-          assert sw.count("'./assets/css/brand-theme.css',") == 1
-          assert "const CACHE = 'totalgest-v125';" in sw
-          print('reports_access_guard', reports.count("if (!usuarioLogado || usuarioLogado.role !== 'admin' && usuarioLogado.role !== 'subadmin') {"))
-          PY
+          test "$(git branch --show-current)" = "refactor/separar-index-app"
+          git rev-parse HEAD
+      - name: Auditar hotspots da próxima fase
+        run: python3 .github/scripts/audit-next-phase.py
