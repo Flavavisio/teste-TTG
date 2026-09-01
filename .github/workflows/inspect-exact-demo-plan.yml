@@ -1,4 +1,4 @@
-name: Audit focused app hotspot
+name: Migrate dashboard analytics metrics
 
 on:
   push:
@@ -6,14 +6,26 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - run: python3 .github/scripts/audit-next-hotspots.py
+      - run: python3 .github/scripts/migrate-dashboard-analytics-metrics.py
+      - run: |
+          node --check assets/js/app-dashboard-analytics-metrics.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check assets/js/app-shell.js
+          node --check sw.js
+          git diff --check
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-dashboard-analytics-metrics.js assets/js/app-shell.js sw.js
+          git commit -m 'Extrair métricas do dashboard analítico'
+          git push origin HEAD:refactor/separar-index-app
