@@ -90,9 +90,28 @@
     };
   }
 
+  function filterAndSortServices(options) {
+    options = options || {};
+    const services = Array.isArray(options.services) ? options.services : [];
+    const applyFilterSort = typeof options.applyFilterSort === 'function' ? options.applyFilterSort : function (_, items) { return items; };
+    const getTableState = typeof options.getTableState === 'function' ? options.getTableState : function () { return {}; };
+    const getClientName = typeof options.getClientName === 'function' ? options.getClientName : function (id) { return id || ''; };
+    let visibleServices = applyFilterSort('servicos', services,
+      ['numeroRegisto', 'descricao', 'status', service => getClientName(service.clienteId)],
+      {
+        data: (a, b) => (a.data || '') + (a.hora || '') < (b.data || '') + (b.hora || '') ? -1 : 1,
+        status: (a, b) => (a.status || '').localeCompare(b.status || '')
+      });
+    if (!getTableState('servicos').sortCol) {
+      visibleServices.sort((a, b) => (a.data + a.hora) < (b.data + b.hora) ? 1 : -1);
+    }
+    return visibleServices;
+  }
+
   window.TotalGestServicesSelection = {
     selectVisibleServices: selectVisibleServices,
     selectPendingSpecialtyServices: selectPendingSpecialtyServices,
-    prepareServiceRow: prepareServiceRow
+    prepareServiceRow: prepareServiceRow,
+    filterAndSortServices: filterAndSortServices
   };
 })();

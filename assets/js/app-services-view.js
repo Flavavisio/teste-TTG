@@ -16,6 +16,19 @@
     return html;
   }
 
+  function servicesTableState(options) {
+    const opts = options || {};
+    const totalCount = Number(opts.totalCount) || 0;
+    const visibleCount = Number(opts.visibleCount) || 0;
+    const renderToolbar = typeof opts.renderToolbar === 'function' ? opts.renderToolbar : function () { return ''; };
+    return {
+      hasRows: visibleCount > 0,
+      toolbarHtml: totalCount ? renderToolbar('servicos', 'Pesquisar por Nº, cliente, descrição, estado…', visibleCount, totalCount) : '',
+      emptyRowsHtml: visibleCount === 0 && totalCount ? '<tr><td colspan="9" style="text-align:center;color:#94a3b8;">Sem resultados para essa pesquisa.</td></tr>' : '',
+      emptyDisplay: visibleCount === 0 && totalCount === 0 ? 'block' : 'none'
+    };
+  }
+
   function statusControl(options) {
     const opts = options || {}, status = opts.status || 'pendente', serviceId = opts.serviceId || '';
     if (status === 'por aprovar') return '<span style="background:#fde68a;color:#92400e;padding:3px 10px;border-radius:999px;font-size:.74rem;font-weight:700;"><i class="fas fa-clock"></i> por aprovar</span>';
@@ -78,5 +91,5 @@
     return `<td><div class="acoes">${html}</div></td>`;
   }
 
-  window.TotalGestServicesView = { specialtyAndHistoryNotice, statusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions };
+  window.TotalGestServicesView = { specialtyAndHistoryNotice, servicesTableState, statusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions };
 })();

@@ -6661,21 +6661,25 @@
                 });
             }
 
-            servicos = _aplicarFiltroOrdenacao('servicos', servicos,
-                ['numeroRegisto', 'descricao', 'status', s => obterNomeCliente(s.clienteId)],
-                {
-                    data: (a, b) => (a.data || '') + (a.hora || '') < (b.data || '') + (b.hora || '') ? -1 : 1,
-                    status: (a, b) => (a.status || '').localeCompare(b.status || '')
-                });
-            if (!_getTableState('servicos').sortCol) servicos.sort((a, b) => (a.data + a.hora) < (b.data + b.hora) ? 1 : -1);
+            servicos = window.TotalGestServicesSelection.filterAndSortServices({
+                services: servicos,
+                applyFilterSort: _aplicarFiltroOrdenacao,
+                getTableState: _getTableState,
+                getClientName: obterNomeCliente
+            });
+            const tableState = window.TotalGestServicesView.servicesTableState({
+                totalCount: totalGeralOS,
+                visibleCount: servicos.length,
+                renderToolbar: _toolbarHtml
+            });
             const tbOS = document.getElementById('servicosToolbar');
-            if (tbOS) tbOS.innerHTML = totalGeralOS ? _toolbarHtml('servicos', 'Pesquisar por Nº, cliente, descrição, estado…', servicos.length, totalGeralOS) : '';
-            if (servicos.length === 0) {
-                tbody.innerHTML = totalGeralOS ? '<tr><td colspan="9" style="text-align:center;color:#94a3b8;">Sem resultados para essa pesquisa.</td></tr>' : '';
-                empty.style.display = totalGeralOS ? 'none' : 'block';
+            if (tbOS) tbOS.innerHTML = tableState.toolbarHtml;
+            if (!tableState.hasRows) {
+                tbody.innerHTML = tableState.emptyRowsHtml;
+                empty.style.display = tableState.emptyDisplay;
                 return;
             }
-            empty.style.display = 'none';
+            empty.style.display = tableState.emptyDisplay;
 
             tbody.innerHTML = servicos.map(s => {
                 const podeEditar = usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin' || usuarioLogado?.role === 'encarregado';
