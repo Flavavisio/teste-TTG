@@ -53,7 +53,23 @@
     return services;
   }
 
+  function selectPendingSpecialtyServices(options) {
+    options = options || {};
+    const role = options.role || '';
+    const services = Array.isArray(options.services) ? options.services : [];
+    const getPendingTypes = typeof options.getPendingTypes === 'function' ? options.getPendingTypes : function () { return []; };
+    const canSeePending = role === 'admin' || role === 'subadmin' || role === 'encarregado';
+    const pendingServices = canSeePending
+      ? services
+          .filter(service => service.status === 'concluído')
+          .map(service => ({ number: service.numeroRegisto || '', types: getPendingTypes(service.id) || [] }))
+          .filter(item => item.types.length > 0)
+      : [];
+    return { canSeePending, pendingServices };
+  }
+
   window.TotalGestServicesSelection = {
-    selectVisibleServices: selectVisibleServices
+    selectVisibleServices: selectVisibleServices,
+    selectPendingSpecialtyServices: selectPendingSpecialtyServices
   };
 })();
