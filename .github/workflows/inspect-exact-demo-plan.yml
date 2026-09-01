@@ -1,32 +1,49 @@
-name: Inspect app migration boundary
+name: Migrate reports presentation
 
 on:
+  push:
+    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Migrar apresentação de relatórios
+        run: python3 .github/scripts/migrate-reports-view.py
+      - name: Validar migração
         run: |
+          node --check assets/js/app-reports-view.js
+          for f in assets/js/app-*.js; do node --check "$f"; done
+          node --check assets/js/app-shell.js
+          node --check sw.js
+          git diff --check
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestDashboardAnalyticsMetrics.calculate({',
-              'window.TotalGestDashboardCounts.calculateContractSummary({',
-              'window.TotalGestDashboardCounts.calculateCrmCounts({',
-              'window.TotalGestLicenseAddons.renderAddon({',
-              'function renderizarDashboardAnalitico()',
-              'function renderizarAuditoria()',
-              'function renderizarMinhaLicenca()',
-              'function renderizarReports()'
-          ]
-          for item in checks: print(item, text.count(item))
+          app = Path('app.html').read_text(encoding='utf-8')
+          shell = Path('assets/js/app-shell.js').read_text(encoding='utf-8')
+          sw = Path('sw.js').read_text(encoding='utf-8')
+          assert app.count('window.TotalGestReportsView.kpi;') == 2
+          assert app.count('window.TotalGestReportsView.moduleLicenseCard({') == 5
+          assert app.count('window.TotalGestReportsView.revenueBars({') == 1
+          assert app.count('function renderizarReports()') == 1
+          assert shell.count("reportsView: './assets/js/app-reports-view.js'") == 1
+          assert shell.count('options.reportsView === true') == 1
+          assert sw.count("const CACHE = 'totalgest-v114';") == 1
+          assert sw.count("'./assets/js/app-reports-view.js'") == 1
+          print('STRUCTURAL_VALIDATION=OK')
           PY
+      - name: Commit da migração
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.html assets/js/app-shell.js sw.js
+          git commit -m 'Extrair apresentação reutilizável de relatórios'
+          git push origin HEAD:refactor/separar-index-app
