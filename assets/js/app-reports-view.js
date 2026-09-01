@@ -39,9 +39,76 @@
     }).join('');
   }
 
+  function superadminCompanySummary(options) {
+    options = options || {};
+    const rows = Array.isArray(options.rows) ? options.rows : [];
+    const totals = options.totals || {};
+    let html = `<div class="report-card"><h4><i class="fas fa-chart-line"></i> Resumo por Empresa</h4>`;
+    if (!rows.length) {
+      return html + `<p class="text-muted">Nenhuma empresa registada.</p></div>`;
+    }
+    html += `<div class="table-wrapper"><table>
+                                <thead><tr><th>Empresa</th><th>Administrador</th><th>Plano</th><th>Expiração</th><th>Funcionários</th><th>Encarregados</th><th>Contratos</th><th>Frota</th><th>Armazém</th><th>CRM + Assist</th><th>ERP</th><th>Rondas</th><th>Receita (€)</th></tr></thead><tbody>`;
+    rows.forEach(function (row) {
+      html += `<tr class="${row.rowClass}">
+                                    <td>${row.empresa}</td>
+                                    <td>${row.nome}</td>
+                                    <td>${row.planoLabel}</td>
+                                    <td>${row.dataExp}</td>
+                                    <td>${row.funcionarios}${row.atingiuLimite ? ' ⚠️' : ''}</td>
+                                    <td>${row.encarregados}</td>
+                                    <td style="text-align:center; color:${row.temContratos ? '#16a34a' : '#cbd5e1'};">${row.temContratos ? '✓' : '—'}</td>
+                                    <td style="text-align:center; color:${row.temFrota ? '#16a34a' : '#cbd5e1'};">${row.temFrota ? '✓' : '—'}</td>
+                                    <td style="text-align:center; color:${row.temArmazem ? '#16a34a' : '#cbd5e1'};">${row.temArmazem ? '✓' : '—'}</td>
+                                    <td style="text-align:center; color:${row.temCrm ? '#16a34a' : '#cbd5e1'};">${row.temCrm ? '✓' : '—'}</td>
+                                    <td style="text-align:center; color:${row.temErp ? '#16a34a' : '#cbd5e1'};">${row.temErp ? '✓' : '—'}</td>
+                                    <td style="text-align:center; color:${row.temRondas ? '#16a34a' : '#cbd5e1'};">${row.temRondas ? '✓' : '—'}</td>
+                                    <td>${row.valorEmpresa.toFixed(2)}</td>
+                                </tr>`;
+    });
+    html += `<tr style="font-weight:bold; background:#f1f5f9;">
+                                <td colspan="4">Total Geral</td>
+                                <td>${totals.funcionarios}</td>
+                                <td>${totals.encarregados}</td>
+                                <td style="text-align:center;">${totals.contratos}</td>
+                                <td style="text-align:center;">${totals.frota}</td>
+                                <td style="text-align:center;">${totals.armazem}</td>
+                                <td style="text-align:center;">${totals.crm}</td>
+                                <td style="text-align:center;">${totals.erp}</td>
+                                <td style="text-align:center;">${totals.rondas}</td>
+                                <td>${totals.receita.toFixed(2)}</td>
+                            </tr>`;
+    return html + `</tbody></table></div></div>`;
+  }
+
+  function distributorClientSummary(options) {
+    options = options || {};
+    const rows = Array.isArray(options.rows) ? options.rows : [];
+    let html = `<div class="report-card"><h4><i class="fas fa-chart-line"></i> Resumo por Cliente</h4>`;
+    if (!rows.length) {
+      return html + `<p class="text-muted">Ainda não criaste nenhum cliente.</p></div>`;
+    }
+    html += `<div class="table-wrapper"><table>
+                                <thead><tr><th>Empresa</th><th>Administrador</th><th>Plano</th><th>Expiração</th><th>Funcionários</th><th>Contratos</th><th>Frota</th><th>Armazém</th><th>CRM+Assist</th><th>Cobras (€)</th></tr></thead><tbody>`;
+    rows.forEach(function (row) {
+      html += `<tr>
+                            <td>${row.empresa}</td><td>${row.nome}</td><td>${row.planoLabel}</td><td>${row.dataExp}</td><td>${row.funcionarios}</td>
+                            <td style="text-align:center;color:${row.temContratos ? '#16a34a' : '#cbd5e1'};">${row.temContratos ? '✓' : '—'}</td>
+                            <td style="text-align:center;color:${row.temFrota ? '#16a34a' : '#cbd5e1'};">${row.temFrota ? '✓' : '—'}</td>
+                            <td style="text-align:center;color:${row.temArmazem ? '#16a34a' : '#cbd5e1'};">${row.temArmazem ? '✓' : '—'}</td>
+                            <td style="text-align:center;color:${row.temCrm ? '#16a34a' : '#cbd5e1'};">${row.temCrm ? '✓' : '—'}</td>
+                            <td>${row.valorCliente.toFixed(2)}</td>
+                        </tr>`;
+    });
+    html += `<tr style="font-weight:bold;background:#f1f5f9;"><td colspan="10">Total Geral</td><td>${options.totalCobrado.toFixed(2)}</td></tr>`;
+    return html + `</tbody></table></div></div>`;
+  }
+
   window.TotalGestReportsView = {
     kpi: kpi,
     moduleLicenseCard: moduleLicenseCard,
-    revenueBars: revenueBars
+    revenueBars: revenueBars,
+    superadminCompanySummary: superadminCompanySummary,
+    distributorClientSummary: distributorClientSummary
   };
 })();
