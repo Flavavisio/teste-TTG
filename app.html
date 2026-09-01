@@ -6695,18 +6695,12 @@
                     hasMaterials: _osTemMateriais,
                     isErpActive: moduloErpAtivo
                 });
-                return window.TotalGestServicesView.serviceRow({
-                    leadingCells: {
-                        number: rowData.number,
-                        hasMaterials: rowData.hasMaterials,
-                        clientName: rowData.clientName,
-                        employeeName: rowData.employeeName,
-                        date: s.data || '-',
-                        time: s.hora || '-',
-                        description: escapeHtmlSimples(s.descricao || '-'),
-                        workTypesHtml: _tiposTrabalhoBadgesHTML(s),
-                        statusHtml
-                    },
+                return window.TotalGestServicesView.serviceRowFromData({
+                    service: s,
+                    rowData,
+                    descriptionHtml: escapeHtmlSimples(s.descricao || '-'),
+                    workTypesHtml: _tiposTrabalhoBadgesHTML(s),
+                    statusHtml,
                     actions: {
                         serviceId: s.id,
                         status: s.status,

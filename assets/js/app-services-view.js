@@ -107,10 +107,30 @@
     return `<td><div class="acoes">${html}</div></td>`;
   }
 
+  function serviceRowFromData(options) {
+    const opts = options || {};
+    const service = opts.service || {};
+    const rowData = opts.rowData || {};
+    return serviceRow({
+      leadingCells: {
+        number: rowData.number,
+        hasMaterials: rowData.hasMaterials,
+        clientName: rowData.clientName,
+        employeeName: rowData.employeeName,
+        date: service.data || '-',
+        time: service.hora || '-',
+        description: opts.descriptionHtml || '-',
+        workTypesHtml: opts.workTypesHtml,
+        statusHtml: opts.statusHtml
+      },
+      actions: opts.actions || {}
+    });
+  }
+
   function serviceRow(options) {
     const opts = options || {};
     return `<tr>${rowLeadingCells(opts.leadingCells || {})}${rowActions(opts.actions || {})}</tr>`;
   }
 
-  window.TotalGestServicesView = { serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, servicesTableState, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRow };
+  window.TotalGestServicesView = { serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, servicesTableState, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRowFromData, serviceRow };
 })();
