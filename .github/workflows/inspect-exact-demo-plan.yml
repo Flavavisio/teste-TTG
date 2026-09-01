@@ -1,27 +1,64 @@
-name: Audit renderizarMinhaLicenca
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
-    paths:
-      - '.github/scripts/audit-renderizar-minha-licenca.py'
-      - '.github/workflows/inspect-exact-demo-plan.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  audit:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Confirmar branch e HEAD
+      - name: Estado dos módulos principais
         run: |
-          test "$(git branch --show-current)" = "refactor/separar-index-app"
-          git rev-parse HEAD
-      - name: Auditar renderizarMinhaLicenca
-        run: python3 .github/scripts/audit-renderizar-minha-licenca.py
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('app.html').read_text(encoding='utf-8')
+          start = text.index('        function renderizarReports() {')
+          end = text.index('\n        function ', start + 1)
+          reports = text[start:end]
+          alert_start = text.index('        function renderizarAlertas() {')
+          alert_end = text.index('\n        function ', alert_start + 1)
+          alertas = text[alert_start:alert_end]
+          index_js = Path('assets/js/index.js').read_text(encoding='utf-8')
+          app_ui = Path('assets/js/app-ui.js').read_text(encoding='utf-8')
+          sw = Path('sw.js').read_text(encoding='utf-8')
+          theme = Path('assets/css/brand-theme.css').read_text(encoding='utf-8')
+          checks = [
+              'window.TotalGestDashboardAnalyticsMetrics.calculate({',
+              'window.TotalGestDashboardCounts.calculateContractSummary({',
+              'window.TotalGestDashboardCounts.calculateCrmCounts({',
+              'window.TotalGestLicenseAddons.renderAddon({',
+              'window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({',
+              'window.TotalGestReportsDistributorMetrics.calculateClientSummary({',
+              'window.TotalGestReportsView.superadminHeader({',
+              'window.TotalGestReportsView.distributorHeader({',
+              'window.TotalGestReportsView.moduleLicenseCard({',
+              'window.TotalGestReportsView.revenueBars({',
+              'window.TotalGestReportsView.superadminCompanySummary(_companySummary)',
+              'window.TotalGestReportsView.distributorClientSummary(_clientSummary)',
+              'window.TotalGestReportsView.adminOverviewCards({',
+              'window.TotalGestAlertsView.alertsCard({',
+              'function renderizarDashboardAnalitico()',
+              'function renderizarAuditoria()',
+              'function renderizarMinhaLicenca()',
+              'function renderizarReports()',
+              'function renderizarAlertas()'
+          ]
+          for item in checks: print(item, text.count(item))
+          assert 'if (!usuarioLogado                container.innerHTML = html;' not in reports
+          assert reports.count('window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({') == 1
+          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateClientSummary({') == 1
+          assert reports.count('window.TotalGestReportsView.superadminHeader({') == 1
+          assert reports.count('window.TotalGestReportsView.distributorHeader({') == 1
+          assert alertas.count('window.TotalGestAlertsView.alertsCard({') == 1
+          assert '#243B8F' in theme and '#FFF0C9' in theme
+          assert index_js.count("link.href = './assets/css/brand-theme.css';") == 1
+          assert app_ui.count("link.href = './assets/css/brand-theme.css';") == 1
+          assert sw.count("'./assets/css/brand-theme.css',") == 1
+          print('reports_access_guard', reports.count("if (!usuarioLogado || usuarioLogado.role !== 'admin' && usuarioLogado.role !== 'subadmin') {"))
+          PY
