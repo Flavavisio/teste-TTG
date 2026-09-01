@@ -57,9 +57,11 @@ jobs:
           if (out.contratosCount !== 1 || out.ctEmDia !== 1 || out.ctValor !== 120) throw new Error('contracts');
           if (out.frotaTotal !== 1 || out.gastoVeiculos !== 123.45 || out.suporteTotal !== 1) throw new Error('operations');
           const html = window.TotalGestReportsView.adminOverviewCards(out);
-          for (const needle of ['Recursos Humanos','Contratos de Manutenção','Frota','Suporte Técnico','1.500,00','123,45']) {
+          for (const needle of ['Recursos Humanos','Contratos de Manutenção','Frota','Suporte Técnico']) {
             if (!html.includes(needle)) throw new Error('view ' + needle);
           }
+          const compact = html.replace(/\s/g, '').replace(/\./g, '');
+          if (!compact.includes('1500,00€') || !compact.includes('123,45€')) throw new Error('view currency');
           console.log('ADMIN_REPORT_SUMMARY_UNIT=OK');
           NODE
           python3 - <<'PY'
