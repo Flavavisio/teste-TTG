@@ -31,7 +31,8 @@ jobs:
           assert b.count('rowActions({')==1
           assert b.count('primaryRowActions({')==0 and b.count('erpRowActions({')==0
           assert b.count("excluirEntidade('servico'")==0
-          for x in ['rowLeadingCells({','statusControl({','workSheetActions({')]: assert b.count(x)==1,(x,b.count(x))
+          for x in ['rowLeadingCells({','statusControl({','workSheetActions({']:
+              assert b.count(x)==1,(x,b.count(x))
           assert "const CACHE = 'totalgest-v133';" in sw
           print('SERVICES_ROW_ACTIONS_VALIDATION=OK')
           PY
@@ -42,4 +43,3 @@ jobs:
           git add app.html sw.js
           git commit -m "Extrair composição das ações das OS"
           git push origin HEAD:refactor/separar-index-app
-# retry after migrator syntax correction
