@@ -1,4 +1,4 @@
-name: Audit next app hotspots
+name: Audit focused app hotspot
 
 on:
   push:
