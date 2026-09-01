@@ -93,5 +93,18 @@
     };
   }
 
-  window.TotalGestDashboardCounts = { calculateRoleCounts: calculateRoleCounts, calculateStatusCounts: calculateStatusCounts };
+  function calculateCrmCounts(options) {
+    const opts = options || {};
+    const data = opts.data || {};
+    const user = opts.user;
+    const adminId = user && user.role === 'admin' ? user.id : (user ? user.adminId : undefined);
+    return {
+      leads: (data.leads || []).filter(l => l.adminId === adminId && l.estado !== 'ganho' && l.estado !== 'perdido').length,
+      oportunidades: (data.oportunidades || []).filter(o => o.adminId === adminId && o.estado !== 'ganho' && o.estado !== 'perdido').length,
+      propostas: (data.propostas || []).filter(p => p.adminId === adminId && (p.estado === 'enviada' || p.estado === 'visualizada')).length,
+      comissoes: (data.oportunidades || []).filter(o => o.adminId === adminId && o.estado === 'ganho' && o.comissaoPercentagem && !o.comissaoPaga).length
+    };
+  }
+
+  window.TotalGestDashboardCounts = { calculateRoleCounts: calculateRoleCounts, calculateStatusCounts: calculateStatusCounts, calculateCrmCounts: calculateCrmCounts };
 })();

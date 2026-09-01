@@ -18659,14 +18659,18 @@
             }
             document.getElementById('countFunc').textContent = countFunc;
             document.getElementById('countCli').textContent = countCli;
+            const _crmCounts = window.TotalGestDashboardCounts.calculateCrmCounts({
+                data: dados,
+                user: usuarioLogado
+            });
             const elCountLeads = document.getElementById('countLeads');
-            if (elCountLeads) elCountLeads.textContent = (dados.leads || []).filter(l => l.adminId === (usuarioLogado?.role === 'admin' ? usuarioLogado.id : usuarioLogado?.adminId) && l.estado !== 'ganho' && l.estado !== 'perdido').length;
+            if (elCountLeads) elCountLeads.textContent = _crmCounts.leads;
             const elCountOport = document.getElementById('countOportunidades');
-            if (elCountOport) elCountOport.textContent = (dados.oportunidades || []).filter(o => o.adminId === (usuarioLogado?.role === 'admin' ? usuarioLogado.id : usuarioLogado?.adminId) && o.estado !== 'ganho' && o.estado !== 'perdido').length;
+            if (elCountOport) elCountOport.textContent = _crmCounts.oportunidades;
             const elCountProp = document.getElementById('countPropostas');
-            if (elCountProp) elCountProp.textContent = (dados.propostas || []).filter(p => p.adminId === (usuarioLogado?.role === 'admin' ? usuarioLogado.id : usuarioLogado?.adminId) && (p.estado === 'enviada' || p.estado === 'visualizada')).length;
+            if (elCountProp) elCountProp.textContent = _crmCounts.propostas;
             const elCountComissoes = document.getElementById('countComissoes');
-            if (elCountComissoes) elCountComissoes.textContent = (dados.oportunidades || []).filter(o => o.adminId === (usuarioLogado?.role === 'admin' ? usuarioLogado.id : usuarioLogado?.adminId) && o.estado === 'ganho' && o.comissaoPercentagem && !o.comissaoPaga).length;
+            if (elCountComissoes) elCountComissoes.textContent = _crmCounts.comissoes;
             const elFrotaResumo = document.getElementById('frotaResumo');
             if (elFrotaResumo) {
                 const r = usuarioLogado?.role;
