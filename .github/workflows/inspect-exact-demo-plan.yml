@@ -1,6 +1,9 @@
-name: Inspect app migration boundary
+name: Inspect services table boundary
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,21 +11,36 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Auditar fronteira de renderizarServicos
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8'); sw=Path('sw.js').read_text(encoding='utf-8')
-          s=text.index('        function renderizarServicos() {'); e=text.index('\n        function ',s+1); b=text[s:e]
-          for x in ['selectVisibleServices({','selectPendingSpecialtyServices({','prepareServiceRow({','specialtyAndHistoryNotice({','statusControl({','workSheetActions({','rowLeadingCells({','rowActions({']:
-              assert b.count(x)==1,(x,b.count(x))
-          for x in ['obterNomeFuncionario(','gerarNumeroRegisto()','_osTemMateriais(','moduloErpAtivo(']:
-              assert b.count(x)==0,(x,b.count(x))
-          assert "const CACHE = 'totalgest-v135';" in sw
-          print('APP_MIGRATION_BOUNDARY=OK')
+          text = Path('app.html').read_text(encoding='utf-8')
+          start_marker = '        function renderizarServicos() {'
+          assert text.count(start_marker) == 1, text.count(start_marker)
+          s = text.index(start_marker)
+          e = text.index('\n        function ', s + len(start_marker))
+          block = text[s:e]
+          print('BEGIN_RENDERIZAR_SERVICOS')
+          print(block)
+          print('END_RENDERIZAR_SERVICOS')
+          for marker in [
+              "_aplicarFiltroOrdenacao('servicos'",
+              'servicosToolbar',
+              '_toolbarHtml(',
+              'servicos.length === 0',
+              'TotalGestServicesSelection',
+              'TotalGestServicesView'
+          ]:
+              print(f'MARKER {marker!r}: {block.count(marker)}')
+          print('SERVICES_SELECTION_INCLUDE_INDEX=', text.find('assets/js/app-services-selection.js'))
+          print('SERVICES_VIEW_INCLUDE_INDEX=', text.find('assets/js/app-services-view.js'))
+          sw = Path('sw.js').read_text(encoding='utf-8')
+          print('CACHE_V135=', "const CACHE = 'totalgest-v135';" in sw)
           PY
