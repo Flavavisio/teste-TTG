@@ -1,65 +1,81 @@
-name: Migrate license presentation phase 2
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Confirmar branch e HEAD
+      - name: Estado dos módulos principais
         run: |
-          test "$(git branch --show-current)" = "refactor/separar-index-app"
-          git rev-parse HEAD
-      - name: Migrar apresentação restante da licença
-        run: python3 .github/scripts/migrate-license-presentation-phase2.py
-      - name: Validar migração
-        run: |
-          node --check assets/js/app-license-addons.js
-          node --check sw.js
-          git diff --check
-          test "$(git diff --name-only | sort | tr '\n' ' ')" = "app.html sw.js "
-          node <<'NODE'
-          global.window = {};
-          require('./assets/js/app-license-addons.js');
-          const v = window.TotalGestLicenseAddons;
-          if (!v.renderNoLicense().includes('Sem licença atribuída')) throw new Error('no-license');
-          if (!v.renderErpComingSoon().includes('Integração com ERP')) throw new Error('erp');
-          const pending = v.renderBaseAction({ pending:true, pendingPlanLabel:'Profissional' });
-          if (!pending.includes('Pedido de licença enviado') || !pending.includes('Profissional')) throw new Error('base-pending');
-          const demo = v.renderBaseAction({ demo:true });
-          if (!demo.includes('Plano Demo') || !demo.includes('Adquirir Licença')) throw new Error('base-demo');
-          const active = v.renderBaseAction({ remainingDays:5 });
-          if (!active.includes('Pedir Renovação') || !active.includes('Alterar Plano')) throw new Error('base-active');
-          const joint = v.renderJointRequest({ items:[{label:'Frota',value:10},{label:'CRM',value:20}] });
-          if (!joint.includes('Frota') || !joint.includes('CRM') || !joint.includes('30.00 €')) throw new Error('joint');
-          if (v.renderJointRequest({items:[{label:'Frota',value:10}]}) !== '') throw new Error('joint-single');
-          if (!v.renderActivateAddons({visible:true}).includes('Ativar Add-ons')) throw new Error('addons-visible');
-          if (v.renderActivateAddons({visible:false}) !== '') throw new Error('addons-hidden');
-          const cancellation = v.renderCancellation({pending:true,signatureName:'Ana',signatureDate:'01/09/2026'});
-          if (!cancellation.includes('Ana') || !cancellation.includes('01/09/2026')) throw new Error('cancel-pending');
-          if (!v.renderCancellation({pending:false}).includes('Encerrar Acordo')) throw new Error('cancel-action');
-          const page = v.renderLicensePage({name:'Admin',erpHtml:'ERP_SENTINEL'});
-          if (!page.includes('ERP_SENTINEL')) throw new Error('erp-slot');
-          console.log('LICENSE_PRESENTATION_PHASE2_UNIT=OK');
-          NODE
           python3 - <<'PY'
           from pathlib import Path
-          app = Path('app.html').read_text(encoding='utf-8')
+          text = Path('app.html').read_text(encoding='utf-8')
+          start = text.index('        function renderizarReports() {')
+          end = text.index('\n        function ', start + 1)
+          reports = text[start:end]
+          alert_start = text.index('        function renderizarAlertas() {')
+          alert_end = text.index('\n        function ', alert_start + 1)
+          alertas = text[alert_start:alert_end]
+          lic_start = text.index('        function renderizarMinhaLicenca() {')
+          lic_end = text.index('\n        function ', lic_start + 1)
+          licenca = text[lic_start:lic_end]
+          index_js = Path('assets/js/index.js').read_text(encoding='utf-8')
+          app_ui = Path('assets/js/app-ui.js').read_text(encoding='utf-8')
           sw = Path('sw.js').read_text(encoding='utf-8')
-          start = app.index('        function renderizarMinhaLicenca() {')
-          end = app.index('\n        function ', start + 1)
-          block = app[start:end]
-          expected = [
+          theme = Path('assets/css/brand-theme.css').read_text(encoding='utf-8')
+          checks = [
+              'window.TotalGestDashboardAnalyticsMetrics.calculate({',
+              'window.TotalGestDashboardCounts.calculateContractSummary({',
+              'window.TotalGestDashboardCounts.calculateCrmCounts({',
+              'window.TotalGestLicenseAddons.renderAddon({',
+              'window.TotalGestLicenseAddons.renderRounds({',
+              'window.TotalGestLicenseAddons.renderNoLicense()',
+              'window.TotalGestLicenseAddons.renderErpComingSoon()',
+              'window.TotalGestLicenseAddons.renderBaseAction({',
+              'window.TotalGestLicenseAddons.renderJointRequest({',
+              'window.TotalGestLicenseAddons.renderActivateAddons({',
+              'window.TotalGestLicenseAddons.renderCancellation({',
+              'window.TotalGestLicenseAddons.renderLicensePage({',
+              'window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({',
+              'window.TotalGestReportsDistributorMetrics.calculateClientSummary({',
+              'window.TotalGestReportsDistributorMetrics.calculateAdminSummary({',
+              'window.TotalGestReportsModuleMetrics.calculateOverview({',
+              'window.TotalGestReportsView.superadminHeader({',
+              'window.TotalGestReportsView.distributorHeader({',
+              'window.TotalGestReportsView.moduleLicenseCard(card)',
+              'window.TotalGestReportsView.revenueBars({',
+              'window.TotalGestReportsView.superadminCompanySummary(_companySummary)',
+              'window.TotalGestReportsView.distributorClientSummary(_clientSummary)',
+              'window.TotalGestReportsView.adminOverviewCards(_adminSummary)',
+              'window.TotalGestAlertsView.alertsCard({',
+              'function renderizarDashboardAnalitico()',
+              'function renderizarAuditoria()',
+              'function renderizarMinhaLicenca()',
+              'function renderizarReports()',
+              'function renderizarAlertas()'
+          ]
+          for item in checks: print(item, text.count(item))
+          assert 'if (!usuarioLogado                container.innerHTML = html;' not in reports
+          assert reports.count('window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({') == 1
+          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateClientSummary({') == 1
+          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateAdminSummary({') == 1
+          assert reports.count('window.TotalGestReportsModuleMetrics.calculateOverview({') == 1
+          assert reports.count('window.TotalGestReportsView.moduleLicenseCard(card)') == 1
+          assert reports.count('window.TotalGestReportsView.superadminHeader({') == 1
+          assert reports.count('window.TotalGestReportsView.distributorHeader({') == 1
+          assert reports.count('window.TotalGestReportsView.adminOverviewCards(_adminSummary)') == 1
+          assert alertas.count('window.TotalGestAlertsView.alertsCard({') == 1
+          assert licenca.count('window.TotalGestLicenseAddons.renderAddon({') == 4
+          assert licenca.count('window.TotalGestLicenseAddons.renderRounds({') == 1
+          for item in [
               'window.TotalGestLicenseAddons.renderNoLicense()',
               'window.TotalGestLicenseAddons.renderErpComingSoon()',
               'window.TotalGestLicenseAddons.renderBaseAction({',
@@ -67,20 +83,12 @@ jobs:
               'window.TotalGestLicenseAddons.renderActivateAddons({',
               'window.TotalGestLicenseAddons.renderCancellation({',
               'window.TotalGestLicenseAddons.renderLicensePage({'
-          ]
-          for item in expected: assert block.count(item) == 1, (item, block.count(item))
-          assert block.count('window.TotalGestLicenseAddons.renderAddon({') == 4
-          assert block.count('window.TotalGestLicenseAddons.renderRounds({') == 1
-          for old in ['Sem licença atribuída', "Integração com ERP's", 'Resumo do pedido conjunto', 'Ativar Add-ons</button>', 'Encerrar Acordo com a Total Gest', 'Plano Demo.']:
-              assert old not in block, old
-          assert 'erpHtml: erpBloco,' in block
+          ]:
+              assert licenca.count(item) == 1, (item, licenca.count(item))
+          assert '#243B8F' in theme and '#FFF0C9' in theme
+          assert index_js.count("link.href = './assets/css/brand-theme.css';") == 1
+          assert app_ui.count("link.href = './assets/css/brand-theme.css';") == 1
+          assert sw.count("'./assets/css/brand-theme.css',") == 1
           assert "const CACHE = 'totalgest-v126';" in sw
-          print('LICENSE_PRESENTATION_PHASE2_VALIDATION=OK')
+          print('reports_access_guard', reports.count("if (!usuarioLogado || usuarioLogado.role !== 'admin' && usuarioLogado.role !== 'subadmin') {"))
           PY
-      - name: Commit da migração
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app.html sw.js
-          git commit -m "Extrair apresentação restante da licença"
-          git push origin refactor/separar-index-app
