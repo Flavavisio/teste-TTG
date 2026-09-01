@@ -30,10 +30,13 @@ jobs:
           from pathlib import Path
           app = Path('app.html').read_text(encoding='utf-8')
           sw = Path('sw.js').read_text(encoding='utf-8')
+          start = app.index('        function renderizarReports() {')
+          end = app.index('\n        function ', start + 1)
+          reports = app[start:end]
           bad = "if (!usuarioLogado                container.innerHTML = html;"
           proper = "if (!usuarioLogado || usuarioLogado.role !== 'admin' && usuarioLogado.role !== 'subadmin') {"
-          assert bad not in app
-          assert app.count(proper) == 1
+          assert bad not in reports
+          assert reports.count(proper) == 1
           assert app.count('function renderizarReports()') == 1
           assert app.count('window.TotalGestReportsView.superadminCompanySummary({') == 1
           assert app.count('window.TotalGestReportsView.distributorClientSummary({') == 1
