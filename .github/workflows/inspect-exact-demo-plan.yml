@@ -1,91 +1,79 @@
-name: Migrate admin report summary
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Confirmar branch e HEAD
+      - name: Estado dos módulos principais
         run: |
-          test "$(git branch --show-current)" = "refactor/separar-index-app"
-          git rev-parse HEAD
-      - name: Migrar resumo admin
-        run: python3 .github/scripts/migrate-admin-report-summary.py
-      - name: Validar migração
-        run: |
-          node --check assets/js/app-reports-distributor-metrics.js
-          node --check assets/js/app-reports-view.js
-          node --check sw.js
-          git diff --check
-          test "$(git diff --name-only | sort | tr '\n' ' ')" = "app.html assets/js/app-reports-distributor-metrics.js assets/js/app-reports-view.js sw.js "
-          node <<'NODE'
-          global.window = {};
-          require('./assets/js/app-reports-distributor-metrics.js');
-          require('./assets/js/app-reports-view.js');
-          const m = window.TotalGestReportsDistributorMetrics;
-          const data = {
-            funcionarios: [{adminId:'a',role:'funcionario',ordenadoBruto:'1000'}],
-            encarregados: [{adminId:'a',ordenadoBruto:'500'}],
-            clientes: [{adminId:'a'}],
-            servicos: [{adminId:'a',status:'pendente'},{adminId:'a',status:'concluído'}],
-            ponto: [{adminId:'a'}], pedidos: [{adminId:'a',status:'pendente_aprov'}],
-            folhasObra: [{adminId:'a',contratoId:'c'}], requisicoes: [{adminId:'a',status:'pendente_aprov'}],
-            contratos: [{adminId:'a',valor:'120'}], locais: [{adminId:'a'}], equipamentos: [{adminId:'a'}],
-            registosManutencao: [{adminId:'a'}], veiculos: [{adminId:'a'}],
-            veiculoIntervencoes: [{adminId:'a',custo:123.45}], veiculoSinistros: [{adminId:'a'}],
-            ajudas: [{adminId:'a',status:'pendente'}]
-          };
-          const out = m.calculateAdminSummary({
-            data,
-            admin:{id:'a',contratosPlano:'mensal'},
-            maintenanceState:()=>({chave:'em_dia'}), nextMaintenance:()=>null,
-            contractsActive:()=>true,
-            countFleet:()=>({total:1,emDia:1,aVencer:0,vencido:0})
-          });
-          if (out.totalFunc !== 1 || out.totalEncarregados !== 1 || out.gastoTotal !== 1500) throw new Error('overview');
-          if (out.contratosCount !== 1 || out.ctEmDia !== 1 || out.ctValor !== 120) throw new Error('contracts');
-          if (out.frotaTotal !== 1 || out.gastoVeiculos !== 123.45 || out.suporteTotal !== 1) throw new Error('operations');
-          const html = window.TotalGestReportsView.adminOverviewCards(out);
-          for (const needle of ['Recursos Humanos','Contratos de Manutenção','Frota','Suporte Técnico']) {
-            if (!html.includes(needle)) throw new Error('view ' + needle);
-          }
-          const compact = html.replace(/\s/g, '').replace(/\./g, '');
-          if (!compact.includes('1500,00€') || !compact.includes('123,45€')) throw new Error('view currency');
-          console.log('ADMIN_REPORT_SUMMARY_UNIT=OK');
-          NODE
           python3 - <<'PY'
           from pathlib import Path
-          app = Path('app.html').read_text(encoding='utf-8')
+          text = Path('app.html').read_text(encoding='utf-8')
+          start = text.index('        function renderizarReports() {')
+          end = text.index('\n        function ', start + 1)
+          reports = text[start:end]
+          alert_start = text.index('        function renderizarAlertas() {')
+          alert_end = text.index('\n        function ', alert_start + 1)
+          alertas = text[alert_start:alert_end]
+          lic_start = text.index('        function renderizarMinhaLicenca() {')
+          lic_end = text.index('\n        function ', lic_start + 1)
+          licenca = text[lic_start:lic_end]
+          index_js = Path('assets/js/index.js').read_text(encoding='utf-8')
+          app_ui = Path('assets/js/app-ui.js').read_text(encoding='utf-8')
           sw = Path('sw.js').read_text(encoding='utf-8')
-          start = app.index('        function renderizarReports() {')
-          end = app.index('\n        function ', start + 1)
-          block = app[start:end]
-          assert block.count('window.TotalGestReportsDistributorMetrics.calculateAdminSummary({') == 1
-          assert block.count('window.TotalGestReportsView.adminOverviewCards(_adminSummary)') == 1
-          assert block.count('window.TotalGestReportsModuleMetrics.calculateOverview({') == 1
-          assert block.count('window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({') == 1
-          assert block.count('window.TotalGestReportsDistributorMetrics.calculateClientSummary({') == 1
-          assert 'const _adminOverview =' not in block
-          assert 'const _adminContracts =' not in block
-          assert 'const _adminOperations =' not in block
+          theme = Path('assets/css/brand-theme.css').read_text(encoding='utf-8')
+          checks = [
+              'window.TotalGestDashboardAnalyticsMetrics.calculate({',
+              'window.TotalGestDashboardCounts.calculateContractSummary({',
+              'window.TotalGestDashboardCounts.calculateCrmCounts({',
+              'window.TotalGestLicenseAddons.renderAddon({',
+              'window.TotalGestLicenseAddons.renderRounds({',
+              'window.TotalGestLicenseAddons.renderLicensePage({',
+              'window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({',
+              'window.TotalGestReportsDistributorMetrics.calculateClientSummary({',
+              'window.TotalGestReportsDistributorMetrics.calculateAdminSummary({',
+              'window.TotalGestReportsModuleMetrics.calculateOverview({',
+              'window.TotalGestReportsView.superadminHeader({',
+              'window.TotalGestReportsView.distributorHeader({',
+              'window.TotalGestReportsView.moduleLicenseCard(card)',
+              'window.TotalGestReportsView.revenueBars({',
+              'window.TotalGestReportsView.superadminCompanySummary(_companySummary)',
+              'window.TotalGestReportsView.distributorClientSummary(_clientSummary)',
+              'window.TotalGestReportsView.adminOverviewCards(_adminSummary)',
+              'window.TotalGestAlertsView.alertsCard({',
+              'function renderizarDashboardAnalitico()',
+              'function renderizarAuditoria()',
+              'function renderizarMinhaLicenca()',
+              'function renderizarReports()',
+              'function renderizarAlertas()'
+          ]
+          for item in checks: print(item, text.count(item))
+          assert 'if (!usuarioLogado                container.innerHTML = html;' not in reports
+          assert reports.count('window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({') == 1
+          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateClientSummary({') == 1
+          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateAdminSummary({') == 1
+          assert reports.count('window.TotalGestReportsModuleMetrics.calculateOverview({') == 1
+          assert reports.count('window.TotalGestReportsView.moduleLicenseCard(card)') == 1
+          assert reports.count('window.TotalGestReportsView.superadminHeader({') == 1
+          assert reports.count('window.TotalGestReportsView.distributorHeader({') == 1
+          assert reports.count('window.TotalGestReportsView.adminOverviewCards(_adminSummary)') == 1
+          assert alertas.count('window.TotalGestAlertsView.alertsCard({') == 1
+          assert licenca.count('window.TotalGestLicenseAddons.renderAddon({') == 4
+          assert licenca.count('window.TotalGestLicenseAddons.renderRounds({') == 1
+          assert licenca.count('window.TotalGestLicenseAddons.renderLicensePage({') == 1
+          assert '#243B8F' in theme and '#FFF0C9' in theme
+          assert index_js.count("link.href = './assets/css/brand-theme.css';") == 1
+          assert app_ui.count("link.href = './assets/css/brand-theme.css';") == 1
+          assert sw.count("'./assets/css/brand-theme.css',") == 1
           assert "const CACHE = 'totalgest-v125';" in sw
-          print('ADMIN_REPORT_SUMMARY_VALIDATION=OK')
+          print('reports_access_guard', reports.count("if (!usuarioLogado || usuarioLogado.role !== 'admin' && usuarioLogado.role !== 'subadmin') {"))
           PY
-      - name: Commit da migração
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app.html assets/js/app-reports-distributor-metrics.js assets/js/app-reports-view.js sw.js
-          git commit -m "Agregar resumo admin dos relatórios"
-          git push origin refactor/separar-index-app
