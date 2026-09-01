@@ -66,5 +66,32 @@
     return { countFunc, countCli, osPend, osAndamento, countPonto, countPedidos, countFolhas, countReqs, countEncarregados };
   }
 
-  window.TotalGestDashboardCounts = { calculateRoleCounts: calculateRoleCounts };
+  function calculateStatusCounts(options) {
+    const opts = options || {};
+    const admins = opts.admins || [];
+    const renewalRequests = opts.renewalRequests || [];
+    const helps = opts.helps || [];
+    const user = opts.user;
+    const licencasAtivas = admins.filter(a => a.ativo && a.licenca && opts.isLicenseValid(a.licenca.dataExpiracao)).length;
+    const aVencer = admins.filter(a => a.ativo && a.licenca && opts.isLicenseValid(a.licenca.dataExpiracao) && opts.daysRemaining(a.licenca.dataExpiracao) <= 5).length;
+    const pedidosPendentes = renewalRequests.filter(p => p.status === 'pendente').length;
+    let ajudasRelevantes = [];
+    if (user) {
+      if (user.role === 'admin' || user.role === 'encarregado') {
+        ajudasRelevantes = helps.filter(a => a.remetenteId === user.id);
+      } else if (user.role === 'superadmin') {
+        ajudasRelevantes = helps;
+      }
+    }
+    return {
+      licencasAtivas: licencasAtivas,
+      aVencer: aVencer,
+      pedidosPendentes: pedidosPendentes,
+      ajudasPendentes: ajudasRelevantes.filter(a => a.status === 'pendente').length,
+      ajudasAnalise: ajudasRelevantes.filter(a => a.status === 'analise').length,
+      ajudasConcluido: ajudasRelevantes.filter(a => a.status === 'concluido').length
+    };
+  }
+
+  window.TotalGestDashboardCounts = { calculateRoleCounts: calculateRoleCounts, calculateStatusCounts: calculateStatusCounts };
 })();

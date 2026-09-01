@@ -18624,27 +18624,20 @@
             const countFolhas = _roleCounts.countFolhas;
             const countReqs = _roleCounts.countReqs;
             const countEncarregados = _roleCounts.countEncarregados;
-            const licencasAtivas = dados.administradores ? dados.administradores.filter(a =>
-                a.ativo && a.licenca && isLicencaValida(a.licenca.dataExpiracao)
-            ).length : 0;
-            const aVencer = dados.administradores ? dados.administradores.filter(a =>
-                a.ativo && a.licenca &&
-                isLicencaValida(a.licenca.dataExpiracao) &&
-                calcularDiasRestantes(a.licenca.dataExpiracao) <= 5
-            ).length : 0;
-            const pedidosPendentes = (dados.pedidosRenovacao || []).filter(p => p.status === 'pendente').length;
-            let ajudasPendentes = 0;
-            let ajudasRelevantes = [];
-            if (usuarioLogado) {
-                if (usuarioLogado.role === 'admin' || usuarioLogado.role === 'encarregado') {
-                    ajudasRelevantes = (dados.ajudas || []).filter(a => a.remetenteId === usuarioLogado.id);
-                } else if (usuarioLogado.role === 'superadmin') {
-                    ajudasRelevantes = (dados.ajudas || []);
-                }
-            }
-            ajudasPendentes = ajudasRelevantes.filter(a => a.status === 'pendente').length;
-            const ajudasAnalise = ajudasRelevantes.filter(a => a.status === 'analise').length;
-            const ajudasConcluido = ajudasRelevantes.filter(a => a.status === 'concluido').length;
+            const _statusCounts = window.TotalGestDashboardCounts.calculateStatusCounts({
+                admins: dados.administradores,
+                renewalRequests: dados.pedidosRenovacao,
+                helps: dados.ajudas,
+                user: usuarioLogado,
+                isLicenseValid: isLicencaValida,
+                daysRemaining: calcularDiasRestantes
+            });
+            const licencasAtivas = _statusCounts.licencasAtivas;
+            const aVencer = _statusCounts.aVencer;
+            const pedidosPendentes = _statusCounts.pedidosPendentes;
+            const ajudasPendentes = _statusCounts.ajudasPendentes;
+            const ajudasAnalise = _statusCounts.ajudasAnalise;
+            const ajudasConcluido = _statusCounts.ajudasConcluido;
             document.getElementById('countLicencas').textContent = licencasAtivas;
             document.getElementById('countAVencer').textContent = aVencer;
             document.getElementById('countPedidosRenovacao').textContent = pedidosPendentes;
