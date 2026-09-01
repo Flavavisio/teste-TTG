@@ -18321,52 +18321,26 @@
                 let html = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:16px;">
                     ${_kpi('Clientes', meusClientes.length + ` <span style=\"font-size:.7rem;color:#16a34a;\">(${ativos.length} ativos)</span>`, '#7c3aed', 'fa-user-tie')}
                 </div>`;
-                const _clientRows = [];
-                let totalCobradoGlobal = 0;
-                meusClientes.forEach(c => {
-                    const _clientMetrics = window.TotalGestReportsDistributorMetrics.calculateClient({
-                        client: c,
-                        data: dados,
-                        contractsActive: moduloContratosAtivo,
-                        fleetActive: moduloFrotaAtivo,
-                        warehouseActive: moduloArmazemAtivo,
-                        crmActive: moduloCrmAtivo,
-                        getPlanValue: getValorPlano,
-                        contractsAnnualPrice: PRECO_CONTRATOS_ANUAL,
-                        contractsMonthlyPrice: PRECO_CONTRATOS_MENSAL,
-                        fleetAnnualPrice: PRECO_FROTA_ANUAL,
-                        fleetMonthlyPrice: PRECO_FROTA_MENSAL,
-                        warehouseAnnualPrice: PRECO_ARMAZEM_ANUAL,
-                        warehouseMonthlyPrice: PRECO_ARMAZEM_MENSAL,
-                        crmAnnualPrice: PRECO_CRM_ANUAL,
-                        crmMonthlyPrice: PRECO_CRM_MENSAL
-                    });
-                    const funcs = _clientMetrics.funcionarios;
-                    const temContratos = _clientMetrics.temContratos;
-                    const temFrota = _clientMetrics.temFrota;
-                    const temArmazem = _clientMetrics.temArmazem;
-                    const temCrm = _clientMetrics.temCrm;
-                    const valorCliente = _clientMetrics.valorCliente;
-                    totalCobradoGlobal += valorCliente;
-                    const dataExp = c.licenca ? new Date(c.licenca.dataExpiracao).toLocaleDateString('pt-PT') : '-';
-                    const planoLabel = c.licenca ? PLANOS[c.licenca.plano]?.label || c.licenca.plano : 'Sem licença';
-                    _clientRows.push({
-                        empresa: c.empresa || '-',
-                        nome: c.nome,
-                        planoLabel: planoLabel,
-                        dataExp: dataExp,
-                        funcionarios: funcs,
-                        temContratos: temContratos,
-                        temFrota: temFrota,
-                        temArmazem: temArmazem,
-                        temCrm: temCrm,
-                        valorCliente: valorCliente
-                    });
+                const _clientSummary = window.TotalGestReportsDistributorMetrics.calculateClientSummary({
+                    clients: meusClientes,
+                    data: dados,
+                    contractsActive: moduloContratosAtivo,
+                    fleetActive: moduloFrotaAtivo,
+                    warehouseActive: moduloArmazemAtivo,
+                    crmActive: moduloCrmAtivo,
+                    getPlanValue: getValorPlano,
+                    contractsAnnualPrice: PRECO_CONTRATOS_ANUAL,
+                    contractsMonthlyPrice: PRECO_CONTRATOS_MENSAL,
+                    fleetAnnualPrice: PRECO_FROTA_ANUAL,
+                    fleetMonthlyPrice: PRECO_FROTA_MENSAL,
+                    warehouseAnnualPrice: PRECO_ARMAZEM_ANUAL,
+                    warehouseMonthlyPrice: PRECO_ARMAZEM_MENSAL,
+                    crmAnnualPrice: PRECO_CRM_ANUAL,
+                    crmMonthlyPrice: PRECO_CRM_MENSAL,
+                    planLabel: client => client.licenca ? PLANOS[client.licenca.plano]?.label || client.licenca.plano : 'Sem licença',
+                    expiryLabel: client => client.licenca ? new Date(client.licenca.dataExpiracao).toLocaleDateString('pt-PT') : '-'
                 });
-                html += window.TotalGestReportsView.distributorClientSummary({
-                    rows: _clientRows,
-                    totalCobrado: totalCobradoGlobal
-                });
+                html += window.TotalGestReportsView.distributorClientSummary(_clientSummary);
                 container.innerHTML = html;
                 return;
             }
