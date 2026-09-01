@@ -18173,7 +18173,7 @@
                 const _totEnc = _metrics.totalEncarregados;
                 const _addons = _metrics.addonsAtivos;
                 const _recT = _metrics.receitaRecorrente;
-                const _kpi = (lbl, val, cor, ic) => `<div style="border:1px solid #e6eaf2;border-left:4px solid ${cor};border-radius:10px;padding:12px 14px;background:#fff;"><div style="font-size:.78rem;color:#64748b;"><i class="fas ${ic}" style="color:${cor};"></i> ${lbl}</div><div style="font-size:1.2rem;font-weight:800;color:#0f172a;margin-top:4px;">${val}</div></div>`;
+                const _kpi = window.TotalGestReportsView.kpi;
                 let html = `<div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button class="btn btn-outline" onclick="relSuperAdminPDF()"><i class="fas fa-file-pdf"></i> Exportar PDF</button></div>`;
                 html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:16px;">
                     ${_kpi('Empresas', _emp.length + ` <span style=\"font-size:.7rem;color:#16a34a;\">(${_empAtivas} ativas)</span>`, '#2563eb', 'fa-building')}
@@ -18287,13 +18287,14 @@
                 const mensais = _contratosMetrics.monthly;
                 const anuais = _contratosMetrics.annual;
                 const receitaManut = _contratosMetrics.revenue;
-                html += `<div class="report-card">
-                            <h4><i class="fas fa-file-signature"></i> Licenças de Contratos de Manutenção</h4>
-                            <div class="report-item"><span>Empresas com módulo ativo</span><span>${comContratos.length}</span></div>
-                            <div class="report-item"><span>Plano Mensal</span><span>${mensais}</span></div>
-                            <div class="report-item"><span>Plano Anual</span><span>${anuais}</span></div>
-                            <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Receita do módulo</span><span>${receitaManut.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span></div>
-                        </div>`;
+                html += window.TotalGestReportsView.moduleLicenseCard({
+                    icon: 'fa-file-signature',
+                    title: 'Licenças de Contratos de Manutenção',
+                    activeCount: comContratos.length,
+                    monthly: mensais,
+                    annual: anuais,
+                    revenue: receitaManut
+                });
                 // Licenças de Frota
                 const _frotaMetrics = window.TotalGestReportsModuleMetrics.calculateFleet({
                     admins: admins,
@@ -18304,13 +18305,14 @@
                 const frotaMensais = _frotaMetrics.monthly;
                 const frotaAnuais = _frotaMetrics.annual;
                 const receitaFrota = _frotaMetrics.revenue;
-                html += `<div class="report-card">
-                            <h4><i class="fas fa-car"></i> Licenças de Frota</h4>
-                            <div class="report-item"><span>Empresas com módulo ativo</span><span>${comFrota.length}</span></div>
-                            <div class="report-item"><span>Plano Mensal</span><span>${frotaMensais}</span></div>
-                            <div class="report-item"><span>Plano Anual</span><span>${frotaAnuais}</span></div>
-                            <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Receita do módulo</span><span>${receitaFrota.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span></div>
-                        </div>`;
+                html += window.TotalGestReportsView.moduleLicenseCard({
+                    icon: 'fa-car',
+                    title: 'Licenças de Frota',
+                    activeCount: comFrota.length,
+                    monthly: frotaMensais,
+                    annual: frotaAnuais,
+                    revenue: receitaFrota
+                });
                 // Licenças de Armazém
                 const _warehouseMetrics = window.TotalGestReportsModuleMetrics.calculateWarehouse({
                     admins: admins,
@@ -18323,14 +18325,15 @@
                 const armAnuais = _warehouseMetrics.annual;
                 const armDemos = _warehouseMetrics.demos;
                 const receitaArmazem = _warehouseMetrics.revenue;
-                html += `<div class="report-card">
-                            <h4><i class="fas fa-boxes"></i> Licenças de Armazém</h4>
-                            <div class="report-item"><span>Empresas com módulo ativo</span><span>${comArmazem.length}</span></div>
-                            <div class="report-item"><span>Plano Mensal</span><span>${armMensais}</span></div>
-                            <div class="report-item"><span>Plano Anual</span><span>${armAnuais}</span></div>
-                            ${armDemos ? `<div class="report-item"><span>Demo</span><span>${armDemos}</span></div>` : ''}
-                            <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Receita do módulo</span><span>${receitaArmazem.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span></div>
-                        </div>`;
+                html += window.TotalGestReportsView.moduleLicenseCard({
+                    icon: 'fa-boxes',
+                    title: 'Licenças de Armazém',
+                    activeCount: comArmazem.length,
+                    monthly: armMensais,
+                    annual: armAnuais,
+                    demos: armDemos,
+                    revenue: receitaArmazem
+                });
                 // Licenças de Notificações
                 const _notificationsMetrics = window.TotalGestReportsModuleMetrics.calculateNotifications({
                     admins: admins,
@@ -18343,14 +18346,15 @@
                 const notifAnuais = _notificationsMetrics.annual;
                 const notifDemos = _notificationsMetrics.demos;
                 const receitaNotif = _notificationsMetrics.revenue;
-                html += `<div class="report-card">
-                            <h4><i class="fas fa-bell"></i> Licenças de Notificações</h4>
-                            <div class="report-item"><span>Empresas com módulo ativo</span><span>${comNotif.length}</span></div>
-                            <div class="report-item"><span>Plano Mensal</span><span>${notifMensais}</span></div>
-                            <div class="report-item"><span>Plano Anual</span><span>${notifAnuais}</span></div>
-                            ${notifDemos ? `<div class="report-item"><span>Demo</span><span>${notifDemos}</span></div>` : ''}
-                            <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Receita do módulo</span><span>${receitaNotif.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span></div>
-                        </div>`;
+                html += window.TotalGestReportsView.moduleLicenseCard({
+                    icon: 'fa-bell',
+                    title: 'Licenças de Notificações',
+                    activeCount: comNotif.length,
+                    monthly: notifMensais,
+                    annual: notifAnuais,
+                    demos: notifDemos,
+                    revenue: receitaNotif
+                });
                 // Licenças de CRM Comercial + Assist
                 const _crmMetrics = window.TotalGestReportsModuleMetrics.calculateCrm({
                     admins: admins,
@@ -18363,14 +18367,15 @@
                 const crmAnuais = _crmMetrics.annual;
                 const crmDemos = _crmMetrics.demos;
                 const receitaCrm = _crmMetrics.revenue;
-                html += `<div class="report-card">
-                            <h4><i class="fas fa-bullseye"></i> Licenças de CRM Comercial + Assist</h4>
-                            <div class="report-item"><span>Empresas com módulo ativo</span><span>${comCrm.length}</span></div>
-                            <div class="report-item"><span>Plano Mensal</span><span>${crmMensais}</span></div>
-                            <div class="report-item"><span>Plano Anual</span><span>${crmAnuais}</span></div>
-                            ${crmDemos ? `<div class="report-item"><span>Demo</span><span>${crmDemos}</span></div>` : ''}
-                            <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Receita do módulo</span><span>${receitaCrm.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span></div>
-                        </div>`;
+                html += window.TotalGestReportsView.moduleLicenseCard({
+                    icon: 'fa-bullseye',
+                    title: 'Licenças de CRM Comercial + Assist',
+                    activeCount: comCrm.length,
+                    monthly: crmMensais,
+                    annual: crmAnuais,
+                    demos: crmDemos,
+                    revenue: receitaCrm
+                });
                 // Nota: o Total Gest Assist deixou de ter card/receita própria — vem sempre incluído
                 // na licença de CRM Comercial (mesma subscrição, mesmo valor, já contabilizado acima).
                 // Receita por módulo (barra)
@@ -18386,8 +18391,7 @@
                 const mods = _revenueSummary.modules;
                 const maxMod = _revenueSummary.maxModuleRevenue;
                 const recTot = _revenueSummary.totalRevenue;
-                let barras = '';
-                mods.forEach(m => { barras += `<div style="margin:8px 0;"><div style="display:flex;justify-content:space-between;font-size:.85rem;"><span>${m.l}</span><strong>${m.v.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</strong></div><div style="background:#eef2f7;border-radius:6px;height:10px;overflow:hidden;margin-top:3px;"><div style="height:100%;width:${Math.round(m.v / maxMod * 100)}%;background:${m.c};"></div></div></div>`; });
+                const barras = window.TotalGestReportsView.revenueBars({ modules: mods, maxModuleRevenue: maxMod });
                 html += `<div class="report-card"><h4><i class="fas fa-coins"></i> Receita por módulo</h4>${barras}<div class="report-item" style="font-weight:bold;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:6px;"><span>Total</span><span>${recTot.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span></div></div>`;
                 container.innerHTML = html;
                 return;
@@ -18404,7 +18408,7 @@
                     isLicenseValid: isLicencaValida
                 });
                 const meusClientes = _distributorOverview.clients;
-                const _kpi = (lbl, val, cor, ic) => `<div style="border:1px solid #e6eaf2;border-left:4px solid ${cor};border-radius:10px;padding:12px 14px;background:#fff;"><div style="font-size:.78rem;color:#64748b;"><i class="fas ${ic}" style="color:${cor};"></i> ${lbl}</div><div style="font-size:1.2rem;font-weight:800;color:#0f172a;margin-top:4px;">${val}</div></div>`;
+                const _kpi = window.TotalGestReportsView.kpi;
                 const ativos = _distributorOverview.active;
                 let html = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:16px;">
                     ${_kpi('Clientes', meusClientes.length + ` <span style=\"font-size:.7rem;color:#16a34a;\">(${ativos.length} ativos)</span>`, '#7c3aed', 'fa-user-tie')}
@@ -29263,7 +29267,7 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, dashboardCounts: true,
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, reportsView: true, dashboardCounts: true,
                 dashboardAnalyticsMetrics: true, licenseAddons: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
