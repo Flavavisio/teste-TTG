@@ -6655,9 +6655,7 @@
                 avisoDiv.innerHTML = window.TotalGestServicesView.specialtyAndHistoryNotice({
                     canSeePending: _pendingSpecialty.canSeePending,
                     pendingServices: _pendingSpecialty.pendingServices,
-                    loadedSinceLabel: _servicosCarregadoDesde
-                        ? new Date(_servicosCarregadoDesde + 'T00:00:00').toLocaleDateString('pt-PT')
-                        : '—'
+                    loadedSinceLabel: window.TotalGestServicesView.serviceHistoryLoadedSinceLabel(_servicosCarregadoDesde)
                 });
             }
 

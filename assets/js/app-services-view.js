@@ -2,6 +2,11 @@
 (function () {
   'use strict';
 
+  function serviceHistoryLoadedSinceLabel(value) {
+    if (!value) return '—';
+    return new Date(value + 'T00:00:00').toLocaleDateString('pt-PT');
+  }
+
   function specialtyAndHistoryNotice(options) {
     const opts = options || {};
     const pending = Array.isArray(opts.pendingServices) ? opts.pendingServices : [];
@@ -107,5 +112,5 @@
     return `<tr>${rowLeadingCells(opts.leadingCells || {})}${rowActions(opts.actions || {})}</tr>`;
   }
 
-  window.TotalGestServicesView = { specialtyAndHistoryNotice, servicesTableState, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRow };
+  window.TotalGestServicesView = { serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, servicesTableState, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRow };
 })();
