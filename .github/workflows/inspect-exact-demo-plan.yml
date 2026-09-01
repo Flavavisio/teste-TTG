@@ -1,51 +1,77 @@
-name: Inspect app migration boundary
+name: Migrate services row controls
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - refactor/separar-index-app
+    paths:
+      - '.github/workflows/inspect-exact-demo-plan.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Confirmar branch e HEAD
         run: |
+          test "$(git branch --show-current)" = "refactor/separar-index-app"
+          git rev-parse HEAD
+      - name: Migrar controlos visuais da linha
+        run: python3 .github/scripts/migrate-services-row-controls.py
+      - name: Validar migração
+        run: |
+          node --check assets/js/app-services-view.js
+          node --check sw.js
+          git diff --check
+          test "$(git diff --name-only | sort | tr '\n' ' ')" = "app.html sw.js "
+          node <<'NODE'
+          global.window = {};
+          require('./assets/js/app-services-view.js');
+          const v = window.TotalGestServicesView;
+          const badge = v.statusControl({serviceId:'S1',status:'concluído',canEdit:true,badgeClass:'badge-ok'});
+          if (!badge.includes('badge-ok') || !badge.includes('concluído')) throw new Error('status-badge');
+          const approval = v.statusControl({serviceId:'S1',status:'por aprovar',canEdit:true,badgeClass:'x'});
+          if (!approval.includes('por aprovar') || approval.includes('<select')) throw new Error('status-approval');
+          const editable = v.statusControl({serviceId:'S1',status:'pendente',canEdit:true,badgeClass:'x'});
+          if (!editable.includes("alterarStatusOS('S1', this.value)") || !editable.includes('status-select')) throw new Error('status-editable');
+          const noSheet = v.workSheetActions({serviceId:'S1',status:'concluído'});
+          if (!noSheet.includes("criarFolhaDaOS('S1')") || !noSheet.includes('Folha')) throw new Error('sheet-create');
+          const sheetWork = v.workSheetActions({serviceId:'S1',status:'concluído',sheetId:'F1',workId:'O1'});
+          if (!sheetWork.includes("abrirFolhaDetalhe('F1')") || !sheetWork.includes('fa-plus')) throw new Error('sheet-work');
+          const sheetNoWork = v.workSheetActions({serviceId:'S1',status:'concluído',sheetId:'F1'});
+          if (!sheetNoWork.includes('Já existe uma folha de obra para esta OS.')) throw new Error('sheet-no-work');
+          if (v.workSheetActions({serviceId:'S1',status:'pendente'}) !== '') throw new Error('sheet-pending');
+          console.log('SERVICES_ROW_CONTROLS_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          shell = Path('assets/js/app-shell.js').read_text(encoding='utf-8')
+          app = Path('app.html').read_text(encoding='utf-8')
           sw = Path('sw.js').read_text(encoding='utf-8')
-          def fn(name):
-              start = text.index(f'        function {name}() {{')
-              end = text.index('\n        function ', start + 1)
-              return text[start:end]
-          reports = fn('renderizarReports')
-          alertas = fn('renderizarAlertas')
-          licenca = fn('renderizarMinhaLicenca')
-          servicos = fn('renderizarServicos')
-          assert reports.count('window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({') == 1
-          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateClientSummary({') == 1
-          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateAdminSummary({') == 1
-          assert reports.count('window.TotalGestReportsModuleMetrics.calculateOverview({') == 1
-          assert alertas.count('window.TotalGestAlertsView.alertsCard({') == 1
-          assert licenca.count('window.TotalGestLicenseAddons.renderAddon({') == 4
-          assert licenca.count('window.TotalGestLicenseAddons.renderRounds({') == 1
-          assert servicos.count('window.TotalGestServicesSelection.selectVisibleServices({') == 1
-          assert servicos.count('window.TotalGestServicesView.specialtyAndHistoryNotice({') == 1
-          assert servicos.count('tbody.innerHTML = servicos.map(') == 1
+          start = app.index('        function renderizarServicos() {')
+          end = app.index('\n        function ', start + 1)
+          block = app[start:end]
+          assert block.count('window.TotalGestServicesView.statusControl({') == 1
+          assert block.count('window.TotalGestServicesView.workSheetActions({') == 1
+          assert block.count('window.TotalGestServicesSelection.selectVisibleServices({') == 1
+          assert block.count('window.TotalGestServicesView.specialtyAndHistoryNotice({') == 1
+          assert block.count('tbody.innerHTML = servicos.map(') == 1
           for item in ['faturarOSViaTOConline(', 'faturarOSViaMoloni(', '_verificarPagamentoMoloni(', 'emitirGuiaTransporteMoloni(', 'emitirNotaCreditoMoloni(']:
-              assert servicos.count(item) == 1, (item, servicos.count(item))
-          assert shell.count("servicesSelection: './assets/js/app-services-selection.js'") == 1
-          assert shell.count("servicesView: './assets/js/app-services-view.js'") == 1
-          assert text.count('servicesSelection: true') == 1
-          assert text.count('servicesView: true') == 1
-          assert sw.count("'./assets/js/app-services-selection.js',") == 1
-          assert sw.count("'./assets/js/app-services-view.js',") == 1
-          assert "const CACHE = 'totalgest-v128';" in sw
-          print('APP_MIGRATION_BOUNDARY=OK')
+              assert block.count(item) == 1, (item, block.count(item))
+          assert "alterarStatusOS('${s.id}', this.value)" not in block
+          assert "abrirFolhaDetalhe('${folhaOS.id}')" not in block
+          assert "const CACHE = 'totalgest-v129';" in sw
+          print('SERVICES_ROW_CONTROLS_VALIDATION=OK')
           PY
+      - name: Commit da migração
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.html sw.js
+          git commit -m "Extrair controlos visuais das ordens de serviço"
+          git push origin refactor/separar-index-app
