@@ -17,7 +17,6 @@
     };
   }
 
-
   function calculateFleet(options) {
     const opts = options || {};
     const admins = opts.admins || [];
@@ -32,7 +31,6 @@
       revenue: monthly * opts.monthlyPrice + annual * opts.annualPrice
     };
   }
-
 
   function calculateWarehouse(options) {
     const opts = options || {};
@@ -51,7 +49,6 @@
     };
   }
 
-
   function calculateNotifications(options) {
     const opts = options || {};
     const admins = opts.admins || [];
@@ -68,7 +65,6 @@
       revenue: monthly * opts.monthlyPrice + annual * opts.annualPrice
     };
   }
-
 
   function calculateCrm(options) {
     const opts = options || {};
@@ -87,11 +83,74 @@
     };
   }
 
+  function card(icon, title, metrics) {
+    return {
+      icon: icon,
+      title: title,
+      activeCount: metrics.active.length,
+      monthly: metrics.monthly,
+      annual: metrics.annual,
+      demos: metrics.demos,
+      revenue: metrics.revenue
+    };
+  }
+
+  function calculateOverview(options) {
+    const opts = options || {};
+    const admins = opts.admins || [];
+    const contracts = calculateContracts({
+      admins: admins,
+      monthlyPrice: opts.contractsMonthlyPrice,
+      annualPrice: opts.contractsAnnualPrice
+    });
+    const fleet = calculateFleet({
+      admins: admins,
+      monthlyPrice: opts.fleetMonthlyPrice,
+      annualPrice: opts.fleetAnnualPrice
+    });
+    const warehouse = calculateWarehouse({
+      admins: admins,
+      isActive: opts.warehouseActive,
+      monthlyPrice: opts.warehouseMonthlyPrice,
+      annualPrice: opts.warehouseAnnualPrice
+    });
+    const notifications = calculateNotifications({
+      admins: admins,
+      isActive: opts.notificationsActive,
+      monthlyPrice: opts.notificationsMonthlyPrice,
+      annualPrice: opts.notificationsAnnualPrice
+    });
+    const crm = calculateCrm({
+      admins: admins,
+      isActive: opts.crmActive,
+      monthlyPrice: opts.crmMonthlyPrice,
+      annualPrice: opts.crmAnnualPrice
+    });
+
+    return {
+      cards: [
+        card('fa-file-signature', 'Licenças de Contratos de Manutenção', contracts),
+        card('fa-car', 'Licenças de Frota', fleet),
+        card('fa-boxes', 'Licenças de Armazém', warehouse),
+        card('fa-bell', 'Licenças de Notificações', notifications),
+        card('fa-bullseye', 'Licenças de CRM Comercial + Assist', crm)
+      ],
+      revenues: {
+        contracts: contracts.revenue,
+        fleet: fleet.revenue,
+        warehouse: warehouse.revenue,
+        notifications: notifications.revenue,
+        crm: crm.revenue
+      }
+    };
+  }
+
   window.TotalGestReportsModuleMetrics = {
     calculateContracts: calculateContracts,
     calculateFleet: calculateFleet,
     calculateWarehouse: calculateWarehouse,
     calculateNotifications: calculateNotifications,
-    calculateCrm: calculateCrm
+    calculateCrm: calculateCrm,
+    calculateOverview: calculateOverview
   };
 })();
