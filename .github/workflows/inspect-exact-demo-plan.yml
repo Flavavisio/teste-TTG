@@ -1,6 +1,8 @@
-name: Inspect app migration boundary
+name: Inspect dashboard counts tail
 
 on:
+  push:
+    branches: [refactor/separar-index-app]
   workflow_dispatch:
 
 permissions:
@@ -8,23 +10,10 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestDashboardCounts.calculateRoleCounts({',
-              'window.TotalGestReportsDistributorMetrics.calculateAdminOperations({',
-              'window.TotalGestReportsDistributorMetrics.calculateAdminContracts({',
-              'window.TotalGestReportsDistributorMetrics.calculateAdminOverview({',
-              'function atualizarContagens()',
-              'function renderizarReports('
-          ]
-          for item in checks: print(item, text.count(item))
-          PY
+      - run: python3 .github/scripts/inspect-dashboard-counts-tail.py
