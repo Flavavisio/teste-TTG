@@ -1,73 +1,82 @@
-name: Inspect app migration boundary
+name: Migrate reports module overview
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - refactor/separar-index-app
+    paths:
+      - '.github/workflows/inspect-exact-demo-plan.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Confirmar branch e HEAD
         run: |
+          test "$(git branch --show-current)" = "refactor/separar-index-app"
+          git rev-parse HEAD
+      - name: Migrar agregação dos módulos
+        run: python3 .github/scripts/audit-next-hotspot.py
+      - name: Validar migração
+        run: |
+          node --check assets/js/app-reports-module-metrics.js
+          node --check assets/js/app-reports-view.js
+          node --check sw.js
+          git diff --check
+          node <<'NODE'
+          global.window = {};
+          require('./assets/js/app-reports-module-metrics.js');
+          const m = window.TotalGestReportsModuleMetrics;
+          const now = Date.now();
+          const admins = [
+            { id:'a', contratosPlano:'mensal', contratosExpiracao:now+100000, frotaPlano:'anual', frotaExpiracao:now+100000, armazemPlano:'demo', crmPlano:'mensal', notificacoesPlano:'anual' },
+            { id:'b', contratosPlano:'anual', contratosExpiracao:now+100000, armazemPlano:'mensal', crmPlano:'anual', notificacoesPlano:'demo' }
+          ];
+          const out = m.calculateOverview({
+            admins,
+            warehouseActive:a=>!!a.armazemPlano,
+            notificationsActive:a=>!!a.notificacoesPlano,
+            crmActive:a=>!!a.crmPlano,
+            contractsMonthlyPrice:10, contractsAnnualPrice:100,
+            fleetMonthlyPrice:20, fleetAnnualPrice:200,
+            warehouseMonthlyPrice:30, warehouseAnnualPrice:300,
+            notificationsMonthlyPrice:40, notificationsAnnualPrice:400,
+            crmMonthlyPrice:50, crmAnnualPrice:500
+          });
+          if (out.cards.length !== 5) throw new Error('cards');
+          if (out.cards[0].activeCount !== 2 || out.revenues.contracts !== 110) throw new Error('contracts');
+          if (out.revenues.fleet !== 200) throw new Error('fleet');
+          if (out.cards[2].demos !== 1 || out.revenues.warehouse !== 30) throw new Error('warehouse');
+          if (out.cards[3].demos !== 1 || out.revenues.notifications !== 400) throw new Error('notifications');
+          if (out.revenues.crm !== 550) throw new Error('crm');
+          console.log('REPORTS_MODULE_OVERVIEW_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          start = text.index('        function renderizarReports() {')
-          end = text.index('\n        function ', start + 1)
-          reports = text[start:end]
-          alert_start = text.index('        function renderizarAlertas() {')
-          alert_end = text.index('\n        function ', alert_start + 1)
-          alertas = text[alert_start:alert_end]
-          lic_start = text.index('        function renderizarMinhaLicenca() {')
-          lic_end = text.index('\n        function ', lic_start + 1)
-          licenca = text[lic_start:lic_end]
-          index_js = Path('assets/js/index.js').read_text(encoding='utf-8')
-          app_ui = Path('assets/js/app-ui.js').read_text(encoding='utf-8')
+          app = Path('app.html').read_text(encoding='utf-8')
           sw = Path('sw.js').read_text(encoding='utf-8')
-          theme = Path('assets/css/brand-theme.css').read_text(encoding='utf-8')
-          checks = [
-              'window.TotalGestDashboardAnalyticsMetrics.calculate({',
-              'window.TotalGestDashboardCounts.calculateContractSummary({',
-              'window.TotalGestDashboardCounts.calculateCrmCounts({',
-              'window.TotalGestLicenseAddons.renderAddon({',
-              'window.TotalGestLicenseAddons.renderRounds({',
-              'window.TotalGestLicenseAddons.renderLicensePage({',
-              'window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({',
-              'window.TotalGestReportsDistributorMetrics.calculateClientSummary({',
-              'window.TotalGestReportsView.superadminHeader({',
-              'window.TotalGestReportsView.distributorHeader({',
-              'window.TotalGestReportsView.moduleLicenseCard({',
-              'window.TotalGestReportsView.revenueBars({',
-              'window.TotalGestReportsView.superadminCompanySummary(_companySummary)',
-              'window.TotalGestReportsView.distributorClientSummary(_clientSummary)',
-              'window.TotalGestReportsView.adminOverviewCards({',
-              'window.TotalGestAlertsView.alertsCard({',
-              'function renderizarDashboardAnalitico()',
-              'function renderizarAuditoria()',
-              'function renderizarMinhaLicenca()',
-              'function renderizarReports()',
-              'function renderizarAlertas()'
-          ]
-          for item in checks: print(item, text.count(item))
-          assert 'if (!usuarioLogado                container.innerHTML = html;' not in reports
-          assert reports.count('window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({') == 1
-          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateClientSummary({') == 1
-          assert reports.count('window.TotalGestReportsView.superadminHeader({') == 1
-          assert reports.count('window.TotalGestReportsView.distributorHeader({') == 1
-          assert alertas.count('window.TotalGestAlertsView.alertsCard({') == 1
-          assert licenca.count('window.TotalGestLicenseAddons.renderAddon({') == 4
-          assert licenca.count('window.TotalGestLicenseAddons.renderRounds({') == 1
-          assert licenca.count('window.TotalGestLicenseAddons.renderLicensePage({') == 1
-          assert '#243B8F' in theme and '#FFF0C9' in theme
-          assert index_js.count("link.href = './assets/css/brand-theme.css';") == 1
-          assert app_ui.count("link.href = './assets/css/brand-theme.css';") == 1
-          assert sw.count("'./assets/css/brand-theme.css',") == 1
-          assert "const CACHE = 'totalgest-v123';" in sw
-          print('reports_access_guard', reports.count("if (!usuarioLogado || usuarioLogado.role !== 'admin' && usuarioLogado.role !== 'subadmin') {"))
+          start = app.index('        function renderizarReports() {')
+          end = app.index('\n        function ', start + 1)
+          block = app[start:end]
+          assert block.count('window.TotalGestReportsModuleMetrics.calculateOverview({') == 1
+          assert block.count('window.TotalGestReportsView.moduleLicenseCard(card)') == 1
+          assert block.count('window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({') == 1
+          assert block.count('window.TotalGestReportsDistributorMetrics.calculateClientSummary({') == 1
+          assert block.count('window.TotalGestReportsView.adminOverviewCards({') == 1
+          assert "const CACHE = 'totalgest-v124';" in sw
+          print('REPORTS_MODULE_OVERVIEW_VALIDATION=OK')
           PY
+      - name: Commit da migração
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.html sw.js
+          git commit -m "Agregar métricas dos módulos nos relatórios"
+          git push origin refactor/separar-index-app
