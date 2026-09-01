@@ -79,6 +79,7 @@
     reportsModuleMetrics: './assets/js/app-reports-module-metrics.js',
     reportsDistributorMetrics: './assets/js/app-reports-distributor-metrics.js',
     reportsView: './assets/js/app-reports-view.js',
+    alertsView: './assets/js/app-alerts-view.js',
     dashboardCounts: './assets/js/app-dashboard-counts.js',
     dashboardAnalyticsMetrics: './assets/js/app-dashboard-analytics-metrics.js',
     licenseAddons: './assets/js/app-license-addons.js',
@@ -194,6 +195,7 @@
     if (options.reportsModuleMetrics === true) pedidos.push(MODULOS.reportsModuleMetrics);
     if (options.reportsDistributorMetrics === true) pedidos.push(MODULOS.reportsDistributorMetrics);
     if (options.reportsView === true) pedidos.push(MODULOS.reportsView);
+    if (options.alertsView === true) pedidos.push(MODULOS.alertsView);
     if (options.dashboardCounts === true) pedidos.push(MODULOS.dashboardCounts);
     if (options.dashboardAnalyticsMetrics === true) pedidos.push(MODULOS.dashboardAnalyticsMetrics);
     if (options.licenseAddons === true) pedidos.push(MODULOS.licenseAddons);

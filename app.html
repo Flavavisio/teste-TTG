@@ -13196,34 +13196,10 @@
 
             if (!alertas.length) { cont.style.display = 'none'; cont.innerHTML = ''; return; }
             cont.style.display = 'block';
-            const icone = t => t === 'danger'
-                ? '<span class="alerta-ic danger"><i class="fas fa-triangle-exclamation"></i></span>'
-                : t === 'warning'
-                ? '<span class="alerta-ic warn"><i class="fas fa-exclamation-triangle"></i></span>'
-                : '<span class="alerta-ic info"><i class="fas fa-info"></i></span>';
-            const linhasHtml = alertas.map(a => `<div class="alerta-linha ${a.tipo === 'danger' ? 'danger' : ''}" onclick="${a.acao}">
-                    ${icone(a.tipo)}
-                    <div class="alerta-txt"><div class="alerta-t">${a.titulo}</div><div class="alerta-s">${a.sub}</div></div>
-                    <i class="fas fa-chevron-right alerta-chev"></i>
-                </div>`).join('');
-            if (_ehPerfilMobile()) {
-                // No telemóvel, os Alertas ficam num acordeão fechado por defeito (para não
-                // empurrar logo "O Meu Dia" para baixo) — o ponto vermelho a piscar no cabeçalho
-                // (igual ao indicador "em curso" das OS) avisa que há algo por ver, sem precisar
-                // de abrir.
-                cont.innerHTML = `<div class="alertas-card">
-                    <div class="alertas-h alertas-h--acordeao" onclick="this.closest('.alertas-card').classList.toggle('aberto')">
-                        <span style="display:flex;align-items:center;gap:8px;"><i class="fas fa-bell"></i> Alertas e Pendências <span class="tgm-live-dot tgm-live-dot--vermelho"></span></span>
-                        <i class="fas fa-chevron-down alertas-acordeao-seta"></i>
-                    </div>
-                    <div class="alertas-corpo">${linhasHtml}</div>
-                </div>`;
-            } else {
-                cont.innerHTML = `<div class="alertas-card">
-                    <div class="alertas-h"><i class="fas fa-bell"></i> Alertas e Pendências</div>
-                    ${linhasHtml}
-                </div>`;
-            }
+            cont.innerHTML = window.TotalGestAlertsView.alertsCard({
+                alertas: alertas,
+                mobile: _ehPerfilMobile()
+            });
         }
 
         // ==================== ARMAZÉM / STOCK (Fase 1) ====================
@@ -29237,7 +29213,7 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, reportsView: true, dashboardCounts: true,
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, reportsView: true, alertsView: true, dashboardCounts: true,
                 dashboardAnalyticsMetrics: true, licenseAddons: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
