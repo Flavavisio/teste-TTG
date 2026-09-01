@@ -27,11 +27,13 @@ block_start = "            const icone = t => t === 'danger'\n"
 block_end = '''                </div>`;\n            }'''
 assert body.count(block_start) == 1, body.count(block_start)
 start_rel = body.index(block_start)
-end_rel = body.index(block_end, start_rel) + len(block_end)
+end_rel = body.rindex(block_end, start_rel) + len(block_end)
 old = body[start_rel:end_rel]
 assert 'const linhasHtml = alertas.map' in old
 assert "if (_ehPerfilMobile())" in old
-assert old.count('cont.innerHTML = `<div class="alertas-card">') == 2
+assert old.count('cont.innerHTML = `<div class="alertas-card">') == 2, old.count('cont.innerHTML = `<div class="alertas-card">')
+assert 'alertas-h--acordeao' in old
+assert '<div class="alertas-h"><i class="fas fa-bell"></i> Alertas e Pendências</div>' in old
 
 replacement = '''            cont.innerHTML = window.TotalGestAlertsView.alertsCard({\n                alertas: alertas,\n                mobile: _ehPerfilMobile()\n            });'''
 body = body[:start_rel] + replacement + body[end_rel:]
