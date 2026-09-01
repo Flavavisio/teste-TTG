@@ -1,4 +1,4 @@
-name: Migrate alerts presentation
+name: Diagnose app shell options
 
 on:
   push:
@@ -7,10 +7,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
+  diagnose:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
@@ -21,36 +21,24 @@ jobs:
         run: |
           test "$(git branch --show-current)" = "refactor/separar-index-app"
           git rev-parse HEAD
-      - name: Migrar apresentação de alertas
-        run: python3 .github/scripts/migrate-alerts-view.py
-      - name: Validar migração
+      - name: Localizar configuração do shell
         run: |
-          node --check assets/js/app-alerts-view.js
-          node --check assets/js/app-shell.js
-          node --check sw.js
-          git diff --check
           python3 - <<'PY'
           from pathlib import Path
-          app = Path('app.html').read_text(encoding='utf-8')
-          shell = Path('assets/js/app-shell.js').read_text(encoding='utf-8')
-          sw = Path('sw.js').read_text(encoding='utf-8')
-          start = app.index('        function renderizarAlertas() {')
-          end = app.index('\n        function ', start + 1)
-          alertas = app[start:end]
-          assert alertas.count('window.TotalGestAlertsView.alertsCard({') == 1
-          assert 'const linhasHtml = alertas.map' not in alertas
-          assert "const icone = t => t === 'danger'" not in alertas
-          assert app.count('alertsView: true,') == 1
-          assert shell.count("alertsView: './assets/js/app-alerts-view.js',") == 1
-          assert shell.count('if (options.alertsView === true) pedidos.push(MODULOS.alertsView);') == 1
-          assert sw.count("'./assets/js/app-alerts-view.js',") == 1
-          assert "const CACHE = 'totalgest-v118';" in sw
-          print('ALERTS_VIEW_VALIDATION=OK')
+          text = Path('app.html').read_text(encoding='utf-8')
+          for needle in ['reportsView', 'TotalGestAppShell', 'carregarModulos', 'iniciar({']:
+              print('---', needle, '---')
+              pos = 0
+              found = 0
+              while True:
+                  pos = text.find(needle, pos)
+                  if pos < 0: break
+                  found += 1
+                  left = max(0, text.rfind('\n', 0, max(0, pos - 500)))
+                  right = text.find('\n', min(len(text), pos + 700))
+                  if right < 0: right = len(text)
+                  print(text[left:right])
+                  pos += len(needle)
+              print('count=', found)
+          print('DIAGNOSE_APP_SHELL_OPTIONS=OK')
           PY
-      - name: Commit da migração
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app.html assets/js/app-shell.js sw.js
-          git commit -m "Extrair apresentação dos alertas"
-          git push origin refactor/separar-index-app
