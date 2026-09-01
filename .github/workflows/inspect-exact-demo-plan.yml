@@ -1,24 +1,51 @@
-name: Audit services refactor boundary
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  audit:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Confirmar branch e HEAD
+      - name: Estado dos módulos principais
         run: |
-          test "$(git branch --show-current)" = "refactor/separar-index-app"
-          git rev-parse HEAD
-      - name: Auditar renderizarServicos
-        run: python3 .github/scripts/audit-renderizar-servicos.py
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('app.html').read_text(encoding='utf-8')
+          sw = Path('sw.js').read_text(encoding='utf-8')
+          def fn(name):
+              start = text.index(f'        function {name}() {{')
+              end = text.index('\n        function ', start + 1)
+              return text[start:end]
+          reports = fn('renderizarReports')
+          alertas = fn('renderizarAlertas')
+          licenca = fn('renderizarMinhaLicenca')
+          servicos = fn('renderizarServicos')
+          assert reports.count('window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({') == 1
+          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateClientSummary({') == 1
+          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateAdminSummary({') == 1
+          assert reports.count('window.TotalGestReportsModuleMetrics.calculateOverview({') == 1
+          assert reports.count('window.TotalGestReportsView.adminOverviewCards(_adminSummary)') == 1
+          assert alertas.count('window.TotalGestAlertsView.alertsCard({') == 1
+          assert licenca.count('window.TotalGestLicenseAddons.renderAddon({') == 4
+          assert licenca.count('window.TotalGestLicenseAddons.renderRounds({') == 1
+          for item in [
+              'window.TotalGestLicenseAddons.renderNoLicense()',
+              'window.TotalGestLicenseAddons.renderErpComingSoon()',
+              'window.TotalGestLicenseAddons.renderBaseAction({',
+              'window.TotalGestLicenseAddons.renderJointRequest({',
+              'window.TotalGestLicenseAddons.renderActivateAddons({',
+              'window.TotalGestLicenseAddons.renderCancellation({',
+              'window.TotalGestLicenseAddons.renderLicensePage({'
+          ]:
+              assert licenca.count(item) == 1, (item, licenca.count(item))
+          assert servicos.count('tbody.innerHTML = servicos.map(') == 1
+          assert "const CACHE = 'totalgest-v126';" in sw
+          print('APP_MIGRATION_BOUNDARY=OK')
+          PY
