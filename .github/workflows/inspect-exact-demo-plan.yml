@@ -1,53 +1,28 @@
-name: Migrate services row cells
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches: [refactor/separar-index-app]
-    paths: ['.github/workflows/inspect-exact-demo-plan.yml']
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Confirmar branch e HEAD
+      - name: Estado dos módulos principais
         run: |
-          test "$(git branch --show-current)" = "refactor/separar-index-app"
-          git rev-parse HEAD
-      - name: Migrar células base
-        run: python3 .github/scripts/audit-services-next.py
-      - name: Validar migração
-        run: |
-          node --check assets/js/app-services-view.js
-          node --check sw.js
-          git diff --check
-          test "$(git diff --name-only | sort | tr '\n' ' ')" = "app.html sw.js "
-          node <<'NODE'
-          global.window={}; require('./assets/js/app-services-view.js');
-          const v=window.TotalGestServicesView;
-          const h=v.rowLeadingCells({number:'OS-1',hasMaterials:true,clientName:'Cliente',employeeName:'Técnico',date:'2026-09-01',time:'10:00',description:'Teste',workTypesHtml:'<b>Tipo</b>',statusHtml:'<i>OK</i>'});
-          if ((h.match(/<td>/g)||[]).length !== 8 || !h.includes('boxes-stacked') || !h.includes('Cliente') || !h.includes('<i>OK</i>')) throw new Error('row-cells');
-          console.log('SERVICES_ROW_CELLS_UNIT=OK');
-          NODE
           python3 - <<'PY'
           from pathlib import Path
-          app=Path('app.html').read_text(encoding='utf-8'); sw=Path('sw.js').read_text(encoding='utf-8')
-          s=app.index('        function renderizarServicos() {'); e=app.index('\n        function ',s+1); b=app[s:e]
-          assert b.count('window.TotalGestServicesView.rowLeadingCells({')==1
-          for x in ['faturarOSViaTOConline(','faturarOSViaMoloni(','_verificarPagamentoMoloni(','emitirGuiaTransporteMoloni(','emitirNotaCreditoMoloni(']: assert b.count(x)==1,(x,b.count(x))
+          text=Path('app.html').read_text(encoding='utf-8'); sw=Path('sw.js').read_text(encoding='utf-8')
+          def fn(name):
+              s=text.index(f'        function {name}() {{'); e=text.index('\n        function ',s+1); return text[s:e]
+          servicos=fn('renderizarServicos')
+          for x in ['selectVisibleServices({','specialtyAndHistoryNotice({','statusControl({','workSheetActions({','rowLeadingCells({']: assert servicos.count(x)==1,(x,servicos.count(x))
+          for x in ['faturarOSViaTOConline(','faturarOSViaMoloni(','_verificarPagamentoMoloni(','emitirGuiaTransporteMoloni(','emitirNotaCreditoMoloni(']: assert servicos.count(x)==1,(x,servicos.count(x))
           assert "const CACHE = 'totalgest-v130';" in sw
-          print('SERVICES_ROW_CELLS_VALIDATION=OK')
+          print('APP_MIGRATION_BOUNDARY=OK')
           PY
-      - name: Commit da migração
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app.html sw.js
-          git commit -m "Extrair células base das ordens de serviço"
-          git push origin refactor/separar-index-app
