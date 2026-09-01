@@ -6647,16 +6647,14 @@
 
             const avisoDiv = document.getElementById('servicosAvisoEspecialidade');
             if (avisoDiv) {
-                const _podeVerPendentes = usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin' || usuarioLogado?.role === 'encarregado';
-                const _servicosPendentesEspecialidade = _podeVerPendentes
-                    ? servicos
-                        .filter(s => s.status === 'concluído')
-                        .map(s => ({ number: s.numeroRegisto || '', types: _tiposEspecialidadePendentes(s.id) }))
-                        .filter(item => item.types.length > 0)
-                    : [];
+                const _pendingSpecialty = window.TotalGestServicesSelection.selectPendingSpecialtyServices({
+                    services: servicos,
+                    role: usuarioLogado?.role || '',
+                    getPendingTypes: serviceId => _tiposEspecialidadePendentes(serviceId)
+                });
                 avisoDiv.innerHTML = window.TotalGestServicesView.specialtyAndHistoryNotice({
-                    canSeePending: _podeVerPendentes,
-                    pendingServices: _servicosPendentesEspecialidade,
+                    canSeePending: _pendingSpecialty.canSeePending,
+                    pendingServices: _pendingSpecialty.pendingServices,
                     loadedSinceLabel: _servicosCarregadoDesde
                         ? new Date(_servicosCarregadoDesde + 'T00:00:00').toLocaleDateString('pt-PT')
                         : '—'
