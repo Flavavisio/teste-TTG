@@ -1,42 +1,56 @@
-name: Inspect app migration boundary
+name: Migrate alerts presentation
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Confirmar branch e HEAD
         run: |
+          test "$(git branch --show-current)" = "refactor/separar-index-app"
+          git rev-parse HEAD
+      - name: Migrar apresentação de alertas
+        run: python3 .github/scripts/migrate-alerts-view.py
+      - name: Validar migração
+        run: |
+          node --check assets/js/app-alerts-view.js
+          node --check assets/js/app-shell.js
+          node --check sw.js
+          git diff --check
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          start = text.index('        function renderizarReports() {')
-          end = text.index('\n        function ', start + 1)
-          reports = text[start:end]
-          checks = [
-              'window.TotalGestDashboardAnalyticsMetrics.calculate({',
-              'window.TotalGestDashboardCounts.calculateContractSummary({',
-              'window.TotalGestDashboardCounts.calculateCrmCounts({',
-              'window.TotalGestLicenseAddons.renderAddon({',
-              'window.TotalGestReportsView.moduleLicenseCard({',
-              'window.TotalGestReportsView.revenueBars({',
-              'window.TotalGestReportsView.superadminCompanySummary({',
-              'window.TotalGestReportsView.distributorClientSummary({',
-              'window.TotalGestReportsView.adminOverviewCards({',
-              'function renderizarDashboardAnalitico()',
-              'function renderizarAuditoria()',
-              'function renderizarMinhaLicenca()',
-              'function renderizarReports()'
-          ]
-          for item in checks: print(item, text.count(item))
-          assert 'if (!usuarioLogado                container.innerHTML = html;' not in reports
-          print('reports_access_guard', reports.count("if (!usuarioLogado || usuarioLogado.role !== 'admin' && usuarioLogado.role !== 'subadmin') {"))
+          app = Path('app.html').read_text(encoding='utf-8')
+          shell = Path('assets/js/app-shell.js').read_text(encoding='utf-8')
+          sw = Path('sw.js').read_text(encoding='utf-8')
+          start = app.index('        function renderizarAlertas() {')
+          end = app.index('\n        function ', start + 1)
+          alertas = app[start:end]
+          assert alertas.count('window.TotalGestAlertsView.alertsCard({') == 1
+          assert 'const linhasHtml = alertas.map' not in alertas
+          assert "const icone = t => t === 'danger'" not in alertas
+          assert app.count('alertsView: true,') == 1
+          assert shell.count("alertsView: './assets/js/app-alerts-view.js',") == 1
+          assert shell.count('if (options.alertsView === true) pedidos.push(MODULOS.alertsView);') == 1
+          assert sw.count("'./assets/js/app-alerts-view.js',") == 1
+          assert "const CACHE = 'totalgest-v118';" in sw
+          print('ALERTS_VIEW_VALIDATION=OK')
           PY
+      - name: Commit da migração
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.html assets/js/app-shell.js sw.js
+          git commit -m "Extrair apresentação dos alertas"
+          git push origin refactor/separar-index-app
