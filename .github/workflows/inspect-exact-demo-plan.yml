@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-          fetch-depth: 6
+          fetch-depth: 8
       - name: Reutilizar scripts já validados
         run: |
           python3 - <<'PY'
@@ -25,27 +25,10 @@ jobs:
           import subprocess
           from pathlib import Path
 
-          revisions = subprocess.check_output([
-              'git', 'rev-list', '--max-count=6', 'HEAD'
-          ], text=True).splitlines()
-          old = None
-          source_rev = None
-          required = (
-              '> /tmp/migrate-services-table.py',
-              '> /tmp/test-services-table.js',
-              '> /tmp/validate-services-table.py',
-          )
-          for rev in revisions:
-              candidate = subprocess.check_output([
-                  'git', 'show', f'{rev}:.github/workflows/inspect-exact-demo-plan.yml'
-              ], text=True)
-              if all(marker in candidate for marker in required):
-                  old = candidate
-                  source_rev = rev
-                  break
-          assert old is not None, revisions
-          print('VALIDATED_SCRIPT_SOURCE=', source_rev)
-
+          validated_rev = 'afb5576fdd42b701827f9c7eb4fa5b06093fa4f8'
+          old = subprocess.check_output([
+              'git', 'show', f'{validated_rev}:.github/workflows/inspect-exact-demo-plan.yml'
+          ], text=True)
           targets = {
               '/tmp/migrate-services-table.py': 'migrate-services-table.py',
               '/tmp/test-services-table.js': 'test-services-table.js',
@@ -59,6 +42,7 @@ jobs:
               decoded = base64.b64decode(payload)
               assert len(decoded) > 100, (marker, len(decoded))
               Path(target).write_bytes(decoded)
+          print('VALIDATED_SCRIPT_SOURCE=', validated_rev)
           PY
           python3 /tmp/migrate-services-table.py
           node /tmp/test-services-table.js
