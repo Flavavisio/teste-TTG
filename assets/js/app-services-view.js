@@ -84,10 +84,44 @@
       <td>${opts.statusHtml || ''}</td>`;
   }
 
+  function primaryRowActions(options) {
+    const opts = options || {};
+    const serviceId = opts.serviceId || '';
+    const status = opts.status || 'pendente';
+    const role = opts.role || '';
+    const canApprove = role === 'admin' || role === 'encarregado';
+    const canManage = role === 'admin' || role === 'subadmin' || role === 'encarregado';
+
+    let html = `<button class="btn btn-sm" style="background:#334155;color:#fff;" onclick="abrirVerOS('${serviceId}')" title="Ver OS — folhas de obra e materiais"><i class="fas fa-eye"></i> Ver OS</button>`;
+
+    if (status === 'por aprovar' && canApprove) {
+      html += `
+        <button class="btn btn-sm btn-success" onclick="aprovarAssistencia('${serviceId}')"><i class="fas fa-check"></i> Aprovar</button>
+        <button class="btn btn-sm btn-danger" onclick="rejeitarAssistencia('${serviceId}')" title="Rejeitar pedido"><i class="fas fa-times"></i></button>`;
+    }
+
+    if (canManage) {
+      html += `
+        <button class="btn btn-sm btn-warning" onclick="abrirModal('servico','${serviceId}')" title="Editar"><i class="fas fa-edit"></i></button>
+        ${status !== 'concluído'
+          ? `<button class="btn btn-sm" style="background:#0f766e;color:#fff;" onclick="finalizarEGerarReportOS('${serviceId}')" title="Finalizar e gerar relatório completo"><i class="fas fa-flag-checkered"></i></button>`
+          : `<button class="btn btn-sm" style="background:#0f766e;color:#fff;" onclick="gerarRelatorioOSIndividual('${serviceId}')" title="Gerar relatório desta OS"><i class="fas fa-file-lines"></i></button>`}`;
+
+      if (opts.localPayment === true) {
+        const paid = opts.paid === true;
+        const receiptNote = paid && opts.receiptMoloniId ? ' (recibo emitido na Moloni)' : '';
+        html += `<button class="btn btn-sm" style="background:${paid ? '#16a34a' : '#dc2626'};color:#fff;font-weight:700;" onclick="_pagoTogglarOS('${serviceId}')" title="${paid ? 'Pago — clica para alterar' + receiptNote : 'Não pago — clica para confirmar'}">${paid ? '€ Pago' : '<span style="text-decoration:line-through;">€</span> Não pago'}</button>`;
+      }
+    }
+
+    return html;
+  }
+
   window.TotalGestServicesView = {
     specialtyAndHistoryNotice,
     statusControl,
     workSheetActions,
-    rowLeadingCells
+    rowLeadingCells,
+    primaryRowActions
   };
 })();
