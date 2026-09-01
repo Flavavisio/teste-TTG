@@ -79,3 +79,9 @@ assert text.count('function renderizarMinhaLicenca()') == 1
 assert text.count('function renderizarDashboardAnalitico()') == 1
 assert text.count('window.TotalGestDashboardAnalyticsMetrics.calculate({') == 1
 print('STRUCTURAL_ASSERTIONS=OK')
+
+item = extract_function('renderizarMinhaLicenca')
+assert item is not None
+print('--- BEGIN renderizarMinhaLicenca ---')
+print(item[2])
+print('--- END renderizarMinhaLicenca ---')
