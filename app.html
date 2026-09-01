@@ -6636,42 +6636,12 @@
         function renderizarServicos() {
             const tbody = document.getElementById('tabelaServicos');
             const empty = document.getElementById('emptyServ');
-            let servicos = dados.servicos || [];
-
-            if (usuarioLogado && (usuarioLogado.role === 'admin' || usuarioLogado.role === 'subadmin')) {
-                const _tid = usuarioLogado.role === 'admin' ? usuarioLogado.id : usuarioLogado.adminId;
-                servicos = servicos.filter(s => s.adminId === _tid);
-            } else if (usuarioLogado && usuarioLogado.role === 'encarregado') {
-                const encarregado = dados.encarregados?.find(e => e.id === usuarioLogado.id);
-                if (encarregado) {
-                    servicos = servicos.filter(s => {
-                        const atribuidos = (s.funcionariosIds && s.funcionariosIds.length) ? s.funcionariosIds : [s.funcionarioId].filter(Boolean);
-                        return s.adminId === encarregado.adminId &&
-                            (s.funcionarioId === null || // "Todos"
-                                atribuidos.includes(usuarioLogado.id) || // diretamente ao encarregado
-                                atribuidos.some(fid => encarregado.funcionariosIds?.includes(fid))); // funcionário do encarregado
-                    });
-                } else {
-                    servicos = [];
-                }
-            } else if (usuarioLogado && usuarioLogado.role === 'funcionario') {
-                const funcObj = dados.funcionarios?.find(f => f.id === usuarioLogado.id);
-                const adminId = funcObj?.adminId;
-                if (adminId) {
-                    servicos = servicos.filter(s => {
-                        const atribuidos = (s.funcionariosIds && s.funcionariosIds.length) ? s.funcionariosIds : [s.funcionarioId].filter(Boolean);
-                        return s.adminId === adminId &&
-                            (s.funcionarioId === null || // "Todos"
-                                atribuidos.includes(usuarioLogado.id));
-                    });
-                } else {
-                    servicos = [];
-                }
-            }
-
-            if (usuarioLogado?.role === 'superadmin') {
-                servicos = [];
-            }
+            let servicos = window.TotalGestServicesSelection.selectVisibleServices({
+                services: dados.servicos || [],
+                user: usuarioLogado,
+                encarregados: dados.encarregados || [],
+                funcionarios: dados.funcionarios || []
+            });
 
             const totalGeralOS = servicos.length;
 
@@ -28921,6 +28891,6 @@ window._relPrefill = function(msg){
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
             syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, reportsView: true, alertsView: true, dashboardCounts: true,
-                dashboardAnalyticsMetrics: true, licenseAddons: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+                dashboardAnalyticsMetrics: true, licenseAddons: true, servicesSelection: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
