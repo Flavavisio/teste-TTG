@@ -18170,104 +18170,24 @@
                 });
                 html += window.TotalGestReportsView.superadminCompanySummary(_companySummary);
 
-                // Licenças de Manutenção (módulo Contratos)
-                const _contratosMetrics = window.TotalGestReportsModuleMetrics.calculateContracts({
+                const _moduleOverview = window.TotalGestReportsModuleMetrics.calculateOverview({
                     admins: admins,
-                    monthlyPrice: PRECO_CONTRATOS_MENSAL,
-                    annualPrice: PRECO_CONTRATOS_ANUAL
+                    warehouseActive: moduloArmazemAtivo,
+                    notificationsActive: moduloNotificacoesAtivo,
+                    crmActive: moduloCrmAtivo,
+                    contractsMonthlyPrice: PRECO_CONTRATOS_MENSAL,
+                    contractsAnnualPrice: PRECO_CONTRATOS_ANUAL,
+                    fleetMonthlyPrice: PRECO_FROTA_MENSAL,
+                    fleetAnnualPrice: PRECO_FROTA_ANUAL,
+                    warehouseMonthlyPrice: PRECO_ARMAZEM_MENSAL,
+                    warehouseAnnualPrice: PRECO_ARMAZEM_ANUAL,
+                    notificationsMonthlyPrice: PRECO_NOTIFICACOES_MENSAL,
+                    notificationsAnnualPrice: PRECO_NOTIFICACOES_ANUAL,
+                    crmMonthlyPrice: PRECO_CRM_MENSAL,
+                    crmAnnualPrice: PRECO_CRM_ANUAL
                 });
-                const comContratos = _contratosMetrics.active;
-                const mensais = _contratosMetrics.monthly;
-                const anuais = _contratosMetrics.annual;
-                const receitaManut = _contratosMetrics.revenue;
-                html += window.TotalGestReportsView.moduleLicenseCard({
-                    icon: 'fa-file-signature',
-                    title: 'Licenças de Contratos de Manutenção',
-                    activeCount: comContratos.length,
-                    monthly: mensais,
-                    annual: anuais,
-                    revenue: receitaManut
-                });
-                // Licenças de Frota
-                const _frotaMetrics = window.TotalGestReportsModuleMetrics.calculateFleet({
-                    admins: admins,
-                    monthlyPrice: PRECO_FROTA_MENSAL,
-                    annualPrice: PRECO_FROTA_ANUAL
-                });
-                const comFrota = _frotaMetrics.active;
-                const frotaMensais = _frotaMetrics.monthly;
-                const frotaAnuais = _frotaMetrics.annual;
-                const receitaFrota = _frotaMetrics.revenue;
-                html += window.TotalGestReportsView.moduleLicenseCard({
-                    icon: 'fa-car',
-                    title: 'Licenças de Frota',
-                    activeCount: comFrota.length,
-                    monthly: frotaMensais,
-                    annual: frotaAnuais,
-                    revenue: receitaFrota
-                });
-                // Licenças de Armazém
-                const _warehouseMetrics = window.TotalGestReportsModuleMetrics.calculateWarehouse({
-                    admins: admins,
-                    isActive: moduloArmazemAtivo,
-                    monthlyPrice: PRECO_ARMAZEM_MENSAL,
-                    annualPrice: PRECO_ARMAZEM_ANUAL
-                });
-                const comArmazem = _warehouseMetrics.active;
-                const armMensais = _warehouseMetrics.monthly;
-                const armAnuais = _warehouseMetrics.annual;
-                const armDemos = _warehouseMetrics.demos;
-                const receitaArmazem = _warehouseMetrics.revenue;
-                html += window.TotalGestReportsView.moduleLicenseCard({
-                    icon: 'fa-boxes',
-                    title: 'Licenças de Armazém',
-                    activeCount: comArmazem.length,
-                    monthly: armMensais,
-                    annual: armAnuais,
-                    demos: armDemos,
-                    revenue: receitaArmazem
-                });
-                // Licenças de Notificações
-                const _notificationsMetrics = window.TotalGestReportsModuleMetrics.calculateNotifications({
-                    admins: admins,
-                    isActive: moduloNotificacoesAtivo,
-                    monthlyPrice: PRECO_NOTIFICACOES_MENSAL,
-                    annualPrice: PRECO_NOTIFICACOES_ANUAL
-                });
-                const comNotif = _notificationsMetrics.active;
-                const notifMensais = _notificationsMetrics.monthly;
-                const notifAnuais = _notificationsMetrics.annual;
-                const notifDemos = _notificationsMetrics.demos;
-                const receitaNotif = _notificationsMetrics.revenue;
-                html += window.TotalGestReportsView.moduleLicenseCard({
-                    icon: 'fa-bell',
-                    title: 'Licenças de Notificações',
-                    activeCount: comNotif.length,
-                    monthly: notifMensais,
-                    annual: notifAnuais,
-                    demos: notifDemos,
-                    revenue: receitaNotif
-                });
-                // Licenças de CRM Comercial + Assist
-                const _crmMetrics = window.TotalGestReportsModuleMetrics.calculateCrm({
-                    admins: admins,
-                    isActive: moduloCrmAtivo,
-                    monthlyPrice: PRECO_CRM_MENSAL,
-                    annualPrice: PRECO_CRM_ANUAL
-                });
-                const comCrm = _crmMetrics.active;
-                const crmMensais = _crmMetrics.monthly;
-                const crmAnuais = _crmMetrics.annual;
-                const crmDemos = _crmMetrics.demos;
-                const receitaCrm = _crmMetrics.revenue;
-                html += window.TotalGestReportsView.moduleLicenseCard({
-                    icon: 'fa-bullseye',
-                    title: 'Licenças de CRM Comercial + Assist',
-                    activeCount: comCrm.length,
-                    monthly: crmMensais,
-                    annual: crmAnuais,
-                    demos: crmDemos,
-                    revenue: receitaCrm
+                _moduleOverview.cards.forEach(card => {
+                    html += window.TotalGestReportsView.moduleLicenseCard(card);
                 });
                 // Nota: o Total Gest Assist deixou de ter card/receita própria — vem sempre incluído
                 // na licença de CRM Comercial (mesma subscrição, mesmo valor, já contabilizado acima).
@@ -18275,11 +18195,11 @@
                 const _revenueSummary = window.TotalGestReportsSuperadminMetrics.calculateRevenueSummary({
                     admins: admins,
                     baseValueCharged: valorBaseCobradoDe,
-                    contractsRevenue: receitaManut,
-                    fleetRevenue: receitaFrota,
-                    warehouseRevenue: receitaArmazem,
-                    notificationsRevenue: receitaNotif,
-                    crmRevenue: receitaCrm
+                    contractsRevenue: _moduleOverview.revenues.contracts,
+                    fleetRevenue: _moduleOverview.revenues.fleet,
+                    warehouseRevenue: _moduleOverview.revenues.warehouse,
+                    notificationsRevenue: _moduleOverview.revenues.notifications,
+                    crmRevenue: _moduleOverview.revenues.crm
                 });
                 const mods = _revenueSummary.modules;
                 const maxMod = _revenueSummary.maxModuleRevenue;
