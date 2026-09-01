@@ -1,43 +1,27 @@
-name: Migrate services ERP actions
+name: Inspect app migration boundary
+
 on:
-  push:
-    branches: [refactor/separar-index-app]
-    paths: ['.github/workflows/inspect-exact-demo-plan.yml']
+  workflow_dispatch:
+
 permissions:
-  contents: write
+  contents: read
+
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Confirmar branch e HEAD
+      - name: Estado dos módulos principais
         run: |
-          test "$(git branch --show-current)" = "refactor/separar-index-app"
-          git rev-parse HEAD
-      - name: Migrar
-        run: python3 .github/scripts/migrate-services-erp-actions.py
-      - name: Validar
-        run: |
-          node --check assets/js/app-services-view.js
-          node --check sw.js
-          git diff --check
           python3 - <<'PY'
           from pathlib import Path
-          t=Path('app.html').read_text(encoding='utf-8'); s=t.index('        function renderizarServicos() {'); e=t.index('\n        function ',s+1); b=t[s:e]
-          assert b.count('erpRowActions({')==1
+          text=Path('app.html').read_text(encoding='utf-8'); sw=Path('sw.js').read_text(encoding='utf-8')
+          s=text.index('        function renderizarServicos() {'); e=text.index('\n        function ',s+1); b=text[s:e]
+          for x in ['selectVisibleServices({','specialtyAndHistoryNotice({','statusControl({','workSheetActions({','rowLeadingCells({','primaryRowActions({','erpRowActions({']: assert b.count(x)==1,(x,b.count(x))
           for x in ['faturarOSViaTOConline(','faturarOSViaMoloni(','_verificarPagamentoMoloni(','emitirGuiaTransporteMoloni(','emitirNotaCreditoMoloni(']: assert b.count(x)==0,(x,b.count(x))
           assert b.count("excluirEntidade('servico'")==1
-          assert b.count('primaryRowActions({')==1
-          assert "const CACHE = 'totalgest-v132';" in Path('sw.js').read_text(encoding='utf-8')
-          print('SERVICES_ERP_ACTIONS_VALIDATION=OK')
+          assert "const CACHE = 'totalgest-v132';" in sw
+          print('APP_MIGRATION_BOUNDARY=OK')
           PY
-      - name: Commit
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add app.html sw.js
-          git commit -m "Extrair apresentação das ações ERP das OS"
-          git push
