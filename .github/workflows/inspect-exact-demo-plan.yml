@@ -1,27 +1,66 @@
-name: Inspect app migration boundary
-
+name: Migrate services row model
 on:
-  workflow_dispatch:
-
+  push:
+    branches: [refactor/separar-index-app]
+    paths: ['.github/workflows/inspect-exact-demo-plan.yml']
 permissions:
-  contents: read
-
+  contents: write
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+        with: { ref: refactor/separar-index-app }
+      - name: Confirmar branch e HEAD
         run: |
+          test "$(git branch --show-current)" = "refactor/separar-index-app"
+          git rev-parse HEAD
+      - name: Migrar
+        run: python3 .github/scripts/migrate-services-row-model.py
+      - name: Validar
+        run: |
+          node --check assets/js/app-services-selection.js
+          node --check sw.js
+          git diff --check
+          test "$(git diff --name-only | sort | tr '\n' ' ')" = "app.html assets/js/app-services-selection.js sw.js "
+          node <<'NODE'
+          global.window = {};
+          require('./assets/js/app-services-selection.js');
+          const fn = window.TotalGestServicesSelection.prepareServiceRow;
+          const service = {id:'s1',adminId:'a1',clienteId:'c1',funcionariosIds:['f1','f2'],numeroRegisto:'OS-9'};
+          const row = fn({
+            service,
+            administrators:[{id:'a1',integracaoFaturacao:{provider:'moloni'},erp:true}],
+            getEmployeeName:id => ({f1:'Ana',f2:'Bruno'})[id],
+            getClientName:id => id === 'c1' ? 'Cliente X' : '',
+            generateNumber:() => 'fallback',
+            hasMaterials:id => id === 's1',
+            isErpActive:admin => admin?.erp === true
+          });
+          if (row.employeeName !== 'Ana<br>Bruno' || row.clientName !== 'Cliente X' || row.number !== 'OS-9' || !row.hasMaterials || !row.erpActive || row.provider !== 'moloni') process.exit(1);
+          const fallback = fn({service:{id:'s2',clienteId:'c2'},generateNumber:()=>'OS-F',getClientName:()=> 'C2'});
+          if (fallback.employeeName !== 'Todos' || fallback.number !== 'OS-F' || fallback.clientName !== 'C2' || fallback.erpActive || fallback.provider !== '') process.exit(1);
+          console.log('SERVICES_ROW_MODEL_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8'); sw=Path('sw.js').read_text(encoding='utf-8')
           s=text.index('        function renderizarServicos() {'); e=text.index('\n        function ',s+1); b=text[s:e]
+          assert b.count('prepareServiceRow({')==1
+          for x in ['_idsAtribOS','nomeFunc','const numero =','_temMateriaisOS']:
+              assert x not in b,x
+          for x in ['obterNomeFuncionario(','gerarNumeroRegisto()','_osTemMateriais(','moduloErpAtivo(']:
+              assert b.count(x)==0,(x,b.count(x))
           for x in ['selectVisibleServices({','selectPendingSpecialtyServices({','specialtyAndHistoryNotice({','statusControl({','workSheetActions({','rowLeadingCells({','rowActions({']:
               assert b.count(x)==1,(x,b.count(x))
-          assert '_podeVerPendentes' not in b and '_servicosPendentesEspecialidade' not in b
-          assert "const CACHE = 'totalgest-v134';" in sw
-          print('APP_MIGRATION_BOUNDARY=OK')
+          assert "const CACHE = 'totalgest-v135';" in sw
+          print('SERVICES_ROW_MODEL_VALIDATION=OK')
           PY
+      - name: Commit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-services-selection.js sw.js
+          git commit -m "Extrair preparação do view-model das OS"
+          git push origin HEAD:refactor/separar-index-app
