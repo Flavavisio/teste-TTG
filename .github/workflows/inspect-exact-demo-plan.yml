@@ -1,25 +1,48 @@
-name: Audit current app hotspots
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  audit:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Confirmar branch e HEAD
+      - name: Estado dos módulos principais
         run: |
-          test "$(git branch --show-current)" = "refactor/separar-index-app"
-          git rev-parse HEAD
-      - name: Auditar hotspots atuais
-        run: python3 .github/scripts/audit-current-hotspots.py
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('app.html').read_text(encoding='utf-8')
+          start = text.index('        function renderizarReports() {')
+          end = text.index('\n        function ', start + 1)
+          reports = text[start:end]
+          alert_start = text.index('        function renderizarAlertas() {')
+          alert_end = text.index('\n        function ', alert_start + 1)
+          alertas = text[alert_start:alert_end]
+          checks = [
+              'window.TotalGestDashboardAnalyticsMetrics.calculate({',
+              'window.TotalGestDashboardCounts.calculateContractSummary({',
+              'window.TotalGestDashboardCounts.calculateCrmCounts({',
+              'window.TotalGestLicenseAddons.renderAddon({',
+              'window.TotalGestReportsView.moduleLicenseCard({',
+              'window.TotalGestReportsView.revenueBars({',
+              'window.TotalGestReportsView.superadminCompanySummary({',
+              'window.TotalGestReportsView.distributorClientSummary({',
+              'window.TotalGestReportsView.adminOverviewCards({',
+              'window.TotalGestAlertsView.alertsCard({',
+              'function renderizarDashboardAnalitico()',
+              'function renderizarAuditoria()',
+              'function renderizarMinhaLicenca()',
+              'function renderizarReports()',
+              'function renderizarAlertas()'
+          ]
+          for item in checks: print(item, text.count(item))
+          assert 'if (!usuarioLogado                container.innerHTML = html;' not in reports
+          assert alertas.count('window.TotalGestAlertsView.alertsCard({') == 1
+          print('reports_access_guard', reports.count("if (!usuarioLogado || usuarioLogado.role !== 'admin' && usuarioLogado.role !== 'subadmin') {"))
+          PY
