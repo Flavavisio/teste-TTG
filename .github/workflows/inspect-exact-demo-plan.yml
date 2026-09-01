@@ -1,54 +1,42 @@
-name: Migrate reports admin presentation
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Confirmar branch e HEAD
+      - name: Estado dos módulos principais
         run: |
-          test "$(git branch --show-current)" = "refactor/separar-index-app"
-          git rev-parse HEAD
-      - name: Migrar apresentação admin de relatórios
-        run: python3 .github/scripts/migrate-reports-admin-view.py
-      - name: Validar migração
-        run: |
-          node --check assets/js/app-reports-view.js
-          git diff --check
           python3 - <<'PY'
           from pathlib import Path
-          app = Path('app.html').read_text(encoding='utf-8')
-          view = Path('assets/js/app-reports-view.js').read_text(encoding='utf-8')
-          sw = Path('sw.js').read_text(encoding='utf-8')
-          start = app.index('        function renderizarReports() {')
-          end = app.index('\n        function ', start + 1)
-          reports = app[start:end]
-          assert reports.count('window.TotalGestReportsView.adminOverviewCards({') == 1
-          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateAdminOverview({') == 1
-          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateAdminContracts({') == 1
-          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateAdminOperations({') == 1
+          text = Path('app.html').read_text(encoding='utf-8')
+          start = text.index('        function renderizarReports() {')
+          end = text.index('\n        function ', start + 1)
+          reports = text[start:end]
+          checks = [
+              'window.TotalGestDashboardAnalyticsMetrics.calculate({',
+              'window.TotalGestDashboardCounts.calculateContractSummary({',
+              'window.TotalGestDashboardCounts.calculateCrmCounts({',
+              'window.TotalGestLicenseAddons.renderAddon({',
+              'window.TotalGestReportsView.moduleLicenseCard({',
+              'window.TotalGestReportsView.revenueBars({',
+              'window.TotalGestReportsView.superadminCompanySummary({',
+              'window.TotalGestReportsView.distributorClientSummary({',
+              'window.TotalGestReportsView.adminOverviewCards({',
+              'function renderizarDashboardAnalitico()',
+              'function renderizarAuditoria()',
+              'function renderizarMinhaLicenca()',
+              'function renderizarReports()'
+          ]
+          for item in checks: print(item, text.count(item))
           assert 'if (!usuarioLogado                container.innerHTML = html;' not in reports
-          assert view.count('function adminOverviewCards(options)') == 1
-          assert view.count('adminOverviewCards: adminOverviewCards') == 1
-          assert "const CACHE = 'totalgest-v117';" in sw
-          print('REPORTS_ADMIN_VIEW_VALIDATION=OK')
+          print('reports_access_guard', reports.count("if (!usuarioLogado || usuarioLogado.role !== 'admin' && usuarioLogado.role !== 'subadmin') {"))
           PY
-      - name: Commit da migração
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app.html assets/js/app-reports-view.js sw.js
-          git commit -m "Extrair apresentação admin dos relatórios"
-          git push origin refactor/separar-index-app
