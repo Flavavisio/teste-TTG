@@ -6647,24 +6647,20 @@
 
             const avisoDiv = document.getElementById('servicosAvisoEspecialidade');
             if (avisoDiv) {
-                if (usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin' || usuarioLogado?.role === 'encarregado') {
-                    const osComPendente = servicos.filter(s => s.status === 'concluído' && _tiposEspecialidadePendentes(s.id).length > 0);
-                    if (osComPendente.length) {
-                        avisoDiv.innerHTML = `<div style="background:#fef3c7;border:1px solid #f59e0b;color:#92400e;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:.85rem;">
-                            <i class="fas fa-triangle-exclamation"></i> <strong>${osComPendente.length}</strong> OS já dada(s) como concluída(s) ainda tem(êm) relatório(s) de especialidade por preencher: ${osComPendente.slice(0, 4).map(s => `${s.numeroRegisto || ''} (${_tiposEspecialidadePendentes(s.id).join(', ')})`).join(' · ')}${osComPendente.length > 4 ? ' ...' : ''}
-                        </div>`;
-                    } else {
-                        avisoDiv.innerHTML = '';
-                    }
-                } else {
-                    avisoDiv.innerHTML = '';
-                }
-            }
-            if (avisoDiv) {
-                avisoDiv.innerHTML += `<div style="margin-bottom:10px;">
-                    <button class="btn btn-sm" id="btn-carregar-os-antigas" style="background:#f1f5f9;color:#334155;" onclick="carregarOSMaisAntigo()"><i class="fas fa-clock-rotate-left"></i> Carregar OS mais antigas (+3 meses)</button>
-                    <span style="font-size:.75rem;color:#94a3b8;margin-left:8px;">A mostrar concluídas desde ${_servicosCarregadoDesde ? new Date(_servicosCarregadoDesde + 'T00:00:00').toLocaleDateString('pt-PT') : '—'}. Pendentes/em andamento aparecem sempre, seja qual for a idade.</span>
-                </div>`;
+                const _podeVerPendentes = usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin' || usuarioLogado?.role === 'encarregado';
+                const _servicosPendentesEspecialidade = _podeVerPendentes
+                    ? servicos
+                        .filter(s => s.status === 'concluído')
+                        .map(s => ({ number: s.numeroRegisto || '', types: _tiposEspecialidadePendentes(s.id) }))
+                        .filter(item => item.types.length > 0)
+                    : [];
+                avisoDiv.innerHTML = window.TotalGestServicesView.specialtyAndHistoryNotice({
+                    canSeePending: _podeVerPendentes,
+                    pendingServices: _servicosPendentesEspecialidade,
+                    loadedSinceLabel: _servicosCarregadoDesde
+                        ? new Date(_servicosCarregadoDesde + 'T00:00:00').toLocaleDateString('pt-PT')
+                        : '—'
+                });
             }
 
             servicos = _aplicarFiltroOrdenacao('servicos', servicos,
@@ -28891,6 +28887,6 @@ window._relPrefill = function(msg){
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
             syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, reportsView: true, alertsView: true, dashboardCounts: true,
-                dashboardAnalyticsMetrics: true, licenseAddons: true, servicesSelection: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+                dashboardAnalyticsMetrics: true, licenseAddons: true, servicesSelection: true, servicesView: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
