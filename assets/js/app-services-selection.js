@@ -68,8 +68,31 @@
     return { canSeePending, pendingServices };
   }
 
+  function prepareServiceRow(options) {
+    options = options || {};
+    const service = options.service || {};
+    const getEmployeeName = typeof options.getEmployeeName === 'function' ? options.getEmployeeName : function (id) { return id || ''; };
+    const getClientName = typeof options.getClientName === 'function' ? options.getClientName : function (id) { return id || ''; };
+    const generateNumber = typeof options.generateNumber === 'function' ? options.generateNumber : function () { return ''; };
+    const hasMaterials = typeof options.hasMaterials === 'function' ? options.hasMaterials : function () { return false; };
+    const isErpActive = typeof options.isErpActive === 'function' ? options.isErpActive : function () { return false; };
+    const administrators = Array.isArray(options.administrators) ? options.administrators : [];
+    const employeeIds = assignedIds(service);
+    const administrator = administrators.find(item => item.id === service.adminId);
+
+    return {
+      employeeName: employeeIds.length ? employeeIds.map(getEmployeeName).join('<br>') : 'Todos',
+      clientName: getClientName(service.clienteId),
+      number: service.numeroRegisto || generateNumber(),
+      hasMaterials: hasMaterials(service.id),
+      erpActive: isErpActive(administrator),
+      provider: administrator?.integracaoFaturacao?.provider || ''
+    };
+  }
+
   window.TotalGestServicesSelection = {
     selectVisibleServices: selectVisibleServices,
-    selectPendingSpecialtyServices: selectPendingSpecialtyServices
+    selectPendingSpecialtyServices: selectPendingSpecialtyServices,
+    prepareServiceRow: prepareServiceRow
   };
 })();
