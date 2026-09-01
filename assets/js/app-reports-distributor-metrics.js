@@ -118,12 +118,71 @@
     return { totalLocais,totalEquip,totalRegistos,moduloAtivoTxt,folhasOT,frotaStats,totalIntervencoes,gastoVeiculos,totalSinistros,ajudasAdmin,ajPend:ajudasAdmin.filter(a=>a.status==='pendente').length,ajConcl:ajudasAdmin.filter(a=>(a.status||'').toLowerCase().includes('conclu')).length };
   }
 
+  function calculateAdminSummary(options) {
+    const opts = options || {};
+    const admin = opts.admin || {};
+    const overview = calculateAdminOverview({ data: opts.data, adminId: admin.id });
+    const contracts = calculateAdminContracts({
+      data: opts.data,
+      adminId: admin.id,
+      maintenanceState: opts.maintenanceState,
+      nextMaintenance: opts.nextMaintenance,
+      toNumber: overview.numOrd
+    });
+    const operations = calculateAdminOperations({
+      data: opts.data,
+      admin: admin,
+      contractsActive: opts.contractsActive,
+      countFleet: opts.countFleet
+    });
+
+    return {
+      totalFunc: overview.totalFunc,
+      totalEncarregados: overview.totalEncarregados,
+      totalCli: overview.totalCli,
+      gastoFunc: overview.gastoFunc,
+      gastoEnc: overview.gastoEnc,
+      gastoTotal: overview.gastoTotal,
+      totalOS: overview.totalOS,
+      osPendentes: overview.osPendentes,
+      osAndamento: overview.osAndamento,
+      osConcluidas: overview.osConcluidas,
+      totalPonto: overview.totalPonto,
+      totalPedidos: overview.totalPedidos,
+      pedPend: overview.pedPend,
+      totalFolhas: overview.totalFolhas,
+      folhasOT: operations.folhasOT,
+      totalReqs: overview.totalReqs,
+      reqPend: overview.reqPend,
+      moduloAtivoTxt: operations.moduloAtivoTxt,
+      contratosCount: contracts.contracts.length,
+      ctEmDia: contracts.emDia,
+      ctAVencer: contracts.aVencer,
+      ctVencidos: contracts.vencidos,
+      totalLocais: operations.totalLocais,
+      totalEquip: operations.totalEquip,
+      totalRegistos: operations.totalRegistos,
+      ctValor: contracts.valor,
+      frotaTotal: operations.frotaStats.total,
+      frotaEmDia: operations.frotaStats.emDia,
+      frotaAVencer: operations.frotaStats.aVencer,
+      frotaVencido: operations.frotaStats.vencido,
+      totalIntervencoes: operations.totalIntervencoes,
+      totalSinistros: operations.totalSinistros,
+      gastoVeiculos: operations.gastoVeiculos,
+      suporteTotal: operations.ajudasAdmin.length,
+      ajPend: operations.ajPend,
+      ajConcl: operations.ajConcl
+    };
+  }
+
   window.TotalGestReportsDistributorMetrics = {
     calculateOverview: calculateOverview,
     calculateClient: calculateClient,
     calculateClientSummary: calculateClientSummary,
     calculateAdminOverview: calculateAdminOverview,
     calculateAdminContracts: calculateAdminContracts,
-    calculateAdminOperations: calculateAdminOperations
+    calculateAdminOperations: calculateAdminOperations,
+    calculateAdminSummary: calculateAdminSummary
   };
 })();

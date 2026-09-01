@@ -18258,95 +18258,15 @@
                 container.innerHTML = '<p class="text-muted text-center">Administrador não encontrado.</p>';
                 return;
             }
-            const _adminOverview = window.TotalGestReportsDistributorMetrics.calculateAdminOverview({ data: dados, adminId: admin.id });
-            const totalFunc = _adminOverview.totalFunc;
-            const totalCli = _adminOverview.totalCli;
-            const totalOS = _adminOverview.totalOS;
-            const osPend = _adminOverview.osPend;
-            const totalPonto = _adminOverview.totalPonto;
-            const totalPedidos = _adminOverview.totalPedidos;
-            const pedPend = _adminOverview.pedPend;
-            const totalFolhas = _adminOverview.totalFolhas;
-            const totalReqs = _adminOverview.totalReqs;
-            const reqPend = _adminOverview.reqPend;
-            const totalEncarregados = _adminOverview.totalEncarregados;
-            const numOrd = _adminOverview.numOrd;
-            const gastoFunc = _adminOverview.gastoFunc;
-            const gastoEnc = _adminOverview.gastoEnc;
-            const gastoTotal = _adminOverview.gastoTotal;
-            const osList = _adminOverview.osList;
-            const osPendentes = _adminOverview.osPendentes;
-            const osAndamento = _adminOverview.osAndamento;
-            const osConcluidas = _adminOverview.osConcluidas;
-            const eur = (n) => n.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-            const _adminContracts = window.TotalGestReportsDistributorMetrics.calculateAdminContracts({
-                data: dados,
-                adminId: admin.id,
-                maintenanceState: estadoManutencao,
-                nextMaintenance: calcularProximaManutencao,
-                toNumber: numOrd
-            });
-            const contratosAdmin = _adminContracts.contracts;
-            const ctEmDia = _adminContracts.emDia;
-            const ctAVencer = _adminContracts.aVencer;
-            const ctVencidos = _adminContracts.vencidos;
-            const ctValor = _adminContracts.valor;
-            const _adminOperations = window.TotalGestReportsDistributorMetrics.calculateAdminOperations({
+            const _adminSummary = window.TotalGestReportsDistributorMetrics.calculateAdminSummary({
                 data: dados,
                 admin: admin,
+                maintenanceState: estadoManutencao,
+                nextMaintenance: calcularProximaManutencao,
                 contractsActive: moduloContratosAtivo,
                 countFleet: contarFrota
             });
-            const totalLocais = _adminOperations.totalLocais;
-            const totalEquip = _adminOperations.totalEquip;
-            const totalRegistos = _adminOperations.totalRegistos;
-            const moduloAtivoTxt = _adminOperations.moduloAtivoTxt;
-            const folhasOT = _adminOperations.folhasOT;
-            const frotaStats = _adminOperations.frotaStats;
-            const totalIntervencoes = _adminOperations.totalIntervencoes;
-            const gastoVeiculos = _adminOperations.gastoVeiculos;
-            const totalSinistros = _adminOperations.totalSinistros;
-            const ajudasAdmin = _adminOperations.ajudasAdmin;
-            const ajPend = _adminOperations.ajPend;
-            const ajConcl = _adminOperations.ajConcl;
-            container.innerHTML = window.TotalGestReportsView.adminOverviewCards({
-                totalFunc: totalFunc,
-                totalEncarregados: totalEncarregados,
-                totalCli: totalCli,
-                gastoFunc: eur(gastoFunc),
-                gastoEnc: eur(gastoEnc),
-                gastoTotal: eur(gastoTotal),
-                totalOS: totalOS,
-                osPendentes: osPendentes,
-                osAndamento: osAndamento,
-                osConcluidas: osConcluidas,
-                totalPonto: totalPonto,
-                totalPedidos: totalPedidos,
-                pedPend: pedPend,
-                totalFolhas: totalFolhas,
-                folhasOT: folhasOT,
-                totalReqs: totalReqs,
-                reqPend: reqPend,
-                moduloAtivoTxt: moduloAtivoTxt,
-                contratosCount: contratosAdmin.length,
-                ctEmDia: ctEmDia,
-                ctAVencer: ctAVencer,
-                ctVencidos: ctVencidos,
-                totalLocais: totalLocais,
-                totalEquip: totalEquip,
-                totalRegistos: totalRegistos,
-                ctValor: eur(ctValor),
-                frotaTotal: frotaStats.total,
-                frotaEmDia: frotaStats.emDia,
-                frotaAVencer: frotaStats.aVencer,
-                frotaVencido: frotaStats.vencido,
-                totalIntervencoes: totalIntervencoes,
-                totalSinistros: totalSinistros,
-                gastoVeiculos: eur(gastoVeiculos),
-                suporteTotal: ajudasAdmin.length,
-                ajPend: ajPend,
-                ajConcl: ajConcl
-            });
+            container.innerHTML = window.TotalGestReportsView.adminOverviewCards(_adminSummary);
         }
 
         function atualizarContagens() {

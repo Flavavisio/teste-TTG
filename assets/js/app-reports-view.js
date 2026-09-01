@@ -132,15 +132,16 @@
 
   function adminOverviewCards(options) {
     options = options || {};
+    const eur = n => (Number(n) || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
     return `
                     <div class="report-card">
                         <h4><i class="fas fa-users"></i> Recursos Humanos</h4>
                         <div class="report-item"><span>Total de Funcionários</span><span>${options.totalFunc}</span></div>
                         <div class="report-item"><span>Total de Encarregados</span><span>${options.totalEncarregados}</span></div>
                         <div class="report-item"><span>Total de Clientes</span><span>${options.totalCli}</span></div>
-                        <div class="report-item"><span>Gasto com Funcionários (bruto)</span><span>${options.gastoFunc}</span></div>
-                        <div class="report-item"><span>Gasto com Encarregados (bruto)</span><span>${options.gastoEnc}</span></div>
-                        <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Gasto Total com Pessoal</span><span>${options.gastoTotal}</span></div>
+                        <div class="report-item"><span>Gasto com Funcionários (bruto)</span><span>${eur(options.gastoFunc)}</span></div>
+                        <div class="report-item"><span>Gasto com Encarregados (bruto)</span><span>${eur(options.gastoEnc)}</span></div>
+                        <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Gasto Total com Pessoal</span><span>${eur(options.gastoTotal)}</span></div>
                     </div>
                     <div class="report-card">
                         <h4><i class="fas fa-tools"></i> Ordens de Serviço</h4>
@@ -177,7 +178,7 @@
                         <div class="report-item"><span>Vencidos</span><span style="color:#dc2626;">${options.ctVencidos}</span></div>
                         <div class="report-item"><span>Locais / Equipamentos</span><span>${options.totalLocais} / ${options.totalEquip}</span></div>
                         <div class="report-item"><span>Manutenções realizadas</span><span>${options.totalRegistos}</span></div>
-                        <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Valor anual contratado</span><span>${options.ctValor}</span></div>
+                        <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Valor anual contratado</span><span>${eur(options.ctValor)}</span></div>
                     </div>
                     <div class="report-card">
                         <h4><i class="fas fa-car"></i> Frota</h4>
@@ -187,7 +188,7 @@
                         <div class="report-item"><span>Vencidos</span><span style="color:#dc2626;">${options.frotaVencido}</span></div>
                         <div class="report-item"><span>Intervenções registadas</span><span>${options.totalIntervencoes}</span></div>
                         <div class="report-item"><span>Sinistros</span><span>${options.totalSinistros}</span></div>
-                        <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Valor gasto (manutenção/inspeção)</span><span>${options.gastoVeiculos}</span></div>
+                        <div class="report-item" style="font-weight:bold; border-top:1px solid #e2e8f0; padding-top:8px;"><span>Valor gasto (manutenção/inspeção)</span><span>${eur(options.gastoVeiculos)}</span></div>
                     </div>
                     <div class="report-card">
                         <h4><i class="fas fa-headset"></i> Suporte Técnico</h4>
