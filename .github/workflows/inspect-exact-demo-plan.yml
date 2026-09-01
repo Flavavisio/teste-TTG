@@ -1,61 +1,28 @@
-name: Migrate services primary actions
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
-    paths:
-      - .github/workflows/inspect-exact-demo-plan.yml
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Confirmar branch e HEAD
+      - name: Estado dos módulos principais
         run: |
-          test "$(git branch --show-current)" = "refactor/separar-index-app"
-          git rev-parse HEAD
-      - name: Migrar ações principais
-        run: python3 .github/scripts/migrate-services-primary-actions.py
-      - name: Validar migração
-        run: |
-          node --check assets/js/app-services-view.js
-          node --check sw.js
-          git diff --check
-          test "$(git diff --name-only | sort | tr '\n' ' ')" = "app.html sw.js "
-          node <<'NODE'
-          global.window={}; require('./assets/js/app-services-view.js');
-          const v=window.TotalGestServicesView;
-          let h=v.primaryRowActions({serviceId:'os1',status:'por aprovar',role:'admin',localPayment:true,paid:false});
-          for (const token of ['abrirVerOS','aprovarAssistencia','rejeitarAssistencia',"abrirModal('servico'",'finalizarEGerarReportOS','_pagoTogglarOS']) if (!h.includes(token)) throw new Error('missing '+token);
-          if (h.includes('faturarOSViaTOConline') || h.includes('faturarOSViaMoloni')) throw new Error('erp leaked');
-          h=v.primaryRowActions({serviceId:'os2',status:'concluído',role:'subadmin',localPayment:false});
-          if (!h.includes('gerarRelatorioOSIndividual') || h.includes('_pagoTogglarOS')) throw new Error('completed/manage');
-          h=v.primaryRowActions({serviceId:'os3',status:'pendente',role:'funcionario',localPayment:true});
-          if (!h.includes('abrirVerOS') || h.includes("abrirModal('servico'") || h.includes('_pagoTogglarOS')) throw new Error('restricted');
-          console.log('SERVICES_PRIMARY_ACTIONS_UNIT=OK');
-          NODE
           python3 - <<'PY'
           from pathlib import Path
-          app=Path('app.html').read_text(encoding='utf-8'); sw=Path('sw.js').read_text(encoding='utf-8')
-          s=app.index('        function renderizarServicos() {'); e=app.index('\n        function ',s+1); b=app[s:e]
-          assert b.count('window.TotalGestServicesView.primaryRowActions({')==1
-          for x in ['abrirVerOS(','aprovarAssistencia(','rejeitarAssistencia(',"abrirModal('servico'",'finalizarEGerarReportOS(','gerarRelatorioOSIndividual(','_pagoTogglarOS(']: assert b.count(x)==0,(x,b.count(x))
-          for x in ['faturarOSViaTOConline(','faturarOSViaMoloni(','_verificarPagamentoMoloni(','emitirGuiaTransporteMoloni(','emitirNotaCreditoMoloni(',"excluirEntidade('servico'"] : assert b.count(x)==1,(x,b.count(x))
+          text=Path('app.html').read_text(encoding='utf-8'); sw=Path('sw.js').read_text(encoding='utf-8')
+          def fn(name):
+              s=text.index(f'        function {name}() {{'); e=text.index('\n        function ',s+1); return text[s:e]
+          servicos=fn('renderizarServicos')
+          for x in ['selectVisibleServices({','specialtyAndHistoryNotice({','statusControl({','workSheetActions({','rowLeadingCells({','primaryRowActions({']: assert servicos.count(x)==1,(x,servicos.count(x))
+          for x in ['faturarOSViaTOConline(','faturarOSViaMoloni(','_verificarPagamentoMoloni(','emitirGuiaTransporteMoloni(','emitirNotaCreditoMoloni(']: assert servicos.count(x)==1,(x,servicos.count(x))
           assert "const CACHE = 'totalgest-v131';" in sw
-          print('SERVICES_PRIMARY_ACTIONS_VALIDATION=OK')
+          print('APP_MIGRATION_BOUNDARY=OK')
           PY
-      - name: Commit da migração
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app.html sw.js
-          git commit -m "Extrair ações principais das ordens de serviço"
-          git push origin refactor/separar-index-app
