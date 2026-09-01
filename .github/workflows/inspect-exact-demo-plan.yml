@@ -1,4 +1,4 @@
-name: Inspect services table boundary
+name: Migrate services table state
 
 on:
   push:
@@ -7,40 +7,265 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Auditar fronteira de renderizarServicos
+      - name: Extrair filtro, ordenação, toolbar e estado vazio
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          start_marker = '        function renderizarServicos() {'
-          assert text.count(start_marker) == 1, text.count(start_marker)
-          s = text.index(start_marker)
-          e = text.index('\n        function ', s + len(start_marker))
-          block = text[s:e]
-          print('BEGIN_RENDERIZAR_SERVICOS')
-          print(block)
-          print('END_RENDERIZAR_SERVICOS')
-          for marker in [
-              "_aplicarFiltroOrdenacao('servicos'",
-              'servicosToolbar',
-              '_toolbarHtml(',
-              'servicos.length === 0',
-              'TotalGestServicesSelection',
-              'TotalGestServicesView'
-          ]:
-              print(f'MARKER {marker!r}: {block.count(marker)}')
-          print('SERVICES_SELECTION_INCLUDE_INDEX=', text.find('assets/js/app-services-selection.js'))
-          print('SERVICES_VIEW_INCLUDE_INDEX=', text.find('assets/js/app-services-view.js'))
-          sw = Path('sw.js').read_text(encoding='utf-8')
-          print('CACHE_V135=', "const CACHE = 'totalgest-v135';" in sw)
+
+          app_path = Path('app.html')
+          selection_path = Path('assets/js/app-services-selection.js')
+          view_path = Path('assets/js/app-services-view.js')
+          sw_path = Path('sw.js')
+          workflow_path = Path('.github/workflows/inspect-exact-demo-plan.yml')
+
+          selection = selection_path.read_text(encoding='utf-8')
+          selection_marker = '  window.TotalGestServicesSelection = {'
+          assert selection.count(selection_marker) == 1, selection.count(selection_marker)
+          assert 'function filterAndSortServices(options)' not in selection
+          selection_helper = r'''  function filterAndSortServices(options) {
+            options = options || {};
+            const services = Array.isArray(options.services) ? options.services : [];
+            const applyFilterSort = typeof options.applyFilterSort === 'function' ? options.applyFilterSort : function (_, items) { return items; };
+            const getTableState = typeof options.getTableState === 'function' ? options.getTableState : function () { return {}; };
+            const getClientName = typeof options.getClientName === 'function' ? options.getClientName : function (id) { return id || ''; };
+            let visibleServices = applyFilterSort('servicos', services,
+              ['numeroRegisto', 'descricao', 'status', service => getClientName(service.clienteId)],
+              {
+                data: (a, b) => (a.data || '') + (a.hora || '') < (b.data || '') + (b.hora || '') ? -1 : 1,
+                status: (a, b) => (a.status || '').localeCompare(b.status || '')
+              });
+            if (!getTableState('servicos').sortCol) {
+              visibleServices.sort((a, b) => (a.data + a.hora) < (b.data + b.hora) ? 1 : -1);
+            }
+            return visibleServices;
+          }
+
+'''
+          selection = selection.replace(selection_marker, selection_helper + selection_marker)
+          old_selection_export = '''  window.TotalGestServicesSelection = {
+            selectVisibleServices: selectVisibleServices,
+            selectPendingSpecialtyServices: selectPendingSpecialtyServices,
+            prepareServiceRow: prepareServiceRow
+          };'''
+          new_selection_export = '''  window.TotalGestServicesSelection = {
+            selectVisibleServices: selectVisibleServices,
+            selectPendingSpecialtyServices: selectPendingSpecialtyServices,
+            prepareServiceRow: prepareServiceRow,
+            filterAndSortServices: filterAndSortServices
+          };'''
+          assert selection.count(old_selection_export) == 1, selection.count(old_selection_export)
+          selection = selection.replace(old_selection_export, new_selection_export)
+          selection_path.write_text(selection, encoding='utf-8')
+
+          view = view_path.read_text(encoding='utf-8')
+          view_marker = '  function statusControl(options) {'
+          assert view.count(view_marker) == 1, view.count(view_marker)
+          assert 'function servicesTableState(options)' not in view
+          view_helper = r'''  function servicesTableState(options) {
+            const opts = options || {};
+            const totalCount = Number(opts.totalCount) || 0;
+            const visibleCount = Number(opts.visibleCount) || 0;
+            const renderToolbar = typeof opts.renderToolbar === 'function' ? opts.renderToolbar : function () { return ''; };
+            return {
+              hasRows: visibleCount > 0,
+              toolbarHtml: totalCount ? renderToolbar('servicos', 'Pesquisar por Nº, cliente, descrição, estado…', visibleCount, totalCount) : '',
+              emptyRowsHtml: visibleCount === 0 && totalCount ? '<tr><td colspan="9" style="text-align:center;color:#94a3b8;">Sem resultados para essa pesquisa.</td></tr>' : '',
+              emptyDisplay: visibleCount === 0 && totalCount === 0 ? 'block' : 'none'
+            };
+          }
+
+'''
+          view = view.replace(view_marker, view_helper + view_marker)
+          old_view_export = '  window.TotalGestServicesView = { specialtyAndHistoryNotice, statusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions };'
+          new_view_export = '  window.TotalGestServicesView = { specialtyAndHistoryNotice, servicesTableState, statusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions };'
+          assert view.count(old_view_export) == 1, view.count(old_view_export)
+          view = view.replace(old_view_export, new_view_export)
+          view_path.write_text(view, encoding='utf-8')
+
+          app = app_path.read_text(encoding='utf-8')
+          function_marker = '        function renderizarServicos() {'
+          assert app.count(function_marker) == 1, app.count(function_marker)
+          fs = app.index(function_marker)
+          fe = app.index('\n        function ', fs + len(function_marker))
+          before_block = app[fs:fe]
+          start_marker = "            servicos = _aplicarFiltroOrdenacao('servicos', servicos,"
+          end_marker = "            empty.style.display = 'none';"
+          assert before_block.count(start_marker) == 1, before_block.count(start_marker)
+          assert before_block.count(end_marker) == 1, before_block.count(end_marker)
+          target_start = app.index(start_marker, fs, fe)
+          target_end = app.index(end_marker, target_start, fe) + len(end_marker)
+          target = app[target_start:target_end]
+          for marker in ["_aplicarFiltroOrdenacao('servicos'", "_getTableState('servicos')", 'servicos.sort(', "document.getElementById('servicosToolbar')", '_toolbarHtml(', 'servicos.length === 0', 'Sem resultados para essa pesquisa.']:
+            assert target.count(marker) == 1, (marker, target.count(marker))
+          replacement = r'''            servicos = window.TotalGestServicesSelection.filterAndSortServices({
+              services: servicos,
+              applyFilterSort: _aplicarFiltroOrdenacao,
+              getTableState: _getTableState,
+              getClientName: obterNomeCliente
+            });
+            const tableState = window.TotalGestServicesView.servicesTableState({
+              totalCount: totalGeralOS,
+              visibleCount: servicos.length,
+              renderToolbar: _toolbarHtml
+            });
+            const tbOS = document.getElementById('servicosToolbar');
+            if (tbOS) tbOS.innerHTML = tableState.toolbarHtml;
+            if (!tableState.hasRows) {
+              tbody.innerHTML = tableState.emptyRowsHtml;
+              empty.style.display = tableState.emptyDisplay;
+              return;
+            }
+            empty.style.display = tableState.emptyDisplay;'''
+          app = app[:target_start] + replacement + app[target_end:]
+          app_path.write_text(app, encoding='utf-8')
+
+          sw = sw_path.read_text(encoding='utf-8')
+          assert sw.count("const CACHE = 'totalgest-v135';") == 1, sw.count("const CACHE = 'totalgest-v135';")
+          sw = sw.replace("const CACHE = 'totalgest-v135';", "const CACHE = 'totalgest-v136';")
+          sw_path.write_text(sw, encoding='utf-8')
+
+          final_app = app_path.read_text(encoding='utf-8')
+          fs = final_app.index(function_marker)
+          fe = final_app.index('\n        function ', fs + len(function_marker))
+          final_block = final_app[fs:fe]
+          for marker in ['filterAndSortServices({', 'servicesTableState({', 'selectVisibleServices({', 'selectPendingSpecialtyServices({', 'prepareServiceRow({', 'specialtyAndHistoryNotice({', 'statusControl({', 'workSheetActions({', 'rowLeadingCells({', 'rowActions({']:
+            assert final_block.count(marker) == 1, (marker, final_block.count(marker))
+          for marker in ["_aplicarFiltroOrdenacao('servicos'", "_getTableState('servicos')", 'servicos.sort(', '_toolbarHtml(', 'servicos.length === 0', 'Sem resultados para essa pesquisa.']:
+            assert final_block.count(marker) == 0, (marker, final_block.count(marker))
+          assert final_block.count("document.getElementById('servicosToolbar')") == 1
+          assert len(final_block) < len(before_block), (len(before_block), len(final_block))
+          print('RENDERIZAR_SERVICOS_BEFORE_CHARS=', len(before_block))
+          print('RENDERIZAR_SERVICOS_AFTER_CHARS=', len(final_block))
+          print('RENDERIZAR_SERVICOS_AFTER_LINES=', len(final_block.splitlines()))
+
+          restored_workflow = '''name: Inspect app migration boundary
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/separar-index-app
+      - name: Estado dos módulos principais
+        run: |
+          python3 - <<'PY2'
+          from pathlib import Path
+          text=Path('app.html').read_text(encoding='utf-8'); sw=Path('sw.js').read_text(encoding='utf-8')
+          s=text.index('        function renderizarServicos() {'); e=text.index('\\n        function ',s+1); b=text[s:e]
+          for x in ['selectVisibleServices({','selectPendingSpecialtyServices({','prepareServiceRow({','filterAndSortServices({','specialtyAndHistoryNotice({','servicesTableState({','statusControl({','workSheetActions({','rowLeadingCells({','rowActions({']:
+              assert b.count(x)==1,(x,b.count(x))
+          for x in ["_aplicarFiltroOrdenacao('servicos'","_getTableState('servicos')",'servicos.sort(','_toolbarHtml(','servicos.length === 0','Sem resultados para essa pesquisa.','obterNomeFuncionario(','gerarNumeroRegisto()','_osTemMateriais(','moduloErpAtivo(']:
+              assert b.count(x)==0,(x,b.count(x))
+          assert "const CACHE = 'totalgest-v136';" in sw
+          print('APP_MIGRATION_BOUNDARY=OK')
+          PY2
+'''
+          workflow_path.write_text(restored_workflow, encoding='utf-8')
           PY
+      - name: Testes unitários dos helpers
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const vm = require('vm');
+          const assert = require('assert');
+          const context = { window: {} };
+          vm.createContext(context);
+          vm.runInContext(fs.readFileSync('assets/js/app-services-selection.js', 'utf8'), context);
+          vm.runInContext(fs.readFileSync('assets/js/app-services-view.js', 'utf8'), context);
+          const selection = context.window.TotalGestServicesSelection;
+          const view = context.window.TotalGestServicesView;
+          let captured = null;
+          const older = { id: 'old', data: '2026-01-01', hora: '09:00', clienteId: 'c1' };
+          const newer = { id: 'new', data: '2026-02-01', hora: '08:00', clienteId: 'c2' };
+          const sorted = selection.filterAndSortServices({
+            services: [older, newer],
+            applyFilterSort: (key, items, fields, comparators) => {
+              captured = { key, fields, comparators };
+              return items.slice();
+            },
+            getTableState: key => ({ sortCol: '' }),
+            getClientName: id => 'Cliente ' + id
+          });
+          assert.deepStrictEqual(Array.from(sorted, x => x.id), ['new', 'old']);
+          assert.strictEqual(captured.key, 'servicos');
+          assert.strictEqual(captured.fields.length, 4);
+          assert.strictEqual(captured.fields[3](older), 'Cliente c1');
+          assert.strictEqual(typeof captured.comparators.data, 'function');
+          assert.strictEqual(typeof captured.comparators.status, 'function');
+          const custom = selection.filterAndSortServices({
+            services: [older, newer],
+            applyFilterSort: (_key, items) => items.slice(),
+            getTableState: () => ({ sortCol: 'status' })
+          });
+          assert.deepStrictEqual(Array.from(custom, x => x.id), ['old', 'new']);
+          let toolbarArgs = null;
+          const empty = view.servicesTableState({ totalCount: 0, visibleCount: 0, renderToolbar: () => 'bad' });
+          assert.deepStrictEqual(JSON.parse(JSON.stringify(empty)), { hasRows: false, toolbarHtml: '', emptyRowsHtml: '', emptyDisplay: 'block' });
+          const noResults = view.servicesTableState({
+            totalCount: 2,
+            visibleCount: 0,
+            renderToolbar: (...args) => { toolbarArgs = args; return 'toolbar'; }
+          });
+          assert.strictEqual(noResults.hasRows, false);
+          assert.strictEqual(noResults.toolbarHtml, 'toolbar');
+          assert.ok(noResults.emptyRowsHtml.includes('Sem resultados para essa pesquisa.'));
+          assert.strictEqual(noResults.emptyDisplay, 'none');
+          assert.deepStrictEqual(toolbarArgs, ['servicos', 'Pesquisar por Nº, cliente, descrição, estado…', 0, 2]);
+          const populated = view.servicesTableState({ totalCount: 2, visibleCount: 1, renderToolbar: () => 'toolbar' });
+          assert.strictEqual(populated.hasRows, true);
+          assert.strictEqual(populated.emptyRowsHtml, '');
+          assert.strictEqual(populated.emptyDisplay, 'none');
+          console.log('HELPERS_UNIT=OK');
+          NODE
+      - name: Validação sintática e estrutural
+        run: |
+          node --check assets/js/app-services-selection.js
+          node --check assets/js/app-services-view.js
+          node --check sw.js
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('app.html').read_text(encoding='utf-8'); sw=Path('sw.js').read_text(encoding='utf-8')
+          s=text.index('        function renderizarServicos() {'); e=text.index('\n        function ',s+1); b=text[s:e]
+          assert b.count('filterAndSortServices({') == 1
+          assert b.count('servicesTableState({') == 1
+          assert b.count("_aplicarFiltroOrdenacao('servicos'") == 0
+          assert b.count("_getTableState('servicos')") == 0
+          assert b.count('servicos.sort(') == 0
+          assert b.count('_toolbarHtml(') == 0
+          assert b.count('servicos.length === 0') == 0
+          assert b.count('Sem resultados para essa pesquisa.') == 0
+          assert "const CACHE = 'totalgest-v136';" in sw
+          workflow=Path('.github/workflows/inspect-exact-demo-plan.yml').read_text(encoding='utf-8')
+          assert 'workflow_dispatch:' in workflow
+          assert 'push:' not in workflow
+          assert 'contents: read' in workflow
+          assert 'contents: write' not in workflow
+          print('STRUCTURE=OK')
+          PY
+          git diff --check
+      - name: Commit da migração validada
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-services-selection.js assets/js/app-services-view.js sw.js .github/workflows/inspect-exact-demo-plan.yml
+          git diff --cached --check
+          test -n "$(git status --porcelain)"
+          git commit -m "Extrair estado da tabela de serviços"
+          git push origin HEAD:refactor/separar-index-app
