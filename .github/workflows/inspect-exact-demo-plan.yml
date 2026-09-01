@@ -1,27 +1,18 @@
-name: Inspect app migration boundary
-
+name: Audit services row composition
 on:
-  workflow_dispatch:
-
+  push:
+    branches: [refactor/separar-index-app]
+    paths: ['.github/workflows/inspect-exact-demo-plan.yml']
 permissions:
   contents: read
-
 jobs:
-  inspect:
+  audit:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8'); sw=Path('sw.js').read_text(encoding='utf-8')
-          s=text.index('        function renderizarServicos() {'); e=text.index('\n        function ',s+1); b=text[s:e]
-          for x in ['selectVisibleServices({','specialtyAndHistoryNotice({','statusControl({','workSheetActions({','rowLeadingCells({','primaryRowActions({','erpRowActions({']: assert b.count(x)==1,(x,b.count(x))
-          for x in ['faturarOSViaTOConline(','faturarOSViaMoloni(','_verificarPagamentoMoloni(','emitirGuiaTransporteMoloni(','emitirNotaCreditoMoloni(']: assert b.count(x)==0,(x,b.count(x))
-          assert b.count("excluirEntidade('servico'")==1
-          assert "const CACHE = 'totalgest-v132';" in sw
-          print('APP_MIGRATION_BOUNDARY=OK')
-          PY
+        with: { ref: refactor/separar-index-app }
+      - run: |
+          test "$(git branch --show-current)" = "refactor/separar-index-app"
+          git rev-parse HEAD
+          python3 .github/scripts/audit-services-row-composition.py
