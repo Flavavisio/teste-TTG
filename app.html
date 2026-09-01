@@ -17662,42 +17662,25 @@
             if (usuarioLogado.role !== 'admin' && usuarioLogado.role !== 'subadmin') { cont.innerHTML = '<p style="color:#64748b;">Apenas o administrador acede a este dashboard.</p>'; return; }
             const adminId = _tenantId();
             const { ini, fim } = _danIntervalo();
-            const tecnicos = [...(dados.funcionarios || []).filter(f => f.adminId === adminId && f.role !== 'admin'), ...(dados.encarregados || []).filter(e => e.adminId === adminId)];
-            const osPeriodo = (dados.servicos || []).filter(s => s.adminId === adminId && s.data && s.data >= ini && s.data <= fim);
-
-            // SO por técnico + tempo médio
-            const statsTec = tecnicos.map(t => {
-                const osT = osPeriodo.filter(s => s.funcionarioId === t.id);
-                const regsPonto = (dados.ponto || []).filter(p => p.funcionarioId === t.id && p.entrada && p.saida && p.servicoId && osT.some(s => s.id === p.servicoId));
-                const totalHoras = regsPonto.reduce((s, p) => s + calcularHoras(p.entrada, p.saida), 0);
-                const tempoMedio = regsPonto.length ? (totalHoras / regsPonto.length) : 0;
-                const diasComPonto = new Set((dados.ponto || []).filter(p => p.funcionarioId === t.id && p.entrada && p.saida && p.data >= ini && p.data <= fim).map(p => p.data)).size;
-                const diasUteis = _danDiasUteis(ini, fim) || 1;
-                const assiduidade = Math.min(100, Math.round((diasComPonto / diasUteis) * 100));
-                return { nome: t.nome, nOS: osT.length, tempoMedio, assiduidade };
-            }).sort((a, b) => b.nOS - a.nOS);
-            const maxOS = Math.max(1, ...statsTec.map(t => t.nOS));
-
-            // Taxa de conclusão + top clientes
-            const totalOS = osPeriodo.length;
-            const osConcluidas = osPeriodo.filter(s => s.status === 'concluído').length;
-            const taxaConclusao = totalOS ? Math.round((osConcluidas / totalOS) * 100) : 0;
-            const porCliente = {};
-            osPeriodo.forEach(s => { if (s.clienteId) porCliente[s.clienteId] = (porCliente[s.clienteId] || 0) + 1; });
-            const topClientes = Object.entries(porCliente).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([cid, n]) => ({ nome: obterNomeCliente(cid) || '—', n }));
-            const geofencePeriodo = (dados.alertasGeofence || []).filter(g => g.adminId === adminId && g.dataCriacao >= new Date(ini).getTime() && g.dataCriacao <= new Date(fim + 'T23:59:59').getTime()).length;
-
-            // Obras concluídas por mês (ano selecionado)
-            const nomesMeses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-            const obrasAdmin = (dados.obras || []).filter(o => o.adminId === adminId && o.estado === 'concluida' && o.dataConclusao);
-            const porMes = [1,2,3,4,5,6,7,8,9,10,11,12].map(m => {
-                const mm = String(m).padStart(2, '0');
-                const obrasMes = obrasAdmin.filter(o => o.dataConclusao && o.dataConclusao.startsWith(_danAnoObras + '-' + mm));
-                const valores = obrasMes.map(o => (dados.servicos || []).filter(s => s.obraId === o.id).reduce((s, x) => s + (Number(x.valor) || 0), 0));
-                const valorMedio = valores.length ? (valores.reduce((a, b) => a + b, 0) / valores.length) : 0;
-                return { n: obrasMes.length, valorMedio };
+            const _analytics = window.TotalGestDashboardAnalyticsMetrics.calculate({
+                data: dados,
+                adminId: adminId,
+                startDate: ini,
+                endDate: fim,
+                worksYear: _danAnoObras,
+                calculateHours: calcularHoras,
+                businessDays: _danDiasUteis,
+                clientName: obterNomeCliente
             });
-            const maxObrasMes = Math.max(1, ...porMes.map(x => x.n));
+            const statsTec = _analytics.technicians;
+            const maxOS = _analytics.maxOS;
+            const totalOS = _analytics.totalOS;
+            const taxaConclusao = _analytics.completionRate;
+            const topClientes = _analytics.topClients;
+            const geofencePeriodo = _analytics.geofenceAlerts;
+            const nomesMeses = _analytics.monthNames;
+            const porMes = _analytics.worksByMonth;
+            const maxObrasMes = _analytics.maxWorksMonth;
 
             cont.innerHTML = `
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px;">
@@ -29287,6 +29270,7 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, dashboardCounts: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, dashboardCounts: true,
+                dashboardAnalyticsMetrics: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
