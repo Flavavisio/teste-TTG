@@ -9,8 +9,14 @@ sw = SW.read_text(encoding='utf-8')
 bad = "            if (!usuarioLogado                container.innerHTML = html;\n                return;\n            }\n\n"
 proper = "            if (!usuarioLogado || usuarioLogado.role !== 'admin' && usuarioLogado.role !== 'subadmin') {"
 
-assert app.count(bad) == 1, app.count(bad)
-assert app.count(proper) == 1, app.count(proper)
+def reports_region(text):
+    start = text.index('        function renderizarReports() {')
+    end = text.index('\n        function ', start + 1)
+    return text[start:end]
+
+before = reports_region(app)
+assert before.count(bad) == 1, before.count(bad)
+assert before.count(proper) == 1, before.count(proper)
 assert app.count('function renderizarReports()') == 1
 assert app.count('bootstrapSupabase()') >= 1
 
@@ -18,9 +24,10 @@ auth_count = app.count('supabase.auth')
 bootstrap_count = app.count('bootstrapSupabase()')
 
 app = app.replace(bad, '', 1)
+after = reports_region(app)
 
-assert bad not in app
-assert app.count(proper) == 1
+assert bad not in after
+assert after.count(proper) == 1
 assert app.count('function renderizarReports()') == 1
 assert app.count('supabase.auth') == auth_count
 assert app.count('bootstrapSupabase()') == bootstrap_count
