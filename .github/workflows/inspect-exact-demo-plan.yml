@@ -22,10 +22,10 @@ jobs:
           start = text.index(marker)
           end = text.index('\n        function ', start + len(marker))
           block = text[start:end]
-          for item in ['selectVisibleServices({','selectPendingSpecialtyServices({','prepareServiceRow({','filterAndSortServices({','specialtyAndHistoryNotice({','servicesTableState({','serviceStatusControl({','serviceRow({']:
+          for item in ['selectVisibleServices({','selectPendingSpecialtyServices({','prepareServiceRow({','filterAndSortServices({','specialtyAndHistoryNotice({','serviceHistoryLoadedSinceLabel(_servicosCarregadoDesde)','servicesTableState({','serviceStatusControl({','serviceRow({']:
               assert block.count(item) == 1, (item, block.count(item))
-          for item in ["_aplicarFiltroOrdenacao('servicos'","_getTableState('servicos')",'servicos.sort(','_toolbarHtml(','servicos.length === 0','Sem resultados para essa pesquisa.','statusControl({','const podeEditar =','workSheetActions({','rowLeadingCells({','rowActions({','const folhaOS =','const btnCriarFolha =','obterNomeFuncionario(','gerarNumeroRegisto()','_osTemMateriais(','moduloErpAtivo(']:
+          for item in ["_aplicarFiltroOrdenacao('servicos'","_getTableState('servicos')",'servicos.sort(','_toolbarHtml(','servicos.length === 0','Sem resultados para essa pesquisa.',"new Date(_servicosCarregadoDesde + 'T00:00:00')",'statusControl({','const podeEditar =','workSheetActions({','rowLeadingCells({','rowActions({','const folhaOS =','const btnCriarFolha =','obterNomeFuncionario(','gerarNumeroRegisto()','_osTemMateriais(','moduloErpAtivo(']:
               assert block.count(item) == 0, (item, block.count(item))
-          assert "const CACHE = 'totalgest-v138';" in Path('sw.js').read_text(encoding='utf-8')
+          assert "const CACHE = 'totalgest-v139';" in Path('sw.js').read_text(encoding='utf-8')
           print('APP_MIGRATION_BOUNDARY=OK')
           PY
