@@ -1,28 +1,25 @@
-name: Inspect app migration boundary
+name: Audit services next boundary
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [refactor/separar-index-app]
+    paths:
+      - '.github/workflows/inspect-exact-demo-plan.yml'
 
 permissions:
   contents: read
 
 jobs:
-  inspect:
+  audit:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Confirmar branch e HEAD
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8'); sw=Path('sw.js').read_text(encoding='utf-8')
-          def fn(name):
-              s=text.index(f'        function {name}() {{'); e=text.index('\n        function ',s+1); return text[s:e]
-          servicos=fn('renderizarServicos')
-          for x in ['selectVisibleServices({','specialtyAndHistoryNotice({','statusControl({','workSheetActions({','rowLeadingCells({','primaryRowActions({']: assert servicos.count(x)==1,(x,servicos.count(x))
-          for x in ['faturarOSViaTOConline(','faturarOSViaMoloni(','_verificarPagamentoMoloni(','emitirGuiaTransporteMoloni(','emitirNotaCreditoMoloni(']: assert servicos.count(x)==1,(x,servicos.count(x))
-          assert "const CACHE = 'totalgest-v131';" in sw
-          print('APP_MIGRATION_BOUNDARY=OK')
-          PY
+          test "$(git branch --show-current)" = "refactor/separar-index-app"
+          git rev-parse HEAD
+      - name: Auditar próxima fronteira
+        run: python3 .github/scripts/audit-services-next-boundary.py
