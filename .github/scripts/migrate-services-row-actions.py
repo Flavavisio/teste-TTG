@@ -29,9 +29,10 @@ new='''                            ${window.TotalGestServicesView.rowActions({
 b2=b[:old_start]+new+b[old_end:]
 assert b2.count('rowActions({')==1
 assert b2.count('primaryRowActions({')==0 and b2.count('erpRowActions({')==0 and b2.count("excluirEntidade('servico'")==0
-for x in ['bootstrapSupabase()','supabase.auth','rowLeadingCells({','statusControl({','workSheetActions({')]:
-    assert text.count(x)==(text[:s]+b2+text[e:]).count(x),x
-p.write_text(text[:s]+b2+text[e:],encoding='utf-8')
+new_text=text[:s]+b2+text[e:]
+for x in ['bootstrapSupabase()','supabase.auth','rowLeadingCells({','statusControl({','workSheetActions({']:
+    assert text.count(x)==new_text.count(x),x
+p.write_text(new_text,encoding='utf-8')
 sw=Path('sw.js'); st=sw.read_text(encoding='utf-8'); assert "const CACHE = 'totalgest-v132';" in st
 sw.write_text(st.replace("const CACHE = 'totalgest-v132';","const CACHE = 'totalgest-v133';",1),encoding='utf-8')
 print(f'RENDERIZAR_SERVICOS_AFTER chars={len(b2)} lines={len(b2.splitlines())}')
