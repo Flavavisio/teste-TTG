@@ -1,76 +1,53 @@
-name: Migrate services notice view
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
-    paths:
-      - '.github/workflows/inspect-exact-demo-plan.yml'
-      - '.github/scripts/migrate-services-notice-view.py'
-      - 'assets/js/app-services-view.js'
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Confirmar branch e HEAD
+      - name: Estado dos módulos principais
         run: |
-          test "$(git branch --show-current)" = "refactor/separar-index-app"
-          git rev-parse HEAD
-      - name: Migrar avisos de serviços
-        run: python3 .github/scripts/migrate-services-notice-view.py
-      - name: Validar migração
-        run: |
-          node --check assets/js/app-services-view.js
-          node --check assets/js/app-shell.js
-          node --check sw.js
-          git diff --check
-          test "$(git diff --name-only | sort | tr '\n' ' ')" = "app.html assets/js/app-shell.js sw.js "
-          node <<'NODE'
-          global.window = {};
-          require('./assets/js/app-services-view.js');
-          const view = window.TotalGestServicesView;
-          const pending = [1,2,3,4,5].map(i => ({ number:`OS-${i}`, types:['AVAC'] }));
-          const html = view.specialtyAndHistoryNotice({ canSeePending:true, pendingServices:pending, loadedSinceLabel:'01/06/2026' });
-          if (!html.includes('<strong>5</strong>') || !html.includes('OS-1 (AVAC)') || !html.includes(' ...')) throw new Error('pending-preview');
-          if (!html.includes('Carregar OS mais antigas (+3 meses)') || !html.includes('01/06/2026')) throw new Error('history-control');
-          if (html.includes('OS-5 (AVAC)')) throw new Error('preview-limit');
-          const hidden = view.specialtyAndHistoryNotice({ canSeePending:false, pendingServices:pending, loadedSinceLabel:'—' });
-          if (hidden.includes('triangle-exclamation') || !hidden.includes('Carregar OS mais antigas')) throw new Error('hidden-pending');
-          console.log('SERVICES_NOTICE_VIEW_UNIT=OK');
-          NODE
           python3 - <<'PY'
           from pathlib import Path
-          app = Path('app.html').read_text(encoding='utf-8')
+          text = Path('app.html').read_text(encoding='utf-8')
           shell = Path('assets/js/app-shell.js').read_text(encoding='utf-8')
           sw = Path('sw.js').read_text(encoding='utf-8')
-          start = app.index('        function renderizarServicos() {')
-          end = app.index('\n        function ', start + 1)
-          block = app[start:end]
-          assert block.count('window.TotalGestServicesSelection.selectVisibleServices({') == 1
-          assert block.count('window.TotalGestServicesView.specialtyAndHistoryNotice({') == 1
-          assert block.count('tbody.innerHTML = servicos.map(') == 1
-          assert 'btn-carregar-os-antigas' not in block
+          def fn(name):
+              start = text.index(f'        function {name}() {{')
+              end = text.index('\n        function ', start + 1)
+              return text[start:end]
+          reports = fn('renderizarReports')
+          alertas = fn('renderizarAlertas')
+          licenca = fn('renderizarMinhaLicenca')
+          servicos = fn('renderizarServicos')
+          assert reports.count('window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({') == 1
+          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateClientSummary({') == 1
+          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateAdminSummary({') == 1
+          assert reports.count('window.TotalGestReportsModuleMetrics.calculateOverview({') == 1
+          assert alertas.count('window.TotalGestAlertsView.alertsCard({') == 1
+          assert licenca.count('window.TotalGestLicenseAddons.renderAddon({') == 4
+          assert licenca.count('window.TotalGestLicenseAddons.renderRounds({') == 1
+          assert servicos.count('window.TotalGestServicesSelection.selectVisibleServices({') == 1
+          assert servicos.count('window.TotalGestServicesView.specialtyAndHistoryNotice({') == 1
+          assert servicos.count('tbody.innerHTML = servicos.map(') == 1
           for item in ['faturarOSViaTOConline(', 'faturarOSViaMoloni(', '_verificarPagamentoMoloni(', 'emitirGuiaTransporteMoloni(', 'emitirNotaCreditoMoloni(']:
-              assert block.count(item) == 1, (item, block.count(item))
+              assert servicos.count(item) == 1, (item, servicos.count(item))
+          assert shell.count("servicesSelection: './assets/js/app-services-selection.js'") == 1
           assert shell.count("servicesView: './assets/js/app-services-view.js'") == 1
+          assert shell.count('if (options.servicesSelection === true) pedidos.push(MODULOS.servicesSelection);') == 1
           assert shell.count('if (options.servicesView === true) pedidos.push(MODULOS.servicesView);') == 1
-          assert app.count('servicesView: true') == 1
+          assert text.count('servicesSelection: true') == 1
+          assert text.count('servicesView: true') == 1
+          assert sw.count("'./assets/js/app-services-selection.js',") == 1
           assert sw.count("'./assets/js/app-services-view.js',") == 1
           assert "const CACHE = 'totalgest-v128';" in sw
-          print('SERVICES_NOTICE_VIEW_VALIDATION=OK')
+          print('APP_MIGRATION_BOUNDARY=OK')
           PY
-      - name: Commit da migração
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app.html assets/js/app-shell.js sw.js
-          git commit -m "Extrair avisos visuais das ordens de serviço"
-          git push origin refactor/separar-index-app
