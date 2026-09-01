@@ -34,6 +34,19 @@
     };
   }
 
+  function applyServicesTableState(options) {
+    const opts = options || {};
+    const state = opts.state || {};
+    if (opts.toolbarElement) opts.toolbarElement.innerHTML = state.toolbarHtml || '';
+    if (!state.hasRows) {
+      opts.tbody.innerHTML = state.emptyRowsHtml || '';
+      opts.emptyElement.style.display = state.emptyDisplay || 'none';
+      return false;
+    }
+    opts.emptyElement.style.display = state.emptyDisplay || 'none';
+    return true;
+  }
+
   function statusControl(options) {
     const opts = options || {}, status = opts.status || 'pendente', serviceId = opts.serviceId || '';
     if (status === 'por aprovar') return '<span style="background:#fde68a;color:#92400e;padding:3px 10px;border-radius:999px;font-size:.74rem;font-weight:700;"><i class="fas fa-clock"></i> por aprovar</span>';
@@ -132,5 +145,5 @@
     return `<tr>${rowLeadingCells(opts.leadingCells || {})}${rowActions(opts.actions || {})}</tr>`;
   }
 
-  window.TotalGestServicesView = { serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, servicesTableState, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRowFromData, serviceRow };
+  window.TotalGestServicesView = { serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, servicesTableState, applyServicesTableState, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRowFromData, serviceRow };
 })();

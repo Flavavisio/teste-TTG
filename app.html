@@ -6671,13 +6671,13 @@
                 renderToolbar: _toolbarHtml
             });
             const tbOS = document.getElementById('servicosToolbar');
-            if (tbOS) tbOS.innerHTML = tableState.toolbarHtml;
-            if (!tableState.hasRows) {
-                tbody.innerHTML = tableState.emptyRowsHtml;
-                empty.style.display = tableState.emptyDisplay;
-                return;
-            }
-            empty.style.display = tableState.emptyDisplay;
+            const hasRows = window.TotalGestServicesView.applyServicesTableState({
+                state: tableState,
+                toolbarElement: tbOS,
+                tbody,
+                emptyElement: empty
+            });
+            if (!hasRows) return;
 
             tbody.innerHTML = servicos.map(s => {
                 const statusHtml = window.TotalGestServicesView.serviceStatusControl({
