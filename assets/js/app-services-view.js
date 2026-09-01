@@ -91,5 +91,10 @@
     return `<td><div class="acoes">${html}</div></td>`;
   }
 
-  window.TotalGestServicesView = { specialtyAndHistoryNotice, servicesTableState, statusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions };
+  function serviceRow(options) {
+    const opts = options || {};
+    return `<tr>${rowLeadingCells(opts.leadingCells || {})}${rowActions(opts.actions || {})}</tr>`;
+  }
+
+  window.TotalGestServicesView = { specialtyAndHistoryNotice, servicesTableState, statusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRow };
 })();

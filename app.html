@@ -6689,13 +6689,6 @@
                     canEdit: podeEditar,
                     badgeClass: statusBadge(s.status)
                 });
-                const folhaOS = s.status === 'concluído' ? dados.folhasObra?.find(f => f.servicoId === s.id) : null;
-                const btnCriarFolha = window.TotalGestServicesView.workSheetActions({
-                    serviceId: s.id,
-                    status: s.status,
-                    sheetId: folhaOS?.id || '',
-                    workId: s.obraId || ''
-                });
                 const rowData = window.TotalGestServicesSelection.prepareServiceRow({
                     service: s,
                     administrators: dados.administradores || [],
@@ -6705,41 +6698,39 @@
                     hasMaterials: _osTemMateriais,
                     isErpActive: moduloErpAtivo
                 });
-                return `
-                        <tr>
-                            ${window.TotalGestServicesView.rowLeadingCells({
-                                number: rowData.number,
-                                hasMaterials: rowData.hasMaterials,
-                                clientName: rowData.clientName,
-                                employeeName: rowData.employeeName,
-                                date: s.data || '-',
-                                time: s.hora || '-',
-                                description: escapeHtmlSimples(s.descricao || '-'),
-                                workTypesHtml: _tiposTrabalhoBadgesHTML(s),
-                                statusHtml
-                            })}
-                            ${window.TotalGestServicesView.rowActions({
-                                serviceId: s.id,
-                                status: s.status,
-                                role: usuarioLogado?.role || '',
-                                localPayment: s.pagamentoLocal === true,
-                                paid: s.pago === true,
-                                receiptMoloniId: s.reciboMoloniId || '',
-                                canManage: usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin',
-                                hasValue: s.valor != null,
-                                erpActive: rowData.erpActive,
-                                provider: rowData.provider,
-                                invoiceTOId: s.faturaTOConlineId || '',
-                                invoiceMoloniId: s.faturaMoloniId || '',
-                                invoiceMoloniUrl: s.faturaMoloniUrl || '',
-                                receiptMoloniUrl: s.reciboMoloniUrl || '',
-                                guideMoloniId: s.guiaMoloniId || '',
-                                guideMoloniUrl: s.guiaMoloniUrl || '',
-                                creditNoteMoloniId: s.notaCreditoMoloniId || '',
-                                creditNoteMoloniUrl: s.notaCreditoMoloniUrl || ''
-                            })}
-                        </tr>
-                    `;
+                return window.TotalGestServicesView.serviceRow({
+                    leadingCells: {
+                        number: rowData.number,
+                        hasMaterials: rowData.hasMaterials,
+                        clientName: rowData.clientName,
+                        employeeName: rowData.employeeName,
+                        date: s.data || '-',
+                        time: s.hora || '-',
+                        description: escapeHtmlSimples(s.descricao || '-'),
+                        workTypesHtml: _tiposTrabalhoBadgesHTML(s),
+                        statusHtml
+                    },
+                    actions: {
+                        serviceId: s.id,
+                        status: s.status,
+                        role: usuarioLogado?.role || '',
+                        localPayment: s.pagamentoLocal === true,
+                        paid: s.pago === true,
+                        receiptMoloniId: s.reciboMoloniId || '',
+                        canManage: usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin',
+                        hasValue: s.valor != null,
+                        erpActive: rowData.erpActive,
+                        provider: rowData.provider,
+                        invoiceTOId: s.faturaTOConlineId || '',
+                        invoiceMoloniId: s.faturaMoloniId || '',
+                        invoiceMoloniUrl: s.faturaMoloniUrl || '',
+                        receiptMoloniUrl: s.reciboMoloniUrl || '',
+                        guideMoloniId: s.guiaMoloniId || '',
+                        guideMoloniUrl: s.guiaMoloniUrl || '',
+                        creditNoteMoloniId: s.notaCreditoMoloniId || '',
+                        creditNoteMoloniUrl: s.notaCreditoMoloniUrl || ''
+                    }
+                });
             }).join('');
         }
 
