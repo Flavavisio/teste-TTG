@@ -41,6 +41,32 @@
     };
   }
 
+  function calculateClientSummary(options) {
+    const opts = options || {};
+    const clients = opts.clients || [];
+    const rows = [];
+    let totalCobrado = 0;
+
+    clients.forEach(function (client) {
+      const metrics = calculateClient(Object.assign({}, opts, { client: client }));
+      totalCobrado += metrics.valorCliente;
+      rows.push({
+        empresa: client.empresa || '-',
+        nome: client.nome,
+        planoLabel: typeof opts.planLabel === 'function' ? opts.planLabel(client) : '',
+        dataExp: typeof opts.expiryLabel === 'function' ? opts.expiryLabel(client) : '-',
+        funcionarios: metrics.funcionarios,
+        temContratos: metrics.temContratos,
+        temFrota: metrics.temFrota,
+        temArmazem: metrics.temArmazem,
+        temCrm: metrics.temCrm,
+        valorCliente: metrics.valorCliente
+      });
+    });
+
+    return { rows: rows, totalCobrado: totalCobrado };
+  }
+
   function calculateAdminOverview(options) {
     const opts = options || {}, data = opts.data || {}, adminId = opts.adminId;
     const totalFunc = data.funcionarios ? data.funcionarios.filter(f => f.adminId === adminId && f.role !== 'admin').length : 0;
@@ -95,6 +121,7 @@
   window.TotalGestReportsDistributorMetrics = {
     calculateOverview: calculateOverview,
     calculateClient: calculateClient,
+    calculateClientSummary: calculateClientSummary,
     calculateAdminOverview: calculateAdminOverview,
     calculateAdminContracts: calculateAdminContracts,
     calculateAdminOperations: calculateAdminOperations
