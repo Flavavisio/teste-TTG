@@ -71,9 +71,23 @@
     return `<button class="btn btn-sm btn-success" onclick="criarFolhaDaOS('${serviceId}')"><i class="fas fa-clipboard-list"></i> Folha</button>`;
   }
 
+  function rowLeadingCells(options) {
+    const opts = options || {};
+    return `
+      <td><strong>${opts.number || ''}</strong> ${opts.hasMaterials ? '<i class="fas fa-boxes-stacked" style="color:#0891b2;" title="Esta OS tem materiais associados"></i>' : ''}</td>
+      <td>${opts.clientName || ''}</td>
+      <td>${opts.employeeName || 'Todos'}</td>
+      <td>${opts.date || '-'}</td>
+      <td>${opts.time || '-'}</td>
+      <td>${opts.description || '-'}</td>
+      <td>${opts.workTypesHtml || '<span style="color:#94a3b8;">-</span>'}</td>
+      <td>${opts.statusHtml || ''}</td>`;
+  }
+
   window.TotalGestServicesView = {
     specialtyAndHistoryNotice,
     statusControl,
-    workSheetActions
+    workSheetActions,
+    rowLeadingCells
   };
 })();
