@@ -18158,97 +18158,32 @@
                     ${_kpi('A expirar (≤10d)', String(_expira), _expira ? '#dc2626' : '#16a34a', 'fa-hourglass-half')}
                     ${_kpi('Receita recorrente', _recT.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €', '#16a34a', 'fa-euro-sign')}
                 </div>`;
-                const _companyRows = [];
-                let totalReceitaGlobal = 0;
-                let totalFuncGlobal = 0;
-                let totalEncarregadosGlobal = 0;
-                let totalContratosGlobal = 0;
-                let totalFrotaGlobal = 0;
-                let totalArmazemGlobal = 0;
-                let totalCrmGlobal = 0;
-                let totalErpGlobal = 0;
-                let totalRondasGlobal = 0;
-                admins.forEach(admin => {
-                    const _row = window.TotalGestReportsSuperadminMetrics.calculateCompany({
-                        admin: admin,
-                        data: dados,
-                        baseValueCharged: valorBaseCobradoDe,
-                        contractsActive: moduloContratosAtivo,
-                        fleetActive: moduloFrotaAtivo,
-                        warehouseActive: moduloArmazemAtivo,
-                        crmActive: moduloCrmAtivo,
-                        erpActive: moduloErpAtivo,
-                        roundsActive: moduloRondasAtivo,
-                        contractsAnnualPrice: PRECO_CONTRATOS_ANUAL,
-                        contractsMonthlyPrice: PRECO_CONTRATOS_MENSAL,
-                        fleetAnnualPrice: PRECO_FROTA_ANUAL,
-                        fleetMonthlyPrice: PRECO_FROTA_MENSAL,
-                        warehouseAnnualPrice: PRECO_ARMAZEM_ANUAL,
-                        warehouseMonthlyPrice: PRECO_ARMAZEM_MENSAL,
-                        crmAnnualPrice: PRECO_CRM_ANUAL,
-                        crmMonthlyPrice: PRECO_CRM_MENSAL,
-                        erpAnnualPrice: PRECO_ERP_ANUAL,
-                        erpMonthlyPrice: PRECO_ERP_MENSAL,
-                        roundsAnnualPrice: PRECO_RONDAS_ANUAL,
-                        roundsMonthlyPrice: PRECO_RONDAS_MENSAL
-                    });
-                    const funcs = _row.funcionarios;
-                    const encarregados = _row.encarregados;
-                    const temContratos = _row.temContratos;
-                    const temFrota = _row.temFrota;
-                    const temArmazem = _row.temArmazem;
-                    const temCrm = _row.temCrm;
-                    const temErp = _row.temErp;
-                    const temRondas = _row.temRondas;
-                    const valorEmpresa = _row.valorEmpresa;
-                    const dataExp = admin.licenca ? new Date(admin.licenca.dataExpiracao).toLocaleDateString(
-                        'pt-PT') : '-';
-                    const planoLabel = admin.licenca ? PLANOS[admin.licenca.plano]?.label || admin.licenca.plano :
-                        'Sem licença';
-                    const maxFunc = admin.licenca ? admin.licenca.maxFuncionarios : 0;
-                    const atingiuLimite = funcs >= maxFunc && maxFunc > 0;
-                    const rowClass = atingiuLimite ? 'tr-limite-atingido' : '';
-                    totalReceitaGlobal += valorEmpresa;
-                    totalFuncGlobal += funcs;
-                    totalEncarregadosGlobal += encarregados;
-                    if (temContratos) totalContratosGlobal++;
-                    if (temFrota) totalFrotaGlobal++;
-                    if (temArmazem) totalArmazemGlobal++;
-                    if (temCrm) totalCrmGlobal++;
-                    if (temErp) totalErpGlobal++;
-                    if (temRondas) totalRondasGlobal++;
-                    _companyRows.push({
-                        rowClass: rowClass,
-                        empresa: admin.empresa || 'Sem empresa',
-                        nome: admin.nome,
-                        planoLabel: planoLabel,
-                        dataExp: dataExp,
-                        funcionarios: funcs,
-                        atingiuLimite: atingiuLimite,
-                        encarregados: encarregados,
-                        temContratos: temContratos,
-                        temFrota: temFrota,
-                        temArmazem: temArmazem,
-                        temCrm: temCrm,
-                        temErp: temErp,
-                        temRondas: temRondas,
-                        valorEmpresa: valorEmpresa
-                    });
+                const _companySummary = window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({
+                    admins: admins,
+                    data: dados,
+                    baseValueCharged: valorBaseCobradoDe,
+                    contractsActive: moduloContratosAtivo,
+                    fleetActive: moduloFrotaAtivo,
+                    warehouseActive: moduloArmazemAtivo,
+                    crmActive: moduloCrmAtivo,
+                    erpActive: moduloErpAtivo,
+                    roundsActive: moduloRondasAtivo,
+                    contractsAnnualPrice: PRECO_CONTRATOS_ANUAL,
+                    contractsMonthlyPrice: PRECO_CONTRATOS_MENSAL,
+                    fleetAnnualPrice: PRECO_FROTA_ANUAL,
+                    fleetMonthlyPrice: PRECO_FROTA_MENSAL,
+                    warehouseAnnualPrice: PRECO_ARMAZEM_ANUAL,
+                    warehouseMonthlyPrice: PRECO_ARMAZEM_MENSAL,
+                    crmAnnualPrice: PRECO_CRM_ANUAL,
+                    crmMonthlyPrice: PRECO_CRM_MENSAL,
+                    erpAnnualPrice: PRECO_ERP_ANUAL,
+                    erpMonthlyPrice: PRECO_ERP_MENSAL,
+                    roundsAnnualPrice: PRECO_RONDAS_ANUAL,
+                    roundsMonthlyPrice: PRECO_RONDAS_MENSAL,
+                    planLabel: admin => admin.licenca ? PLANOS[admin.licenca.plano]?.label || admin.licenca.plano : 'Sem licença',
+                    expiryLabel: admin => admin.licenca ? new Date(admin.licenca.dataExpiracao).toLocaleDateString('pt-PT') : '-'
                 });
-                html += window.TotalGestReportsView.superadminCompanySummary({
-                    rows: _companyRows,
-                    totals: {
-                        funcionarios: totalFuncGlobal,
-                        encarregados: totalEncarregadosGlobal,
-                        contratos: totalContratosGlobal,
-                        frota: totalFrotaGlobal,
-                        armazem: totalArmazemGlobal,
-                        crm: totalCrmGlobal,
-                        erp: totalErpGlobal,
-                        rondas: totalRondasGlobal,
-                        receita: totalReceitaGlobal
-                    }
-                });
+                html += window.TotalGestReportsView.superadminCompanySummary(_companySummary);
 
                 // Licenças de Manutenção (módulo Contratos)
                 const _contratosMetrics = window.TotalGestReportsModuleMetrics.calculateContracts({
