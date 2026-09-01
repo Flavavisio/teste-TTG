@@ -1,51 +1,79 @@
-name: Inspect app migration boundary
+name: Migrate services selection
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - refactor/separar-index-app
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Confirmar branch e HEAD
         run: |
+          test "$(git branch --show-current)" = "refactor/separar-index-app"
+          git rev-parse HEAD
+      - name: Migrar seleção de serviços
+        run: python3 .github/scripts/migrate-services-selection.py
+      - name: Validar migração
+        run: |
+          node --check assets/js/app-services-selection.js
+          node --check assets/js/app-shell.js
+          node --check sw.js
+          git diff --check
+          test "$(git diff --name-only | sort | tr '\n' ' ')" = "app.html assets/js/app-shell.js sw.js "
+          node <<'NODE'
+          global.window = {};
+          require('./assets/js/app-services-selection.js');
+          const select = window.TotalGestServicesSelection.selectVisibleServices;
+          const services = [
+            {id:'a',adminId:'A',funcionarioId:null},
+            {id:'b',adminId:'A',funcionarioId:'F1'},
+            {id:'c',adminId:'A',funcionariosIds:['F2']},
+            {id:'d',adminId:'B',funcionarioId:'F1'},
+            {id:'e',adminId:'A',funcionariosIds:['F3']}
+          ];
+          const encarregados = [{id:'E1',adminId:'A',funcionariosIds:['F2']}];
+          const funcionarios = [{id:'F1',adminId:'A'}];
+          const ids = x => x.map(s => s.id).join(',');
+          if (ids(select({services,user:{id:'A',role:'admin'},encarregados,funcionarios})) !== 'a,b,c,e') throw new Error('admin');
+          if (ids(select({services,user:{id:'S1',adminId:'A',role:'subadmin'},encarregados,funcionarios})) !== 'a,b,c,e') throw new Error('subadmin');
+          if (ids(select({services,user:{id:'E1',role:'encarregado'},encarregados,funcionarios})) !== 'a,c') throw new Error('encarregado');
+          if (ids(select({services,user:{id:'F1',role:'funcionario'},encarregados,funcionarios})) !== 'a,b') throw new Error('funcionario');
+          if (select({services,user:{id:'SA',role:'superadmin'},encarregados,funcionarios}).length !== 0) throw new Error('superadmin');
+          if (select({services,user:{id:'X',role:'encarregado'},encarregados,funcionarios}).length !== 0) throw new Error('encarregado-missing');
+          console.log('SERVICES_SELECTION_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
+          app = Path('app.html').read_text(encoding='utf-8')
+          shell = Path('assets/js/app-shell.js').read_text(encoding='utf-8')
           sw = Path('sw.js').read_text(encoding='utf-8')
-          def fn(name):
-              start = text.index(f'        function {name}() {{')
-              end = text.index('\n        function ', start + 1)
-              return text[start:end]
-          reports = fn('renderizarReports')
-          alertas = fn('renderizarAlertas')
-          licenca = fn('renderizarMinhaLicenca')
-          servicos = fn('renderizarServicos')
-          assert reports.count('window.TotalGestReportsSuperadminMetrics.calculateCompanySummary({') == 1
-          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateClientSummary({') == 1
-          assert reports.count('window.TotalGestReportsDistributorMetrics.calculateAdminSummary({') == 1
-          assert reports.count('window.TotalGestReportsModuleMetrics.calculateOverview({') == 1
-          assert reports.count('window.TotalGestReportsView.adminOverviewCards(_adminSummary)') == 1
-          assert alertas.count('window.TotalGestAlertsView.alertsCard({') == 1
-          assert licenca.count('window.TotalGestLicenseAddons.renderAddon({') == 4
-          assert licenca.count('window.TotalGestLicenseAddons.renderRounds({') == 1
-          for item in [
-              'window.TotalGestLicenseAddons.renderNoLicense()',
-              'window.TotalGestLicenseAddons.renderErpComingSoon()',
-              'window.TotalGestLicenseAddons.renderBaseAction({',
-              'window.TotalGestLicenseAddons.renderJointRequest({',
-              'window.TotalGestLicenseAddons.renderActivateAddons({',
-              'window.TotalGestLicenseAddons.renderCancellation({',
-              'window.TotalGestLicenseAddons.renderLicensePage({'
-          ]:
-              assert licenca.count(item) == 1, (item, licenca.count(item))
-          assert servicos.count('tbody.innerHTML = servicos.map(') == 1
-          assert "const CACHE = 'totalgest-v126';" in sw
-          print('APP_MIGRATION_BOUNDARY=OK')
+          start = app.index('        function renderizarServicos() {')
+          end = app.index('\n        function ', start + 1)
+          block = app[start:end]
+          assert block.count('window.TotalGestServicesSelection.selectVisibleServices({') == 1
+          assert block.count('tbody.innerHTML = servicos.map(') == 1
+          for item in ['faturarOSViaTOConline(', 'faturarOSViaMoloni(', '_verificarPagamentoMoloni(', 'emitirGuiaTransporteMoloni(', 'emitirNotaCreditoMoloni(']:
+              assert block.count(item) == 1, (item, block.count(item))
+          assert shell.count("servicesSelection: './assets/js/app-services-selection.js'") == 1
+          assert shell.count('if (options.servicesSelection === true) pedidos.push(MODULOS.servicesSelection);') == 1
+          assert app.count('servicesSelection: true') == 1
+          assert sw.count("'./assets/js/app-services-selection.js',") == 1
+          assert "const CACHE = 'totalgest-v127';" in sw
+          print('SERVICES_SELECTION_VALIDATION=OK')
           PY
+      - name: Commit da migração
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.html assets/js/app-shell.js sw.js
+          git commit -m "Extrair seleção de ordens de serviço"
+          git push origin refactor/separar-index-app
