@@ -1,6 +1,9 @@
-name: Inspect app migration boundary
+name: Inspect next services boundary
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,46 +11,25 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos principais
+      - name: Mapear renderizarServicos atual
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text = Path('app.html').read_text(encoding='utf-8')
-          sw = Path('sw.js').read_text(encoding='utf-8')
-          start = text.index('        function renderizarServicos() {')
-          end = text.index('\n        function ', start + 1)
+          marker = '        function renderizarServicos() {'
+          assert text.count(marker) == 1, text.count(marker)
+          start = text.index(marker)
+          end = text.index('\n        function ', start + len(marker))
           block = text[start:end]
-          for marker in [
-              'selectVisibleServices({',
-              'selectPendingSpecialtyServices({',
-              'prepareServiceRow({',
-              'filterAndSortServices({',
-              'specialtyAndHistoryNotice({',
-              'servicesTableState({',
-              'statusControl({',
-              'workSheetActions({',
-              'rowLeadingCells({',
-              'rowActions({'
-          ]:
-              assert block.count(marker) == 1, (marker, block.count(marker))
-          for marker in [
-              "_aplicarFiltroOrdenacao('servicos'",
-              "_getTableState('servicos')",
-              'servicos.sort(',
-              '_toolbarHtml(',
-              'servicos.length === 0',
-              'Sem resultados para essa pesquisa.',
-              'obterNomeFuncionario(',
-              'gerarNumeroRegisto()',
-              '_osTemMateriais(',
-              'moduloErpAtivo('
-          ]:
-              assert block.count(marker) == 0, (marker, block.count(marker))
-          assert "const CACHE = 'totalgest-v136';" in sw
-          print('APP_MIGRATION_BOUNDARY=OK')
+          print('RENDERIZAR_SERVICOS_CHARS=', len(block))
+          print('RENDERIZAR_SERVICOS_LINES=', len(block.splitlines()))
+          print('--- RENDERIZAR_SERVICOS_START ---')
+          print(block)
+          print('--- RENDERIZAR_SERVICOS_END ---')
           PY
