@@ -16,8 +16,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Confirmar HEAD esperado
-        run: test "$(git rev-parse HEAD)" = "6528bb675d90a4a91f3aa677330dc5ce63106f7e"
+      - name: Confirmar branch e HEAD
+        run: |
+          test "$(git branch --show-current)" = "refactor/separar-index-app"
+          git rev-parse HEAD
       - name: Migrar tabelas de resumo
         run: python3 .github/scripts/migrate-reports-summary-tables.py
       - name: Validar migração
