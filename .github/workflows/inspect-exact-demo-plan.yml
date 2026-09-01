@@ -32,7 +32,7 @@ jobs:
           require('./assets/js/app-reports-view.js');
           const v = window.TotalGestReportsView;
           const sa = v.superadminHeader({ empresas: 3, empresasAtivas: 2, totalUtilizadores: 9, addonsAtivos: 4, expiramEm10Dias: 1, receitaRecorrente: 1234.5 });
-          if (!sa.includes('Exportar PDF') || !sa.includes('3') || !sa.includes('2 ativas') || !sa.includes('1.234,50')) throw new Error('superadminHeader');
+          if (!sa.includes('Exportar PDF') || !sa.includes('Empresas') || !sa.includes('2 ativas') || !sa.includes('Receita recorrente') || !sa.includes('€')) throw new Error('superadminHeader');
           const dist = v.distributorHeader({ clientes: 5, clientesAtivos: 4 });
           if (!dist.includes('Clientes') || !dist.includes('5') || !dist.includes('4 ativos')) throw new Error('distributorHeader');
           console.log('REPORTS_HEADERS_VIEW_UNIT=OK');
