@@ -6713,15 +6713,14 @@
                             })}
                             <td>
                                 <div class="acoes">
-                                    <button class="btn btn-sm" style="background:#334155;color:#fff;" onclick="abrirVerOS('${s.id}')" title="Ver OS — folhas de obra e materiais"><i class="fas fa-eye"></i> Ver OS</button>
-                                    ${(s.status === 'por aprovar' && (usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'encarregado')) ? `
-                                        <button class="btn btn-sm btn-success" onclick="aprovarAssistencia('${s.id}')"><i class="fas fa-check"></i> Aprovar</button>
-                                        <button class="btn btn-sm btn-danger" onclick="rejeitarAssistencia('${s.id}')" title="Rejeitar pedido"><i class="fas fa-times"></i></button>
-                                    ` : ''}
-                                    ${(usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin' || usuarioLogado?.role === 'encarregado') ? `
-                                        <button class="btn btn-sm btn-warning" onclick="abrirModal('servico','${s.id}')" title="Editar"><i class="fas fa-edit"></i></button>
-                                        ${s.status !== 'concluído' ? `<button class="btn btn-sm" style="background:#0f766e;color:#fff;" onclick="finalizarEGerarReportOS('${s.id}')" title="Finalizar e gerar relatório completo"><i class="fas fa-flag-checkered"></i></button>` : `<button class="btn btn-sm" style="background:#0f766e;color:#fff;" onclick="gerarRelatorioOSIndividual('${s.id}')" title="Gerar relatório desta OS"><i class="fas fa-file-lines"></i></button>`}
-                                        ${s.pagamentoLocal ? `<button class="btn btn-sm" style="background:${s.pago === true ? '#16a34a' : '#dc2626'};color:#fff;font-weight:700;" onclick="_pagoTogglarOS('${s.id}')" title="${s.pago === true ? ('Pago — clica para alterar' + (s.reciboMoloniId ? ' (recibo emitido na Moloni)' : '')) : 'Não pago — clica para confirmar'}">${s.pago === true ? '€ Pago' : '<span style="text-decoration:line-through;">€</span> Não pago'}</button>` : ''}
+                                    ${window.TotalGestServicesView.primaryRowActions({
+                                        serviceId: s.id,
+                                        status: s.status,
+                                        role: usuarioLogado?.role || '',
+                                        localPayment: s.pagamentoLocal === true,
+                                        paid: s.pago === true,
+                                        receiptMoloniId: s.reciboMoloniId || ''
+                                    })}
                                         ${(() => {
                                             if (s.status !== 'concluído' || s.valor == null || (usuarioLogado?.role !== 'admin' && usuarioLogado?.role !== 'subadmin')) return '';
                                             const _adminVerOs = dados.administradores?.find(a => a.id === s.adminId);
