@@ -1,29 +1,20 @@
-name: Apply seventh safe services batch
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Migrar e validar sétimo lote seguro
+      - name: Estado dos módulos de serviços
         run: |
-          python3 scripts/tmp-migrate-services-safe-batch-7.py
-          node --check assets/js/app-services-selection.js
-          node --check assets/js/app-services-view.js
-          node --check sw.js
-          git diff --check
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
@@ -31,20 +22,10 @@ jobs:
           s=text.index(marker); e=text.index('\n        function ',s+len(marker)); block=text[s:e]
           for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderDependencies: runtimeState.renderDependencies','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
               assert block.count(item)==1,(item,block.count(item))
-          for item in ['servicesViewElements(document)','prepareServicesForRendering({','createServiceRenderDependencies({','createServicesAreaRenderer({','selectPending: renderDependencies.selectPendingSpecialty','prepareRow: renderDependencies.prepareRow']:
+          for item in ['servicesViewElements(document)','prepareServicesForRendering({','createServiceRenderDependencies({','createServicesAreaRenderer({','selectPending: renderDependencies.selectPendingSpecialty','prepareRow: renderDependencies.prepareRow','const servicos = selectionState.services;','createPendingSpecialtySelector({','renderPendingSpecialtyNotice({','createServicesTableStateRenderer({','renderTableState(','createServiceRowPreparerFromData({','createServiceRowsRenderer({','renderPreparedRows(']:
               assert block.count(item)==0,(item,block.count(item))
           for item in ['invoiceTOId:','invoiceMoloniId:','invoiceMoloniUrl:','receiptMoloniUrl:','guideMoloniId:','guideMoloniUrl:','creditNoteMoloniId:','creditNoteMoloniUrl:']:
               assert block.count(item)==1,(item,block.count(item))
           assert "const CACHE = 'totalgest-v150';" in Path('sw.js').read_text(encoding='utf-8')
-          print('SAFE_BATCH_7_VERIFY=OK')
+          print('APP_MIGRATION_BOUNDARY=OK')
           PY
-      - name: Commit funcional
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add app.html assets/js/app-services-selection.js assets/js/app-services-view.js sw.js
-          git diff --cached --check
-          test -n "$(git diff --cached --name-only)"
-          test "$(git diff --cached --name-only | wc -l)" -eq 4
-          git commit -m "Extrair sétima ronda segura da apresentação das OS"
-          git push origin HEAD:refactor/separar-index-app
