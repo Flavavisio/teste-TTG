@@ -17,6 +17,8 @@ jobs:
           ref: refactor/separar-index-app
       - name: Separate clients domain and validate
         run: |
+          sed -i 's/        async function _guardarEdicaoPontoRegisto(regId) {/        function _guardarEdicaoPontoRegisto(regId) {/g' scripts/tmp-migrate-clients-domain-batch-31.py
+          sed -i 's/        async function _repararEntradasPresas() {/        function _repararEntradasPresas() {/g' scripts/tmp-migrate-clients-domain-batch-31.py
           python3 scripts/tmp-migrate-clients-domain-batch-31.py
           node --check assets/js/app-clients-view.js
           node --check assets/js/app-shell.js
