@@ -1,40 +1,40 @@
-name: Inspect app migration boundary
+name: Audit app remaining functions
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [refactor/separar-index-app]
 
 permissions:
   contents: read
 
 jobs:
-  inspect:
+  audit:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos extraídos
+      - name: Audit largest functions
         run: |
-          node --check assets/js/app-attendance-view.js
-          node --check sw.js
-          git diff --check
           python3 - <<'PY'
+          import re
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
-          def block(marker):
-              s=text.index(marker); e=text.index('\n        function ',s+len(marker)); return text[s:e]
-          services=block('        function renderizarServicos() {')
-          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
-              assert services.count(item)==1
-          point=block('        function renderizarPonto() {')
-          for item in ['prepareAttendanceBaseState({','prepareAttendanceViewState({','createAttendancePersonEntryRenderer({','renderAttendancePersonEntry(fid, porPessoa[fid], _ausenciaHoje)','applyAttendanceAccordionState(attendanceElements, htmlAcc, Object.keys(porPessoa).length)']:
-              assert point.count(item)==1,(item,point.count(item))
-          for old in ['applyMissingAttendancePeople(porPessoa, {','createAttendancePersonRenderer({','attendancePersonName(','prepareAttendancePersonAccordionItem(fid, porPessoa[fid], {','guardarDados(dados)']:
-              assert old not in point,old
-          assert point.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
-          attendance=Path('assets/js/app-attendance-view.js').read_text(encoding='utf-8')
-          for item in ['function prepareAttendanceBaseState(','function prepareAttendanceViewState(','function prepareMissingAttendanceState(','function applyMissingAttendancePeople(','function createAttendancePersonRenderer(','function createAttendancePersonEntryRenderer(','window.TotalGestAttendanceView = {']:
-              assert attendance.count(item)==1,(item,attendance.count(item))
-          assert "const CACHE = 'totalgest-v167';" in Path('sw.js').read_text(encoding='utf-8')
-          print('RENDER_PONTO_CHARS=',len(point)); print('RENDER_PONTO_LINES=',point.count('\n')+1); print('APP_MIGRATION_BOUNDARY=OK')
+          starts=[]
+          for m in re.finditer(r'(?m)^\s{8}function\s+([A-Za-z0-9_$]+)\s*\(', text):
+              starts.append((m.start(),m.group(1)))
+          rows=[]
+          for i,(s,name) in enumerate(starts):
+              e=starts[i+1][0] if i+1<len(starts) else len(text)
+              chunk=text[s:e]
+              rows.append((len(chunk),chunk.count('\n')+1,name,s))
+          rows.sort(reverse=True)
+          print('APP_CHARS=',len(text)); print('TOP_FUNCTIONS')
+          for chars,lines,name,s in rows[:35]:
+              flags=[]
+              for word,label in [('supabase','SUPABASE'),('auth','AUTH'),('moloni','ERP'),('fatura','BILLING'),('storage','STORAGE')]:
+                  if word in text[s:s+chars].lower(): flags.append(label)
+              print(f'{chars:6d} chars | {lines:4d} lines | {name} | {",".join(flags) or "SAFE?"}')
+          print('AUDIT_OK')
           PY
