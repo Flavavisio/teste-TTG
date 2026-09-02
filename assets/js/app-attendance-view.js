@@ -674,6 +674,17 @@
     };
   }
 
+  function createAttendancePersonEntryRenderer(options) {
+    const o = options || {};
+    const renderPerson = createAttendancePersonRenderer(o);
+    return function (personId, records, absence) {
+      return renderPerson(personId, records, {
+        absence,
+        personName: attendancePersonName(personId, o.administrators, o.getEmployeeName)
+      });
+    };
+  }
+
   window.TotalGestAttendanceView = {
     startOfWeekMonday,
     formatHours,
@@ -733,6 +744,7 @@
     applyMissingAttendancePeople,
     attendancePersonName,
     prepareAttendancePersonAccordionItem,
-    createAttendancePersonRenderer
+    createAttendancePersonRenderer,
+    createAttendancePersonEntryRenderer
   };
 })();

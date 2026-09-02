@@ -7419,7 +7419,9 @@
             _pontoNavData = attendanceViewState.selectedDate;
             const _hojeSoP = attendanceViewState.selectedDate;
             const porPessoa = attendanceViewState.groupedRecords;
-            const renderAttendancePerson = window.TotalGestAttendanceView.createAttendancePersonRenderer({
+            const renderAttendancePersonEntry = window.TotalGestAttendanceView.createAttendancePersonEntryRenderer({
+                administrators: dados.administradores || [],
+                getEmployeeName: obterNomeFuncionario,
                 viewState: attendanceViewState,
                 selectedDateIsToday: _hojeSoP === getDataHoje(),
                 mode: _pontoNavModo,
@@ -7430,16 +7432,8 @@
                 escapeHtml: escapeHtmlSimples
             });
             const htmlAcc = Object.keys(porPessoa).map(fid => {
-                const nomePessoa = window.TotalGestAttendanceView.attendancePersonName(
-                    fid,
-                    dados.administradores || [],
-                    obterNomeFuncionario
-                );
                 const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);
-                return renderAttendancePerson(fid, porPessoa[fid], {
-                    absence: _ausenciaHoje,
-                    personName: nomePessoa
-                });
+                return renderAttendancePersonEntry(fid, porPessoa[fid], _ausenciaHoje);
             }).join('');
             if (!window.TotalGestAttendanceView.applyAttendanceAccordionState(attendanceElements, htmlAcc, Object.keys(porPessoa).length)) return;
         }
