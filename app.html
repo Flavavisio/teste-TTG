@@ -6635,14 +6635,14 @@
         _registarTabela('servicos', renderizarServicos);
         function renderizarServicos() {
             const viewElements = window.TotalGestServicesView.servicesViewElements(document);
-            const tbody = viewElements.tbody;
-            const empty = viewElements.emptyElement;
-            let servicos = window.TotalGestServicesSelection.selectVisibleServicesFromData({
+            const selectionState = window.TotalGestServicesSelection.prepareServicesForRendering({
                 data: dados,
-                user: usuarioLogado
+                user: usuarioLogado,
+                applyFilterSort: _aplicarFiltroOrdenacao,
+                getTableState: _getTableState,
+                getClientName: obterNomeCliente
             });
-
-            const totalGeralOS = servicos.length;
+            const servicos = selectionState.services;
 
             const selectPendingSpecialty = window.TotalGestServicesSelection.createPendingSpecialtySelector({
                 user: usuarioLogado,
@@ -6650,43 +6650,32 @@
             });
             window.TotalGestServicesView.renderPendingSpecialtyNotice({
                 element: viewElements.noticeElement,
-                services: servicos,
+                services: selectionState.sourceServices,
                 selectPending: selectPendingSpecialty,
                 loadedSince: _servicosCarregadoDesde
             });
 
-            const filterServices = window.TotalGestServicesSelection.createServiceFilterSorter({
-                applyFilterSort: _aplicarFiltroOrdenacao,
-                getTableState: _getTableState,
-                getClientName: obterNomeCliente
-            });
-            servicos = filterServices(servicos);
             const renderTableState = window.TotalGestServicesView.createServicesTableStateRenderer({
                 renderToolbar: _toolbarHtml,
-                toolbarElement: viewElements.toolbarElement,
-                tbody,
-                emptyElement: empty
+                elements: viewElements
             });
-            if (!renderTableState(totalGeralOS, servicos.length)) return;
+            if (!renderTableState(selectionState.totalCount, servicos.length)) return;
 
-            const prepareRow = window.TotalGestServicesSelection.createServiceRowPreparer({
-                administrators: dados.administradores || [],
+            const prepareRow = window.TotalGestServicesSelection.createServiceRowPreparerFromData({
+                data: dados,
                 getEmployeeName: obterNomeFuncionario,
                 getClientName: obterNomeCliente,
                 generateNumber: gerarNumeroRegisto,
                 hasMaterials: _osTemMateriais,
                 isErpActive: moduloErpAtivo
             });
-            const renderRow = window.TotalGestServicesView.createServiceRowRenderer({
+            const renderPreparedRows = window.TotalGestServicesView.createServiceRowsRenderer({
+                elements: viewElements,
+                prepareRow,
                 role: usuarioLogado?.role || '',
                 getBadgeClass: statusBadge,
                 escapeDescription: escapeHtmlSimples,
-                getWorkTypesHtml: _tiposTrabalhoBadgesHTML
-            });
-            const renderPreparedRows = window.TotalGestServicesView.createPreparedServiceRowsRenderer({
-                tbody,
-                prepareRow,
-                renderRow,
+                getWorkTypesHtml: _tiposTrabalhoBadgesHTML,
                 buildActions: (s, rowData) => ({
                         serviceId: s.id,
                         status: s.status,

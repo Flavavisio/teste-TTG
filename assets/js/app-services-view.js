@@ -105,14 +105,15 @@
 
   function createServicesTableStateRenderer(options) {
     const opts = options || {};
+    const elements = opts.elements || {};
     return function (totalCount, visibleCount) {
       return renderServicesTableState({
         totalCount,
         visibleCount,
         renderToolbar: opts.renderToolbar,
-        toolbarElement: opts.toolbarElement,
-        tbody: opts.tbody,
-        emptyElement: opts.emptyElement
+        toolbarElement: opts.toolbarElement || elements.toolbarElement,
+        tbody: opts.tbody || elements.tbody,
+        emptyElement: opts.emptyElement || elements.emptyElement
       });
     };
   }
@@ -261,10 +262,27 @@
     };
   }
 
+  function createServiceRowsRenderer(options) {
+    const opts = options || {};
+    const elements = opts.elements || {};
+    const renderRow = createServiceRowRenderer({
+      role: opts.role || '',
+      getBadgeClass: opts.getBadgeClass,
+      escapeDescription: opts.escapeDescription,
+      getWorkTypesHtml: opts.getWorkTypesHtml
+    });
+    return createPreparedServiceRowsRenderer({
+      tbody: opts.tbody || elements.tbody,
+      prepareRow: opts.prepareRow,
+      renderRow,
+      buildActions: opts.buildActions
+    });
+  }
+
   function serviceRow(options) {
     const opts = options || {};
     return `<tr>${rowLeadingCells(opts.leadingCells || {})}${rowActions(opts.actions || {})}</tr>`;
   }
 
-  window.TotalGestServicesView = { servicesViewElements, serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, specialtyAndHistoryNoticeFromState, applySpecialtyAndHistoryNotice, renderPendingSpecialtyNotice, servicesTableState, applyServicesTableState, renderServicesTableState, createServicesTableStateRenderer, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRowFromData, createServiceRowRenderer, renderServiceRowsToTable, createPreparedServiceRowsRenderer, serviceRow };
+  window.TotalGestServicesView = { servicesViewElements, serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, specialtyAndHistoryNoticeFromState, applySpecialtyAndHistoryNotice, renderPendingSpecialtyNotice, servicesTableState, applyServicesTableState, renderServicesTableState, createServicesTableStateRenderer, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRowFromData, createServiceRowRenderer, renderServiceRowsToTable, createPreparedServiceRowsRenderer, createServiceRowsRenderer, serviceRow };
 })();

@@ -136,6 +136,37 @@
     };
   }
 
+  function createServiceRowPreparerFromData(options) {
+    options = options || {};
+    const data = options.data || {};
+    return createServiceRowPreparer({
+      administrators: data.administradores || [],
+      getEmployeeName: options.getEmployeeName,
+      getClientName: options.getClientName,
+      generateNumber: options.generateNumber,
+      hasMaterials: options.hasMaterials,
+      isErpActive: options.isErpActive
+    });
+  }
+
+  function prepareServicesForRendering(options) {
+    options = options || {};
+    const sourceServices = selectVisibleServicesFromData({
+      data: options.data || {},
+      user: options.user || null
+    });
+    return {
+      sourceServices,
+      totalCount: sourceServices.length,
+      services: filterAndSortServices({
+        services: sourceServices,
+        applyFilterSort: options.applyFilterSort,
+        getTableState: options.getTableState,
+        getClientName: options.getClientName
+      })
+    };
+  }
+
   function createServiceFilterSorter(options) {
     options = options || {};
     return function (services) {
@@ -174,6 +205,8 @@
     createPendingSpecialtySelector: createPendingSpecialtySelector,
     prepareServiceRow: prepareServiceRow,
     createServiceRowPreparer: createServiceRowPreparer,
+    createServiceRowPreparerFromData: createServiceRowPreparerFromData,
+    prepareServicesForRendering: prepareServicesForRendering,
     createServiceFilterSorter: createServiceFilterSorter,
     filterAndSortServices: filterAndSortServices
   };
