@@ -1,48 +1,73 @@
-name: Inspect app migration boundary
+name: Apply nineteenth safe attendance batch
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos extraídos
+      - name: Migrar e validar décimo nono lote seguro
         run: |
+          python3 scripts/tmp-migrate-attendance-safe-batch-19.py
           node --check assets/js/app-attendance-view.js
           node --check sw.js
           git diff --check
+          node - <<'NODE'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert');
+          const context={window:{}}; vm.createContext(context);
+          vm.runInContext(fs.readFileSync('assets/js/app-attendance-view.js','utf8'),context);
+          const v=context.window.TotalGestAttendanceView;
+          const point=[{adminId:'t1',funcionarioId:'f1',data:'2026-09-02',entrada:'08:00',saida:'12:00'}];
+          const long=[{funcionarioId:'f1',obraId:'o1',data:'2026-09-02',entrada:'13:00',saida:'17:00'}];
+          const works=[{id:'o1',descricao:'Obra 1'}];
+          const merged=v.mergeAttendanceRecords(point,long,works);
+          assert.strictEqual(merged.length,2);
+          assert.strictEqual(merged[1]._ehObraLonga,true);
+          const visible=v.prepareAttendanceVisibleRecords({pointRecords:point,longWorkRecords:long,works,user:{role:'admin'},tenantId:'t1'});
+          assert.strictEqual(visible.length,2);
+          const periods=v.prepareAttendancePeriods(visible,{weekStart:new Date(2026,7,31),currentDate:new Date(2026,8,2)});
+          assert.strictEqual(periods.weekRecords.length,2);
+          assert.strictEqual(periods.recentRecords.length,2);
+          const base=v.prepareAttendanceBaseState({pointRecords:point,longWorkRecords:long,works,user:{role:'admin'},tenantId:'t1',weekStart:new Date(2026,7,31),currentDate:new Date(2026,8,2)});
+          assert.strictEqual(base.visibleRecords.length,2);
+          assert.strictEqual(base.weekRecords.length,2);
+          assert.strictEqual(base.recentRecords.length,2);
+          console.log('SAFE_BATCH_19_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
-          def block(marker):
-              s=text.index(marker); e=text.index('\n        function ',s+len(marker)); return text[s:e]
-          services=block('        function renderizarServicos() {')
-          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
-              assert services.count(item)==1,(item,services.count(item))
-          point=block('        function renderizarPonto() {')
-          for item in ['buildLongWorkAttendanceRecords(','filterAttendanceRecordsForViewer(','attendanceRecentStart(new Date())','selectRecentAttendanceRecords(registros, {','calculateWeeklyAttendanceTotal(_registrosSemana, {','attendanceWeeklyTarget(','attendanceWeeklyBalanceLabel(totalHoras, _alvoSem)','attendanceViewElements(document)','applyAttendanceEmptyState(attendanceElements, registros.length === 0)','prepareAttendanceNavigation(registros, {','attendanceTimingConfig(adminAtual())','shouldIncludeMissingAttendancePeople({','eligibleAttendancePersonIds(','missingAttendancePersonIds(porPessoa, _todosIds)','addMissingAttendancePeople(porPessoa, idsSemPicagem)','prepareAttendanceAccordionPerson(porPessoa[fid], {','attendanceAccordionItem({','applyAttendanceAccordionState(attendanceElements, htmlAcc, Object.keys(porPessoa).length)']:
-              assert point.count(item)==1,(item,point.count(item))
-          assert point.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
-          for old in ["document.getElementById('emptyPonto')","document.getElementById('pontoAcordeao')","if (!_pontoNavData) _pontoNavData = getDataHoje();",'const _adminCfg = adminAtual();',"if (!Object.keys(porPessoa).length) { if (contAcc) contAcc.innerHTML = ''; empty.style.display = 'block'; return; }",'guardarDados(dados)']:
-              assert old not in point, old
-          assert point.count('atualizarEstadoPonto();')==1
-          assert point.count('renderizarResumoPontoAdmin();')==1
+          marker='        function renderizarPonto() {'
+          s=text.index(marker); e=text.index('\n        function ',s+len(marker)); block=text[s:e]
+          assert block.count('prepareAttendanceBaseState({')==1
+          assert block.count('const _registrosSemana = attendanceBaseState.weekRecords;')==1
+          assert block.count('let registros = attendanceBaseState.recentRecords;')==1
+          for old in ['buildLongWorkAttendanceRecords(','filterAttendanceRecordsForViewer(','attendanceRecentStart(new Date())','selectRecentAttendanceRecords(registros, {']:
+              assert old not in block, old
           attendance=Path('assets/js/app-attendance-view.js').read_text(encoding='utf-8')
-          for item in ['function attendanceViewElements(','function applyAttendanceEmptyState(','function prepareAttendanceNavigation(','function attendanceTimingConfig(','function applyAttendanceAccordionState(','function filterAttendanceRecordsForViewer(','function prepareAttendancePersonState(','function prepareAttendanceAccordionPerson(','window.TotalGestAttendanceView = {']:
+          for item in ['function mergeAttendanceRecords(','function prepareAttendanceVisibleRecords(','function prepareAttendancePeriods(','function prepareAttendanceBaseState(']:
               assert attendance.count(item)==1,(item,attendance.count(item))
-          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
-          assert shell.count("attendanceView: './assets/js/app-attendance-view.js'")==1
-          sw=Path('sw.js').read_text(encoding='utf-8')
-          assert sw.count("'./assets/js/app-attendance-view.js'")==1
-          assert "const CACHE = 'totalgest-v161';" in sw
-          print('RENDER_PONTO_CHARS=',len(point))
-          print('RENDER_PONTO_LINES=',point.count('\n')+1)
-          print('APP_MIGRATION_BOUNDARY=OK')
+          assert "const CACHE = 'totalgest-v162';" in Path('sw.js').read_text(encoding='utf-8')
+          print('SAFE_BATCH_19_VERIFY=OK')
           PY
+      - name: Commit funcional
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-attendance-view.js sw.js
+          git diff --cached --check
+          test -n "$(git diff --cached --name-only)"
+          test "$(git diff --cached --name-only | wc -l)" -eq 3
+          git commit -m "Extrair preparação base segura do registo de ponto"
+          git push origin HEAD:refactor/separar-index-app
