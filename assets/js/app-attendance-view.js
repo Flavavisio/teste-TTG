@@ -232,6 +232,60 @@
     return { entryHtml, exitHtml };
   }
 
+  function preparePersonAttendanceRecords(records) {
+    const personRecords = Array.isArray(records) ? records : [];
+    personRecords.sort(function (a, b) {
+      return (a.data || '').localeCompare(b.data || '') || (a.entrada || '').localeCompare(b.entrada || '');
+    });
+    const generalRecords = personRecords
+      .filter(function (record) { return !record.servicoId && !record.obraId; })
+      .sort(function (a, b) { return (a.entrada || '').localeCompare(b.entrada || ''); });
+    return { personRecords, generalRecords };
+  }
+
+  function calculateGeneralAttendanceState(generalRecords, nowTime, calculateHours) {
+    const records = Array.isArray(generalRecords) ? generalRecords : [];
+    const calc = typeof calculateHours === 'function' ? calculateHours : function () { return 0; };
+    let generalHours = 0;
+    let generalOpen = false;
+    records.forEach(function (record) {
+      if (record.entrada && record.saida) generalHours += calc(record.entrada, record.saida);
+      else if (record.entrada && !record.saida) {
+        generalHours += calc(record.entrada, nowTime);
+        generalOpen = true;
+      }
+    });
+    return {
+      generalRecord: records[0] || null,
+      generalHours,
+      generalOpen
+    };
+  }
+
+  function applyAttendanceLunchDeduction(personRecords, options) {
+    const records = Array.isArray(personRecords) ? personRecords : [];
+    const o = options || {};
+    const hasLunchBreak = records.some(function (record) { return record.pausaAlmoco && record.saida; });
+    let generalHours = Number(o.generalHours || 0);
+    let lunchDeducted = false;
+    if (!hasLunchBreak && !o.generalOpen && generalHours > 6) {
+      generalHours = Math.max(0, generalHours - 1);
+      lunchDeducted = true;
+    }
+    return { generalHours, lunchDeducted };
+  }
+
+  function isAttendanceBelowEightHours(generalRecord, generalOpen, generalHours) {
+    return !!(generalRecord && !generalOpen && generalHours > 0 && generalHours < 8);
+  }
+
+  function isAttendanceLate(options) {
+    const o = options || {};
+    if (o.absence) return false;
+    if (o.generalRecord) return !!(o.generalRecord.entrada && o.generalRecord.entrada > o.lateLimit);
+    return !!(o.selectedDateIsToday && Number(o.recordsCount || 0) === 0 && o.nowTime > o.lateLimit);
+  }
+
   window.TotalGestAttendanceView = {
     startOfWeekMonday,
     formatHours,
@@ -254,6 +308,11 @@
     attendanceAlertsHtml,
     attendancePersonSummaryHtml,
     attendanceEditTitle,
-    attendanceEntryExitHtml
+    attendanceEntryExitHtml,
+    preparePersonAttendanceRecords,
+    calculateGeneralAttendanceState,
+    applyAttendanceLunchDeduction,
+    isAttendanceBelowEightHours,
+    isAttendanceLate
   };
 })();

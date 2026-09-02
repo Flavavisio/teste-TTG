@@ -7477,33 +7477,38 @@
                 idsSemPicagem.forEach(id => { porPessoa[id] = []; });
             }
             const htmlAcc = Object.keys(porPessoa).map(fid => {
-                const regsPessoa = porPessoa[fid].sort((a, b) => (a.data || '').localeCompare(b.data || '') || (a.entrada || '').localeCompare(b.entrada || ''));
+                const personAttendance = window.TotalGestAttendanceView.preparePersonAttendanceRecords(porPessoa[fid]);
+                const regsPessoa = personAttendance.personRecords;
                 const nomePessoa = (dados.administradores?.find(a => a.id === fid)?.nome) || obterNomeFuncionario(fid);
                 // Só o registo GERAL (sem OS/obra ligada) conta para os alertas de horas/atraso — as entradas em OS/obra não.
-                // Um dia pode ter vários segmentos gerais (ex: entrada → pausa almoço, depois retorno → saída),
-                // por isso juntamos todos para calcular o total de horas e construir a linha entrada→...→saída.
-                const regsGeral = regsPessoa.filter(r => !r.servicoId && !r.obraId).sort((a, b) => (a.entrada || '').localeCompare(b.entrada || ''));
-                const geral = regsGeral[0] || null;
-                let horasGeral = 0, geralAberto = false;
-                regsGeral.forEach(r => {
-                    if (r.entrada && r.saida) horasGeral += calcularHoras(r.entrada, r.saida);
-                    else if (r.entrada && !r.saida) { horasGeral += calcularHoras(r.entrada, agoraHM); geralAberto = true; }
-                });
+                // Um dia pode ter vários segmentos gerais (ex: entrada → pausa almoço, depois retorno → saída).
+                const regsGeral = personAttendance.generalRecords;
+                const generalAttendance = window.TotalGestAttendanceView.calculateGeneralAttendanceState(regsGeral, agoraHM, calcularHoras);
+                const geral = generalAttendance.generalRecord;
+                let horasGeral = generalAttendance.generalHours;
+                const geralAberto = generalAttendance.generalOpen;
                 // Se o dia passou das 6h seguidas e não há pausa de almoço registada, desconta 1h
                 // automaticamente (assume-se que almoçou sem picar) e assinala com um aviso.
                 // A pausa pode ter sido marcada num registo geral OU dentro de uma OS/obra (o botão
                 // "Vou para almoço" que aparece ao picar a saída de uma OS) — conta em qualquer um
                 // dos dois, senão o sistema acusava "não picou almoço" mesmo quando picou, só que
                 // ligado a uma OS em vez de ao registo geral.
-                const temPausaGeral = regsPessoa.some(r => r.pausaAlmoco && r.saida);
-                let almocoDescontado = false;
-                if (!temPausaGeral && !geralAberto && horasGeral > 6) {
-                    horasGeral = Math.max(0, horasGeral - 1);
-                    almocoDescontado = true;
-                }
-                const menosDe8h = geral && !geralAberto && horasGeral > 0 && horasGeral < 8;
+                const lunchState = window.TotalGestAttendanceView.applyAttendanceLunchDeduction(regsPessoa, {
+                    generalOpen: geralAberto,
+                    generalHours: horasGeral
+                });
+                horasGeral = lunchState.generalHours;
+                const almocoDescontado = lunchState.lunchDeducted;
+                const menosDe8h = window.TotalGestAttendanceView.isAttendanceBelowEightHours(geral, geralAberto, horasGeral);
                 const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);
-                const atrasado = _ausenciaHoje ? false : (geral ? (geral.entrada && geral.entrada > _limiteAtraso) : (_hojeSoP === getDataHoje() && regsPessoa.length === 0 && agoraHM > _limiteAtraso));
+                const atrasado = window.TotalGestAttendanceView.isAttendanceLate({
+                    absence: _ausenciaHoje,
+                    generalRecord: geral,
+                    selectedDateIsToday: _hojeSoP === getDataHoje(),
+                    recordsCount: regsPessoa.length,
+                    nowTime: agoraHM,
+                    lateLimit: _limiteAtraso
+                });
                 const alertaHtml = window.TotalGestAttendanceView.attendanceAlertsHtml({
                     lessThanEightHours: menosDe8h,
                     late: atrasado,
