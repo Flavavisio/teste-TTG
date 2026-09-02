@@ -12739,10 +12739,16 @@
 
             const adminRecAlerta = dados.administradores?.find(a => a.id === adminId);
             if (moduloContratosAtivo(adminRecAlerta)) {
-                const contratosAVencerLista = (dados.contratos || []).filter(c => c.adminId === adminId && estadoManutencao(calcularProximaManutencao(c)).chave === 'a_vencer');
-                if (contratosAVencerLista.length) alertas.push({ tipo: 'warning', titulo: `${contratosAVencerLista.length} ${contratosAVencerLista.length === 1 ? 'contrato de manutenção a vencer' : 'contratos de manutenção a vencer'} nos próximos 30 dias`, sub: 'Verifique se é preciso gerar a OS de manutenção.', acao: "abrirSecao('contratos')" });
-                contratosAVencerLista.forEach(c => {
-                    const dias = estadoManutencao(calcularProximaManutencao(c)).dias;
+                const contractAttention = window.TotalGestAlertsView.prepareMaintenanceContractAlerts({
+                    contracts: dados.contratos || [],
+                    adminId: adminId,
+                    getNextMaintenance: calcularProximaManutencao,
+                    getMaintenanceState: estadoManutencao
+                });
+                if (contractAttention.alert) alertas.push(contractAttention.alert);
+                contractAttention.items.forEach(item => {
+                    const c = item.contract;
+                    const dias = item.days;
                     _notificarPorFaseVencimento('contrato_vencer_' + adminId, c.id, dias, () => {
                         _notificarAdminESubadmin(adminId, '📄 Contrato de manutenção a vencer', 'Contrato ' + (c.numero || '#' + c.id) + ' — ' + _clienteLabel(dados.clientes?.find(cl => cl.id === c.clienteId) || {}) + ' vence em ' + dias + ' dia(s).', "abrirSecao('contratos')");
                     });
@@ -12771,72 +12777,59 @@
             const pendingLeaveRequestsAlert = window.TotalGestAlertsView.pendingLeaveRequestsAlert(dados.pedidos || [], adminId);
             if (pendingLeaveRequestsAlert) alertas.push(pendingLeaveRequestsAlert);
 
-            if (adminRecAlerta?.licenca?.dataExpiracao) {
-                const diasLic = calcularDiasRestantes(adminRecAlerta.licenca.dataExpiracao);
+            const licenseExpiry = window.TotalGestAlertsView.licenseExpiryState(adminRecAlerta, calcularDiasRestantes);
+            if (licenseExpiry) {
+                const diasLic = licenseExpiry.days;
                 _notificarPorFaseVencimento('licenca_' + adminId, 'atual', diasLic, () => {
                     _notificarAdminESubadmin(adminId, '⏰ Licença a expirar', 'A licença da tua empresa expira em ' + diasLic + ' dia(s). Renova em "Minha Licença" para não perderes acesso.', "abrirSecao('minha-licenca')");
                 });
             }
 
-            // Registo prévio e ANEPC — alerta vermelho quando faltarem 6 meses (180 dias) para a renovação.
-            const _seisMesesDias = 180;
-            if (adminRecAlerta?.registoPrevioValidade) {
-                const diasRP = calcularDiasRestantes(new Date(adminRecAlerta.registoPrevioValidade + 'T00:00:00').getTime());
-                if (diasRP <= _seisMesesDias) {
-                    alertas.push({ tipo: 'danger', titulo: `⚠️ Registo prévio a renovar`, sub: `Vence em ${diasRP} dia(s) (${adminRecAlerta.registoPrevioValidade}). Renove junto do Departamento de Segurança Privada da PSP.`, acao: "abrirEditarPerfil()" });
-                    _notificarPorFaseVencimento('registo_previo_' + adminId, 'atual', diasRP, () => {
-                        _notificarAdminESubadmin(adminId, '⚠️ Registo prévio a renovar', 'O registo prévio da tua empresa vence em ' + diasRP + ' dia(s). Trata da renovação junto da PSP.', "abrirEditarPerfil()");
-                    });
-                }
+            const regulatoryAlerts = window.TotalGestAlertsView.prepareRegulatoryRenewals({
+                admin: adminRecAlerta,
+                calculateDaysRemaining: calcularDiasRestantes,
+                thresholdDays: 180
+            });
+            if (regulatoryAlerts.registoPrevio) {
+                const diasRP = regulatoryAlerts.registoPrevio.days;
+                alertas.push(regulatoryAlerts.registoPrevio.alert);
+                _notificarPorFaseVencimento('registo_previo_' + adminId, 'atual', diasRP, () => {
+                    _notificarAdminESubadmin(adminId, '⚠️ Registo prévio a renovar', 'O registo prévio da tua empresa vence em ' + diasRP + ' dia(s). Trata da renovação junto da PSP.', "abrirEditarPerfil()");
+                });
             }
-            if (adminRecAlerta?.anepcValidade) {
-                const diasAN = calcularDiasRestantes(new Date(adminRecAlerta.anepcValidade + 'T00:00:00').getTime());
-                if (diasAN <= _seisMesesDias) {
-                    alertas.push({ tipo: 'danger', titulo: `⚠️ Registo ANEPC a renovar`, sub: `Vence em ${diasAN} dia(s) (${adminRecAlerta.anepcValidade}). Renove junto da ANEPC.`, acao: "abrirEditarPerfil()" });
-                    _notificarPorFaseVencimento('anepc_' + adminId, 'atual', diasAN, () => {
-                        _notificarAdminESubadmin(adminId, '⚠️ Registo ANEPC a renovar', 'O registo ANEPC da tua empresa vence em ' + diasAN + ' dia(s). Trata da renovação junto da ANEPC.', "abrirEditarPerfil()");
-                    });
-                }
+            if (regulatoryAlerts.anepc) {
+                const diasAN = regulatoryAlerts.anepc.days;
+                alertas.push(regulatoryAlerts.anepc.alert);
+                _notificarPorFaseVencimento('anepc_' + adminId, 'atual', diasAN, () => {
+                    _notificarAdminESubadmin(adminId, '⚠️ Registo ANEPC a renovar', 'O registo ANEPC da tua empresa vence em ' + diasAN + ' dia(s). Trata da renovação junto da ANEPC.', "abrirEditarPerfil()");
+                });
             }
-            // SHST — consulta de medicina do trabalho: avisa 30 dias antes de vencer, por
-            // funcionário/encarregado. Só corre se o admin tiver o SHST ativo no Perfil.
             if (adminRecAlerta?.shstAtivo) {
-                const _shstPessoas = [
-                    ...(dados.funcionarios || []).filter(f => f.adminId === adminId && f.suspenso !== true),
-                    ...(dados.encarregados || []).filter(e => e.adminId === adminId && e.suspenso !== true)
-                ];
-                _shstPessoas.forEach(p => {
-                    if (!p.shstUltimaConsulta) return;
-                    let periodicidadeAnos = 1;
-                    if (p.dataNascimento) {
-                        const nasc = new Date(p.dataNascimento + 'T00:00:00');
-                        const hojeP = new Date();
-                        let idade = hojeP.getFullYear() - nasc.getFullYear();
-                        const aindaNaoFezAnos = (hojeP.getMonth() < nasc.getMonth()) || (hojeP.getMonth() === nasc.getMonth() && hojeP.getDate() < nasc.getDate());
-                        if (aindaNaoFezAnos) idade--;
-                        periodicidadeAnos = idade >= 50 ? 1 : 2;
-                    }
-                    const vencSHST = new Date(p.shstUltimaConsulta + 'T00:00:00');
-                    vencSHST.setFullYear(vencSHST.getFullYear() + periodicidadeAnos);
-                    const diasSHST = calcularDiasRestantes(vencSHST.getTime());
-                    if (diasSHST <= 30) {
-                        alertas.push({ tipo: 'danger', titulo: `⚠️ SHST a renovar — ${p.nome}`, sub: `Consulta de medicina do trabalho vence em ${diasSHST} dia(s) (${vencSHST.toLocaleDateString('pt-PT')}).`, acao: `abrirModal('funcionario','${p.id}')` });
-                        _notificarPorFaseVencimento('shst_' + p.id, 'atual', diasSHST, () => {
-                            _notificarAdminESubadmin(adminId, '⚠️ SHST a renovar', 'A consulta de medicina do trabalho de ' + p.nome + ' vence em ' + diasSHST + ' dia(s).', `abrirModal('funcionario','${p.id}')`);
-                        });
-                    }
+                const shstRenewals = window.TotalGestAlertsView.prepareShstRenewals({
+                    employees: dados.funcionarios || [],
+                    managers: dados.encarregados || [],
+                    adminId: adminId,
+                    calculateDaysRemaining: calcularDiasRestantes,
+                    now: new Date()
+                });
+                shstRenewals.forEach(item => {
+                    const p = item.person;
+                    const diasSHST = item.days;
+                    alertas.push(item.alert);
+                    _notificarPorFaseVencimento('shst_' + p.id, 'atual', diasSHST, () => {
+                        _notificarAdminESubadmin(adminId, '⚠️ SHST a renovar', 'A consulta de medicina do trabalho de ' + p.nome + ' vence em ' + diasSHST + ' dia(s).', `abrirModal('funcionario','${p.id}')`);
+                    });
                 });
             }
 
             if (moduloArmazemAtivo(adminAtual())) {
-                const stockBaixo = (dados.artigos || []).filter(a => a.adminId === adminId && a.alertaStock === true && a.stockMinimo != null && stockAtualArtigo(a.id) <= a.stockMinimo).length;
-                if (stockBaixo) alertas.push({ tipo: 'warning', titulo: `${stockBaixo} ${stockBaixo === 1 ? 'artigo em falta' : 'artigos em falta'}`, sub: 'Stock no mínimo ou abaixo — reponha o armazém.', acao: "abrirSecao('artigos')" });
-
-                const obrasExced = new Set();
-                (dados.obraMateriais || []).forEach(m => {
-                    if (m.adminId === adminId && (m.qtdConsumida || 0) > (m.qtdPrevista || 0)) obrasExced.add(m.obraId);
+                const warehouseAlerts = window.TotalGestAlertsView.prepareWarehouseAlerts({
+                    articles: dados.artigos || [],
+                    workMaterials: dados.obraMateriais || [],
+                    adminId: adminId,
+                    getCurrentStock: stockAtualArtigo
                 });
-                if (obrasExced.size) alertas.push({ tipo: 'warning', titulo: `${obrasExced.size} ${obrasExced.size === 1 ? 'obra com excedente de materiais' : 'obras com excedente de materiais'}`, sub: 'Consumo acima do previsto. Verifique o plano da obra.', acao: "abrirSecao('obras')" });
+                warehouseAlerts.forEach(alert => alertas.push(alert));
             }
 
             if (!alertas.length) { cont.style.display = 'none'; cont.innerHTML = ''; return; }

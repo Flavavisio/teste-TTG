@@ -201,6 +201,84 @@
     };
   }
 
+  function prepareMaintenanceContractAlerts(options) {
+    const o = options || {};
+    const items = (Array.isArray(o.contracts) ? o.contracts : []).filter(function (contract) {
+      return contract.adminId === o.adminId && o.getMaintenanceState(o.getNextMaintenance(contract)).chave === 'a_vencer';
+    }).map(function (contract) {
+      return { contract: contract, days: o.getMaintenanceState(o.getNextMaintenance(contract)).dias };
+    });
+    return {
+      items: items,
+      alert: items.length ? { tipo: 'warning', titulo: items.length + ' ' + (items.length === 1 ? 'contrato de manutenção a vencer' : 'contratos de manutenção a vencer') + ' nos próximos 30 dias', sub: 'Verifique se é preciso gerar a OS de manutenção.', acao: "abrirSecao('contratos')" } : null
+    };
+  }
+
+  function licenseExpiryState(admin, calculateDaysRemaining) {
+    if (!admin || !admin.licenca || !admin.licenca.dataExpiracao) return null;
+    return { days: calculateDaysRemaining(admin.licenca.dataExpiracao) };
+  }
+
+  function regulatoryRenewal(validity, options) {
+    if (!validity) return null;
+    const o = options || {};
+    const days = o.calculateDaysRemaining(new Date(validity + 'T00:00:00').getTime());
+    if (days > o.thresholdDays) return null;
+    return {
+      days: days,
+      alert: { tipo: 'danger', titulo: '⚠️ ' + o.title, sub: 'Vence em ' + days + ' dia(s) (' + validity + '). ' + o.subtitle, acao: "abrirEditarPerfil()" }
+    };
+  }
+
+  function prepareRegulatoryRenewals(options) {
+    const o = options || {}, admin = o.admin || {};
+    return {
+      registoPrevio: regulatoryRenewal(admin.registoPrevioValidade, { calculateDaysRemaining: o.calculateDaysRemaining, thresholdDays: o.thresholdDays, title: 'Registo prévio a renovar', subtitle: 'Renove junto do Departamento de Segurança Privada da PSP.' }),
+      anepc: regulatoryRenewal(admin.anepcValidade, { calculateDaysRemaining: o.calculateDaysRemaining, thresholdDays: o.thresholdDays, title: 'Registo ANEPC a renovar', subtitle: 'Renove junto da ANEPC.' })
+    };
+  }
+
+  function personAgeOnDate(birthDate, now) {
+    if (!birthDate) return null;
+    const birth = new Date(birthDate + 'T00:00:00');
+    let age = now.getFullYear() - birth.getFullYear();
+    const beforeBirthday = now.getMonth() < birth.getMonth() || (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate());
+    if (beforeBirthday) age--;
+    return age;
+  }
+
+  function prepareShstRenewals(options) {
+    const o = options || {}, now = o.now instanceof Date ? o.now : new Date(o.now || Date.now());
+    const people = (Array.isArray(o.employees) ? o.employees : []).concat(Array.isArray(o.managers) ? o.managers : []).filter(function (person) {
+      return person.adminId === o.adminId && person.suspenso !== true && person.shstUltimaConsulta;
+    });
+    return people.map(function (person) {
+      const age = personAgeOnDate(person.dataNascimento, now);
+      const periodicityYears = age == null ? 1 : (age >= 50 ? 1 : 2);
+      const expiry = new Date(person.shstUltimaConsulta + 'T00:00:00');
+      expiry.setFullYear(expiry.getFullYear() + periodicityYears);
+      const days = o.calculateDaysRemaining(expiry.getTime());
+      return { person: person, expiry: expiry, days: days };
+    }).filter(function (item) { return item.days <= 30; }).map(function (item) {
+      item.alert = { tipo: 'danger', titulo: '⚠️ SHST a renovar — ' + item.person.nome, sub: 'Consulta de medicina do trabalho vence em ' + item.days + ' dia(s) (' + item.expiry.toLocaleDateString('pt-PT') + ').', acao: "abrirModal('funcionario','" + item.person.id + "')" };
+      return item;
+    });
+  }
+
+  function prepareWarehouseAlerts(options) {
+    const o = options || {}, alerts = [];
+    const lowStock = (Array.isArray(o.articles) ? o.articles : []).filter(function (article) {
+      return article.adminId === o.adminId && article.alertaStock === true && article.stockMinimo != null && o.getCurrentStock(article.id) <= article.stockMinimo;
+    }).length;
+    if (lowStock) alerts.push({ tipo: 'warning', titulo: lowStock + ' ' + (lowStock === 1 ? 'artigo em falta' : 'artigos em falta'), sub: 'Stock no mínimo ou abaixo — reponha o armazém.', acao: "abrirSecao('artigos')" });
+    const works = new Set();
+    (Array.isArray(o.workMaterials) ? o.workMaterials : []).forEach(function (material) {
+      if (material.adminId === o.adminId && (material.qtdConsumida || 0) > (material.qtdPrevista || 0)) works.add(material.obraId);
+    });
+    if (works.size) alerts.push({ tipo: 'warning', titulo: works.size + ' ' + (works.size === 1 ? 'obra com excedente de materiais' : 'obras com excedente de materiais'), sub: 'Consumo acima do previsto. Verifique o plano da obra.', acao: "abrirSecao('obras')" });
+    return alerts;
+  }
+
   window.TotalGestAlertsView = {
     alertsCard: alertsCard,
     isEmployeeAlertsRole: isEmployeeAlertsRole,
@@ -215,6 +293,11 @@
     pendingLeaveRequestsAlert: pendingLeaveRequestsAlert,
     latestFleetMaintenance: latestFleetMaintenance,
     fleetVehicleAttention: fleetVehicleAttention,
-    prepareFleetAttention: prepareFleetAttention
+    prepareFleetAttention: prepareFleetAttention,
+    prepareMaintenanceContractAlerts: prepareMaintenanceContractAlerts,
+    licenseExpiryState: licenseExpiryState,
+    prepareRegulatoryRenewals: prepareRegulatoryRenewals,
+    prepareShstRenewals: prepareShstRenewals,
+    prepareWarehouseAlerts: prepareWarehouseAlerts
   };
 })();
