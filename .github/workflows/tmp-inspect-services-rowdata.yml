@@ -1,9 +1,6 @@
 name: Inspect services row data boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -11,22 +8,10 @@ permissions:
 
 jobs:
   inspect:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mostrar renderizarServicos
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          marker = '        function renderizarServicos() {'
-          start = text.index(marker)
-          end = text.index('\n        function ', start + len(marker))
-          block = text[start:end]
-          print(block)
-          print('RENDERIZAR_SERVICOS_CHARS=', len(block))
-          print('RENDERIZAR_SERVICOS_LINES=', len(block.splitlines()))
-          PY
+      - name: Estado neutralizado
+        run: echo "manual only"
