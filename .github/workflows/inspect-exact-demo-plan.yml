@@ -1,31 +1,62 @@
-name: Inspect alerts domain separation
+name: Apply alerts domain batch 30
 
 on:
   push:
     branches: [refactor/separar-index-app]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspect current alerts orchestration
+      - name: Separate alerts domain and validate
         run: |
+          python3 scripts/tmp-migrate-alerts-domain-batch-30.py
+          node --check assets/js/app-alerts-view.js
+          node --check sw.js
+          git diff --check
+          node - <<'NODE'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert');
+          const c={window:{}}; vm.createContext(c); vm.runInContext(fs.readFileSync('assets/js/app-alerts-view.js','utf8'),c); const v=c.window.TotalGestAlertsView;
+          let phase=[],sent=[]; const by=(...a)=>{phase.push(a.slice(0,3));a[3]();}; const send=(...a)=>sent.push(a);
+          let alerts=[];
+          v.runLicenseAlertFlow({admin:{licenca:{dataExpiracao:7}},adminId:'a1',calculateDaysRemaining:x=>x,notifyByPhase:by,notifyAdmin:send});
+          assert.strictEqual(phase[0][0],'licenca_a1'); assert.ok(sent[0][1].includes('Licença'));
+          phase=[];sent=[];alerts=[];
+          v.runRegulatoryAlertFlow({admin:{registoPrevioValidade:'2026-09-10',anepcValidade:'2026-09-11'},adminId:'a1',alerts,thresholdDays:180,calculateDaysRemaining:()=>8,notifyByPhase:by,notifyAdmin:send});
+          assert.strictEqual(alerts.length,2); assert.strictEqual(phase.length,2); assert.strictEqual(sent.length,2);
+          phase=[];sent=[];alerts=[];
+          v.runFleetAlertFlow({vehicles:[{id:'v1',adminId:'a1',matricula:'AA-00-AA',inspecaoValidade:'bad',seguroValidade:'ok'}],interventions:[],adminId:'a1',alerts,getDateState:x=>x==='bad'?{chave:'a_vencer',dias:5}:{chave:'ok',dias:90},notifyByPhase:by,notifyAdmin:send});
+          assert.strictEqual(alerts.length,1); assert.strictEqual(phase[0][0],'frota_vencer_a1'); assert.ok(sent[0][2].includes('AA-00-AA'));
+          console.log('DOMAIN_BATCH_30_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8')
-          s=text.index('        function renderizarAlertas() {')
-          e=text.index('\n        function ', s+10)
-          block=text[s:e]
-          print('ALERTS_CHARS=',len(block))
-          print('ALERTS_LINES=',block.count('\n')+1)
-          print('---ALERTS_START---')
-          print(block)
-          print('---ALERTS_END---')
+          t=Path('app.html').read_text()
+          def block(marker):
+              s=t.index(marker); e=t.index('\n        function ',s+len(marker)); return t[s:e]
+          a=block('        function renderizarAlertas() {')
+          for x in ['runMaintenanceContractAlertFlow({','runFleetAlertFlow({','runLicenseAlertFlow({','runRegulatoryAlertFlow({','runShstAlertFlow({','runWarehouseAlertFlow({']:
+              assert a.count(x)==1,(x,a.count(x))
+          assert a.count('notifyByPhase: _notificarPorFaseVencimento')==5
+          assert a.count('notifyAdmin: _notificarAdminESubadmin')==5
+          for x in ["_notificarPorFaseVencimento('contrato_vencer_", "_notificarPorFaseVencimento('frota_vencer_", "_notificarPorFaseVencimento('licenca_", "_notificarPorFaseVencimento('registo_previo_", "_notificarPorFaseVencimento('anepc_", "_notificarPorFaseVencimento('shst_"]:
+              assert x not in a,x
+          assert "const CACHE = 'totalgest-v173';" in Path('sw.js').read_text()
+          print('DOMAIN_BATCH_30_VERIFY=OK')
           PY
+      - name: Commit functional domain separation
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-alerts-view.js sw.js
+          git diff --cached --check
+          test "$(git diff --cached --name-only | wc -l)" -eq 3
+          git commit -m "Separar domínio funcional dos alertas"
+          git push origin HEAD:refactor/separar-index-app
