@@ -1,6 +1,9 @@
-name: Inspect app migration boundary
+name: Inspect next extraction candidates
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,60 +11,34 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos extraídos
+      - name: Inspect next candidates
         run: |
-          node --check assets/js/app-alerts-view.js
-          node --check assets/js/app-attendance-view.js
-          node --check assets/js/app-clients-view.js
-          node --check assets/js/app-team-view.js
-          node --check assets/js/app-requisitions-view.js
-          node --check assets/js/app-shell.js
-          node --check sw.js
-          git diff --check
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
-          def block(marker):
-              s=text.index(marker); e=text.index('\n        function ',s+len(marker)); return text[s:e]
-          services=block('        function renderizarServicos() {')
-          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
-              assert services.count(item)==1
-          point=block('        function renderizarPonto() {')
-          for item in ['prepareAttendanceBaseState({','prepareAttendanceViewState({','createAttendancePersonEntryRenderer({','renderAttendancePersonEntry(fid, porPessoa[fid], _ausenciaHoje)','applyAttendanceAccordionState(attendanceElements, htmlAcc, Object.keys(porPessoa).length)']:
-              assert point.count(item)==1
-          assert point.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
-          alerts=block('        function renderizarAlertas() {')
-          for item in ['alertsViewElements(document)','prepareInitialAdminAlerts({','runMaintenanceContractAlertFlow({','runFleetAlertFlow({','preparePendingAdminRequestsAlerts({','runLicenseAlertFlow({','runRegulatoryAlertFlow({','runShstAlertFlow({','runWarehouseAlertFlow({','applyAlertsState(cont, alertas, _ehPerfilMobile())']:
-              assert alerts.count(item)==1,(item,alerts.count(item))
-          clients=block('        function renderizarClientes() {')
-          assert clients.count('prepareClientsForRendering({')==1
-          assert clients.count('renderClientsArea({')==1
-          employees=block('        function renderizarFuncionarios() {')
-          assert employees.count('prepareEmployeesForRendering({')==1
-          assert employees.count('renderEmployeesArea({')==1
-          managers=block('        function renderizarEncarregados() {')
-          assert managers.count('selectManagersForUser({')==1
-          assert managers.count('renderManagersArea({')==1
-          requisitions=block('        function renderizarRequisicoes() {')
-          assert requisitions.count('selectRequisitionsForUser(')==1
-          assert requisitions.count('renderRequisitionsArea({')==1
-          for item in ['aprovarRequisicao(','rejeitarRequisicao(','validarRequisicao(',"abrirModal('requisicao'","document.getElementById('tabelaRequisicoes')"]:
-              assert item not in requisitions,item
-          rv=Path('assets/js/app-requisitions-view.js').read_text(encoding='utf-8')
-          for item in ['function selectRequisitionsForUser(','function requisitionStatusLabel(','function canApproveRequisition(','function requisitionActionsHtml(','function requisitionRowHtml(','function requisitionsViewElements(','function renderRequisitionsArea(','window.TotalGestRequisitionsView = {']:
-              assert rv.count(item)==1,(item,rv.count(item))
-          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
-          assert shell.count("clientsView: './assets/js/app-clients-view.js'")==1
-          assert shell.count("teamView: './assets/js/app-team-view.js'")==1
-          assert shell.count("requisitionsView: './assets/js/app-requisitions-view.js'")==1
-          assert shell.count('if (options.requisitionsView === true) pedidos.push(MODULOS.requisitionsView);')==1
-          assert text.count('requisitionsView: true,')==1
-          assert 'bootstrapSupabase()' in text
-          assert "const CACHE = 'totalgest-v176';" in Path('sw.js').read_text(encoding='utf-8')
-          print('REQUISITIONS_CHARS=',len(requisitions)); print('REQUISITIONS_LINES=',requisitions.count('\n')+1); print('APP_MIGRATION_BOUNDARY=OK')
+          lines=text.splitlines()
+          names=['renderizarFerramentas','renderizarRelatorioPonto','_renderizarPontoRelatorio','_renderizarEscalasVisual','renderizarFornecedores','renderizarArtigos','renderizarObras']
+          for name in names:
+              markers=[f'        function {name}(',f'        async function {name}(']
+              found=None
+              for m in markers:
+                  try:
+                      s=text.index(m); found=m; break
+                  except ValueError: pass
+              if not found:
+                  print(name,'NOT_FOUND'); continue
+              starts=[]
+              for pat in ['\n        function ','\n        async function ']:
+                  p=text.find(pat,s+len(found))
+                  if p!=-1: starts.append(p)
+              e=min(starts) if starts else len(text)
+              b=text[s:e]
+              print(f'{name}: CHARS={len(b)} LINES={b.count(chr(10))+1}')
+              print('  TOKENS:', {k:b.count(k) for k in ['supabase','fetch(','localStorage','_guardar','salvar','excluir','abrirModal','innerHTML','_aplicarFiltroOrdenacao','usuarioLogado','_tenantId()']})
           PY
