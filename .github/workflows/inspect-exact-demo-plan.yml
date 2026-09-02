@@ -10,4 +10,37 @@ jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Boundary workflow restored to manual/read"
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/separar-index-app
+      - name: Estado dos módulos extraídos
+        run: |
+          node --check assets/js/app-attendance-view.js
+          node --check sw.js
+          git diff --check
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('app.html').read_text(encoding='utf-8')
+          def block(marker):
+              s=text.index(marker); e=text.index('\n        function ',s+len(marker)); return text[s:e]
+          services=block('        function renderizarServicos() {')
+          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
+              assert services.count(item)==1,(item,services.count(item))
+          point=block('        function renderizarPonto() {')
+          for item in ['buildLongWorkAttendanceRecords(','filterAttendanceRecordsForViewer(','attendanceRecentStart(new Date())','selectRecentAttendanceRecords(registros, {','calculateWeeklyAttendanceTotal(_registrosSemana, {','attendanceWeeklyTarget(','attendanceWeeklyBalanceLabel(totalHoras, _alvoSem)','selectAttendanceNavigationRecords(','groupAttendanceByPerson(registrosHoje)','attendanceLateLimit(_horaEsperada, _tolerMin)','shouldIncludeMissingAttendancePeople({','eligibleAttendancePersonIds(','missingAttendancePersonIds(porPessoa, _todosIds)','addMissingAttendancePeople(porPessoa, idsSemPicagem)','prepareAttendanceAccordionPerson(porPessoa[fid], {','attendanceAccordionItem({']:
+              assert point.count(item)==1,(item,point.count(item))
+          assert point.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
+          for old in ["registros = registros.filter(p => p.adminId === _tenantId());",'const _hojeMes = new Date();','let totalHoras = 0;','_registrosSemana.forEach(p => {','let _alvoSem = null;','preparePersonAttendanceRecords(porPessoa[fid])','attendanceAlertsHtml({','attendancePersonSummaryHtml({','guardarDados(dados)']:
+              assert old not in point, old
+          assert point.count('atualizarEstadoPonto();')==1
+          assert point.count('renderizarResumoPontoAdmin();')==1
+          attendance=Path('assets/js/app-attendance-view.js').read_text(encoding='utf-8')
+          for item in ['function filterAttendanceRecordsForViewer(','function attendanceRecentStart(','function calculateWeeklyAttendanceTotal(','function attendanceWeeklyTarget(','function attendanceWeeklyBalanceLabel(','function prepareAttendancePersonState(','function prepareAttendanceAccordionPerson(','window.TotalGestAttendanceView = {']:
+              assert attendance.count(item)==1,(item,attendance.count(item))
+          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
+          assert shell.count("attendanceView: './assets/js/app-attendance-view.js'")==1
+          sw=Path('sw.js').read_text(encoding='utf-8')
+          assert sw.count("'./assets/js/app-attendance-view.js'")==1
+          assert "const CACHE = 'totalgest-v160';" in sw
+          print('APP_MIGRATION_BOUNDARY=OK')
+          PY
