@@ -1,33 +1,72 @@
-name: Inspect app module bootstrap
+name: Apply clients domain batch 31
 
 on:
   push:
     branches: [refactor/separar-index-app]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspect module bootstrap markers
+      - name: Separate clients domain and validate
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8')
-          for needle in ['TotalGestApp.init', 'alertsView', 'servicesSelection', 'attendanceView']:
-              print('---',needle,'---')
-              pos=0
-              while True:
-                  i=text.find(needle,pos)
-                  if i<0: break
-                  ls=text.rfind('\n',0,i)+1
-                  le=text.find('\n',i)
-                  print(text[ls:le])
-                  pos=i+len(needle)
+          p=Path('scripts/tmp-migrate-clients-domain-batch-31.py')
+          t=p.read_text(encoding='utf-8')
+          t=t.replace('        async function _guardarEdicaoPontoRegisto(regId) {','        function _guardarEdicaoPontoRegisto(regId) {')
+          t=t.replace('        async function _repararEntradasPresas() {','        function _repararEntradasPresas() {')
+          t=t.replace("needle = '            alertsView: true,'", "needle = 'reportsView: true, alertsView: true,'")
+          p.write_text(t,encoding='utf-8')
           PY
+          python3 scripts/tmp-migrate-clients-domain-batch-31.py
+          node --check assets/js/app-clients-view.js
+          node --check assets/js/app-shell.js
+          node --check sw.js
+          git diff --check
+          node - <<'NODE'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert');
+          const c={window:{}}; vm.createContext(c); vm.runInContext(fs.readFileSync('assets/js/app-clients-view.js','utf8'),c); const v=c.window.TotalGestClientsView;
+          const clients=[{id:'c1',adminId:'a1',nome:'A'},{id:'c2',adminId:'a2',nome:'B'}];
+          assert.strictEqual(v.selectClientsForUser(clients,{role:'admin',id:'a1'}).length,1);
+          assert.strictEqual(v.selectClientsForUser(clients,{role:'subadmin',adminId:'a2'}).length,1);
+          assert.strictEqual(v.selectClientsForUser(clients,{role:'funcionario',adminId:'a1'}).length,0);
+          assert.strictEqual(v.selectClientsForUser(clients,{role:'superadmin'}).length,0);
+          assert.strictEqual(v.clientInstallationsCount([{clienteId:'c1'},{clienteId:'c1'},{clienteId:'c2'}],'c1'),2);
+          const st=v.prepareClientsForRendering({clients,user:{role:'admin',id:'a1'},applyFilterSort:x=>x}); assert.strictEqual(st.total,1); assert.strictEqual(st.list.length,1);
+          const html=v.clientRowsHtml({id:'c1',nome:'Cliente',numeroCliente:'1',telefone:'2',endereco:'Rua',email:'a@b.pt'},{locations:[{clienteId:'c1'}],escapeHtml:String});
+          for (const text of ["_toggleAcordeaoCliente('c1')","abrirHistoricoCliente('c1')","abrirModalNovoLocalCliente('c1')","abrirModal('cliente','c1')","excluirEntidade('cliente','c1')"]) assert.ok(html.includes(text),text);
+          console.log('CLIENT_DOMAIN_BATCH_31_UNIT=OK');
+          NODE
+          python3 - <<'PY'
+          from pathlib import Path
+          t=Path('app.html').read_text(encoding='utf-8')
+          def block(marker):
+              s=t.index(marker); e=t.index('\n        function ',s+len(marker)); return t[s:e]
+          clients=block('        function renderizarClientes() {')
+          assert clients.count('prepareClientsForRendering({')==1
+          assert clients.count('renderClientsArea({')==1
+          assert '_toggleAcordeaoCliente' not in clients
+          assert t.count('clientsView: true,')==1
+          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
+          assert shell.count("clientsView: './assets/js/app-clients-view.js'")==1
+          assert shell.count('if (options.clientsView === true) pedidos.push(MODULOS.clientsView);')==1
+          assert "const CACHE = 'totalgest-v174';" in Path('sw.js').read_text(encoding='utf-8')
+          print('CLIENT_DOMAIN_BATCH_31_VERIFY=OK')
+          PY
+      - name: Commit functional clients separation
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-clients-view.js assets/js/app-shell.js sw.js
+          git diff --cached --check
+          test "$(git diff --cached --name-only | wc -l)" -eq 4
+          git commit -m "Separar apresentação do domínio clientes"
+          git push origin HEAD:refactor/separar-index-app
