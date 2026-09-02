@@ -10,4 +10,40 @@ jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
-      - run: echo manual-only
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/separar-index-app
+      - name: Estado dos módulos extraídos
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('app.html').read_text(encoding='utf-8')
+
+          marker='        function renderizarServicos() {'
+          s=text.index(marker); e=text.index('\n        function ',s+len(marker)); services=text[s:e]
+          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
+              assert services.count(item)==1,(item,services.count(item))
+          for item in ['invoiceTOId:','invoiceMoloniId:','invoiceMoloniUrl:','receiptMoloniUrl:','guideMoloniId:','guideMoloniUrl:','creditNoteMoloniId:','creditNoteMoloniUrl:']:
+              assert services.count(item)==1,(item,services.count(item))
+
+          render_marker='        function renderizarPonto() {'
+          rs=text.index(render_marker); re=text.index('\n        function ',rs+len(render_marker)); render=text[rs:re]
+          for item in ['buildLongWorkAttendanceRecords(','selectRecentAttendanceRecords(registros, {','selectAttendanceNavigationRecords(','groupAttendanceByPerson(registrosHoje)','attendanceLateLimit(_horaEsperada, _tolerMin)','attendanceAccordionItem({','attendanceAlertsHtml({','attendancePersonSummaryHtml({','preparePersonAttendanceRecords(porPessoa[fid])','calculateGeneralAttendanceState(regsGeral, agoraHM, calcularHoras)','applyAttendanceLunchDeduction(regsPessoa, {','isAttendanceBelowEightHours(geral, geralAberto, horasGeral)','isAttendanceLate({','prepareAttendanceRecordRow(r, {','attendanceRecordRow(','shouldIncludeMissingAttendancePeople({','eligibleAttendancePersonIds(','missingAttendancePersonIds(porPessoa, _todosIds)','addMissingAttendancePeople(porPessoa, idsSemPicagem)']:
+              assert render.count(item)==1,(item,render.count(item))
+          for item in ['let idsSemPicagem = [];','...(dados.funcionarios || []).filter(f =>','idsSemPicagem = _todosIds.filter(id => !porPessoa[id]);','idsSemPicagem.forEach(id => { porPessoa[id] = []; });','guardarDados(dados)']:
+              assert render.count(item)==0,(item,render.count(item))
+          assert render.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
+          assert render.index('isAttendanceBelowEightHours(') < render.index('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);') < render.index('isAttendanceLate({')
+          assert render.count('atualizarEstadoPonto();')==1
+          assert render.count('renderizarResumoPontoAdmin();')==1
+
+          attendance=Path('assets/js/app-attendance-view.js').read_text(encoding='utf-8')
+          for item in ['function preparePersonAttendanceRecords(','function calculateGeneralAttendanceState(','function applyAttendanceLunchDeduction(','function isAttendanceBelowEightHours(','function isAttendanceLate(','function attendanceRecordHours(','function attendanceRecordWorkplace(','function attendanceRecordMedia(','function prepareAttendanceRecordRow(','function shouldIncludeMissingAttendancePeople(','function eligibleAttendancePersonIds(','function missingAttendancePersonIds(','function addMissingAttendancePeople(','window.TotalGestAttendanceView = {']:
+              assert attendance.count(item)==1,(item,attendance.count(item))
+          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
+          assert shell.count("attendanceView: './assets/js/app-attendance-view.js'")==1
+          sw=Path('sw.js').read_text(encoding='utf-8')
+          assert sw.count("'./assets/js/app-attendance-view.js'")==1
+          assert "const CACHE = 'totalgest-v158';" in sw
+          print('APP_MIGRATION_BOUNDARY=OK')
+          PY
