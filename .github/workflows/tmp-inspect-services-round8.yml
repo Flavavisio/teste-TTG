@@ -1,9 +1,6 @@
 name: Inspect services round 8
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -11,22 +8,6 @@ permissions:
 
 jobs:
   inspect:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: refactor/separar-index-app
-      - name: Localizar carga dos módulos extraídos
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          for file in ['app.html','index.html','assets/js/app-bootstrap.js','assets/js/app-shell.js']:
-              p=Path(file)
-              if not p.exists(): continue
-              text=p.read_text(encoding='utf-8')
-              print('FILE=',file)
-              for i,line in enumerate(text.splitlines(),1):
-                  if 'app-services-' in line or 'assets/js/app-' in line and ('script' in line.lower() or 'src' in line.lower()):
-                      print(i, line)
-          PY
+      - run: echo "temporary inspection neutralized"
