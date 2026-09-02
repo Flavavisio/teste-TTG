@@ -17,21 +17,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mapear funções vizinhas das OS
+      - name: Inspecionar helpers seguros de ponto
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
           text = Path('app.html').read_text(encoding='utf-8')
-          marker = '        function renderizarServicos() {'
-          base = text.index(marker)
-          window = text[base:base+50000]
-          matches = list(re.finditer(r'^        function\s+([A-Za-z0-9_$]+)\s*\(', window, re.M))
-          print('BEGIN_FUNCTION_INVENTORY')
-          for i, m in enumerate(matches[:35]):
-              start = m.start()
-              end = matches[i+1].start() if i+1 < len(matches) else min(len(window), start+5000)
-              block = window[start:end]
-              print(f'{i:02d}|{m.group(1)}|chars={len(block)}|lines={len(block.splitlines())}')
-          print('END_FUNCTION_INVENTORY')
+          names = ['_inicioSemana', '_fmtH', 'renderizarResumoPontoAdmin']
+          for name in names:
+              marker = f'        function {name}('
+              start = text.index(marker)
+              end = text.find('\n        function ', start + len(marker))
+              if end < 0: end = len(text)
+              print(f'BEGIN_{name}')
+              print(text[start:end])
+              print(f'END_{name}')
           PY
