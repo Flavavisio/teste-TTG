@@ -82,6 +82,7 @@
     alertsView: './assets/js/app-alerts-view.js',
     servicesSelection: './assets/js/app-services-selection.js',
     servicesView: './assets/js/app-services-view.js',
+    attendanceView: './assets/js/app-attendance-view.js',
     dashboardCounts: './assets/js/app-dashboard-counts.js',
     dashboardAnalyticsMetrics: './assets/js/app-dashboard-analytics-metrics.js',
     licenseAddons: './assets/js/app-license-addons.js',

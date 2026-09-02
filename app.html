@@ -7254,13 +7254,10 @@
             renderizarTudo();
         }
         function _inicioSemana() {
-            const x = new Date(); const dow = (x.getDay() + 6) % 7; // 0 = segunda
-            x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - dow); return x;
+            return window.TotalGestAttendanceView.startOfWeekMonday();
         }
         function _fmtH(h) {
-            if (!h || h <= 0) return '0h 0m';
-            const hi = Math.floor(h); const mi = Math.round((h - hi) * 60);
-            return `${hi}h ${mi}m`;
+            return window.TotalGestAttendanceView.formatHours(h);
         }
         function renderizarResumoPontoAdmin() {
             const cont = document.getElementById('resumoPontoAdmin');
@@ -7323,26 +7320,25 @@
                 const appBadge = naApp
                     ? `<span style="color:#16a34a;font-weight:700;">● Online</span> <span style="color:#94a3b8;font-size:.8em;">${_tempoDesde(p.atividade, Date.now())}</span>`
                     : (p.atividade ? `<span style="color:#94a3b8;">○ Offline</span> <span style="color:#94a3b8;font-size:.8em;">${_tempoDesde(p.atividade, Date.now())}</span>` : '<span style="color:#cbd5e1;">—</span>');
-                return `<tr>
-                    <td>${p.nome} <span style="color:#94a3b8;font-size:.8em;">(${p.tipo})</span></td>
-                    <td>${appBadge}</td>
-                    <td>${estadoBadge}</td>
-                    <td>${obra}</td>
-                    <td>${_fmtH(horasHoje)}</td>
-                    <td>${_fmtH(horasSemana)} <span style="color:#94a3b8;font-size:.8em;">/ ${p.horas || 0}h</span></td>
-                    <td style="font-weight:700;color:${saldo >= 0 ? '#16a34a' : '#dc2626'};">${saldoTxt}</td>
-                </tr>`;
+                return window.TotalGestAttendanceView.teamSummaryRow({
+                    name: p.nome,
+                    type: p.tipo,
+                    appBadge,
+                    serviceBadge: estadoBadge,
+                    workplace: obra,
+                    hoursToday: horasHoje,
+                    hoursWeek: horasSemana,
+                    contractedHours: p.horas || 0,
+                    balance: saldo,
+                    balanceText: saldoTxt
+                });
             }).join('');
 
-            cont.innerHTML = `
-                <div class="report-card">
-                    <h4><i class="fas fa-users"></i> Estado da equipa — ${emServicoN} em serviço · ${pessoas.length - emServicoN} fora</h4>
-                    ${pessoas.length ? `<div class="table-wrapper"><table>
-                        <thead><tr><th>Pessoa</th><th>Na app</th><th>Estado</th><th>Obra atual</th><th>Horas hoje</th><th>Esta semana</th><th>Saldo (semana)</th></tr></thead>
-                        <tbody>${linhas}</tbody></table></div>
-                        <p style="color:#94a3b8;font-size:.82rem;margin-top:8px;">Saldo = horas trabalhadas esta semana menos as horas semanais contratadas.</p>`
-                      : '<p style="color:#64748b;">Sem funcionários ou encarregados.</p>'}
-                </div>`;
+            cont.innerHTML = window.TotalGestAttendanceView.teamSummaryCard({
+                inServiceCount: emServicoN,
+                peopleCount: pessoas.length,
+                rowsHtml: linhas
+            });
             _pontoAccAtualizarControlos();
         }
 
