@@ -11149,74 +11149,22 @@
         }
 
         function renderizarRequisicoes() {
-            const tbody = document.getElementById('tabelaRequisicoes');
-            const empty = document.getElementById('emptyRequisicoes');
-            let reqs = dados.requisicoes || [];
-            if (usuarioLogado && usuarioLogado.role === 'admin') {
-                reqs = reqs.filter(r => r.adminId === _tenantId());
-            } else if (usuarioLogado && usuarioLogado.role === 'encarregado') {
-                reqs = reqs.filter(r => r.funcionarioId === usuarioLogado.id);
-            } else if (usuarioLogado && usuarioLogado.role === 'funcionario') {
-                reqs = reqs.filter(r => r.funcionarioId === usuarioLogado.id);
-            }
-            if (usuarioLogado?.role === 'superadmin') {
-                reqs = [];
-            }
-            if (reqs.length === 0) {
-                tbody.innerHTML = '';
-                empty.style.display = 'block';
-                return;
-            }
-            empty.style.display = 'none';
-            tbody.innerHTML = reqs.map(r => {
-                const itensStr = escapeHtmlSimples(r.itens ? r.itens.map(i => `${i.nome} (${i.quantidade})`).join(', ') : '-');
-                const obra = escapeHtmlSimples(r.servicoId ? obterDescricaoOS(r.servicoId) : (r.obraDescricao || '-'));
-                const fornecedor = escapeHtmlSimples(r.fornecedor || '-');
-                const statusLabel = r.status === 'pendente_aprov' ? 'Pendente' :
-                    r.status === 'em_andamento' ? 'Em andamento' :
-                    r.status === 'aguarda_validacao' ? 'Aguarda Validação' :
-                    r.status === 'concluído' ? 'Concluído' :
-                    r.status === 'rejeitado' ? 'Rejeitado' : r.status;
-                let acoes = '';
-                const podeAprovar = ((usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin') && r.adminId === _tenantId()) ||
-                    (usuarioLogado?.role === 'encarregado' && r.funcionarioId === usuarioLogado.id);
-                if (podeAprovar && r.status === 'pendente_aprov') {
-                    acoes += `
-                        <button class="btn btn-sm btn-success" onclick="aprovarRequisicao('${r.id}')"><i class="fas fa-check"></i> Aprovar</button>
-                        <button class="btn btn-sm btn-danger" onclick="rejeitarRequisicao('${r.id}')"><i class="fas fa-times"></i> Rejeitar</button>
-                    `;
-                }
-                if ((usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin') && r.adminId === _tenantId() && r.status === 'aguarda_validacao') {
-                    acoes += `
-                        <button class="btn btn-sm btn-success" onclick="validarRequisicao('${r.id}')"><i class="fas fa-check-circle"></i> Validar</button>
-                        <button class="btn btn-sm btn-danger" onclick="rejeitarRequisicao('${r.id}')"><i class="fas fa-times"></i> Rejeitar</button>
-                    `;
-                }
-                if ((usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin') && r.adminId === _tenantId()) {
-                    acoes += `<button class="btn btn-sm btn-warning" onclick="abrirModal('requisicao','${r.id}')"><i class="fas fa-edit"></i></button>`;
-                }
-                return `
-                        <tr>
-                            <td>${obra}</td>
-                            <td>${fornecedor}</td>
-                            <td>${r.descricao || '-'}</td>
-                            <td>${itensStr}</td>
-                            <td>${r.data || '-'}</td>
-                            <td><span class="${statusBadge(r.status)}">${statusLabel}</span></td>
-                            <td>
-                                <div class="acoes">
-                                    ${acoes}
-                                    ${r.anexo ? `<a href="${r.anexo}" target="_blank" class="anexo-link" title="Ver anexo"><i class="fas fa-paperclip"></i></a>` : ''}
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-            }).join('');
+            const tenantId = _tenantId();
+            const requisitions = window.TotalGestRequisitionsView.selectRequisitionsForUser(
+                dados.requisicoes || [],
+                usuarioLogado,
+                tenantId
+            );
+            window.TotalGestRequisitionsView.renderRequisitionsArea({
+                document,
+                list: requisitions,
+                user: usuarioLogado,
+                tenantId,
+                escapeHtml: escapeHtmlSimples,
+                getServiceDescription: obterDescricaoOS,
+                getStatusBadge: statusBadge
+            });
         }
-
-        const HEARTBEAT_MS = 45000;   // bate a atividade a cada 45s
-        const POLL_MS = 15000;        // painéis atualizam a cada 15s
-        const LIMITE_ONLINE_MS = 90000; // 1,5 min sem heartbeat => offline
         function _tempoDesde(ul, agora) {
             if (!ul) return 'nunca';
             const seg = Math.floor((agora - ul) / 1000);
@@ -28430,7 +28378,7 @@ window._relPrefill = function(msg){
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
             syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, reportsView: true, alertsView: true,
-            clientsView: true, teamView: true, dashboardCounts: true,
+            clientsView: true, teamView: true, requisitionsView: true, dashboardCounts: true,
                 dashboardAnalyticsMetrics: true, licenseAddons: true, servicesSelection: true, servicesView: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
