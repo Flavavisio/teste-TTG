@@ -1,78 +1,17 @@
-name: Apply sixteenth safe attendance batch
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Migrar e validar décimo sexto lote seguro
-        run: |
-          python3 scripts/tmp-migrate-attendance-safe-batch-16.py
-          node --check assets/js/app-attendance-view.js
-          node --check sw.js
-          git diff --check
-          node - <<'NODE'
-          const fs=require('fs'),vm=require('vm'),assert=require('assert');
-          const context={window:{}}; vm.createContext(context);
-          vm.runInContext(fs.readFileSync('assets/js/app-attendance-view.js','utf8'),context);
-          const v=context.window.TotalGestAttendanceView;
-          const records=[
-            {id:'g1',data:'2026-09-02',entrada:'08:00',saida:'12:00',funcionarioId:'f1',pausaAlmoco:true},
-            {id:'g2',data:'2026-09-02',entrada:'13:00',saida:'17:00',funcionarioId:'f1'},
-            {id:'os1',data:'2026-09-02',entrada:'09:00',saida:'10:00',funcionarioId:'f1',servicoId:'s1'}
-          ];
-          const calc=(a,b)=>{const m=x=>{const p=x.split(':').map(Number);return p[0]*60+p[1]};return (m(b)-m(a))/60};
-          const state=v.prepareAttendancePersonState(records,{nowTime:'18:00',calculateHours:calc,absence:null,selectedDateIsToday:true,lateLimit:'09:15'});
-          assert.strictEqual(state.personRecords.length,3);
-          assert.strictEqual(state.generalRecords.length,2);
-          assert.strictEqual(state.generalHours,8);
-          assert.strictEqual(state.lunchDeducted,false);
-          assert.strictEqual(state.lessThanEightHours,false);
-          assert.strictEqual(state.late,false);
-          const summary=v.attendancePersonPresentation(state,{personName:'Teste',absence:null,selectedDateIsToday:true,lateLimit:'09:15',expectedTime:'09:00',toleranceMinutes:15,formatHours:h=>`${h}h`});
-          assert(summary.includes('8h'));
-          const rows=v.attendancePersonRows(records,{mode:'dia',calculateHours:calc,formatHours:h=>`${h}h`,getWorkDescription:()=> 'OS',getClientName:()=> '-',escapeHtml:x=>x});
-          assert(rows.includes('ponto-acc-sub-row'));
-          const card=v.prepareAttendanceAccordionPerson(records,{personName:'Teste',absence:null,nowTime:'18:00',selectedDateIsToday:true,lateLimit:'09:15',expectedTime:'09:00',toleranceMinutes:15,mode:'dia',calculateHours:calc,formatHours:h=>`${h}h`,getWorkDescription:()=> 'OS',getClientName:()=> '-',escapeHtml:x=>x});
-          assert.strictEqual(card.hasRecords,true);
-          assert(card.summaryHtml.includes('8h'));
-          assert(card.rowsHtml.includes('ponto-acc-sub-row'));
-          console.log('SAFE_BATCH_16_UNIT=OK');
-          NODE
-          python3 - <<'PY'
-          from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8')
-          marker='        function renderizarPonto() {'
-          s=text.index(marker); e=text.index('\n        function ',s+len(marker)); block=text[s:e]
-          assert block.count('prepareAttendanceAccordionPerson(porPessoa[fid], {')==1
-          assert block.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
-          for old in ['preparePersonAttendanceRecords(porPessoa[fid])','calculateGeneralAttendanceState(regsGeral, agoraHM, calcularHoras)','applyAttendanceLunchDeduction(regsPessoa, {','attendanceAlertsHtml({','attendancePersonSummaryHtml({','prepareAttendanceRecordRow(r, {']:
-              assert old not in block, old
-          attendance=Path('assets/js/app-attendance-view.js').read_text(encoding='utf-8')
-          for item in ['function prepareAttendancePersonState(','function attendancePersonPresentation(','function attendancePersonRows(','function prepareAttendanceAccordionPerson(']:
-              assert attendance.count(item)==1,(item,attendance.count(item))
-          assert "const CACHE = 'totalgest-v159';" in Path('sw.js').read_text(encoding='utf-8')
-          print('SAFE_BATCH_16_VERIFY=OK')
-          PY
-      - name: Commit funcional
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add app.html assets/js/app-attendance-view.js sw.js
-          git diff --cached --check
-          test -n "$(git diff --cached --name-only)"
-          test "$(git diff --cached --name-only | wc -l)" -eq 3
-          git commit -m "Extrair orquestração segura por pessoa do registo de ponto"
-          git push origin HEAD:refactor/separar-index-app
+      - name: Estado seguro
+        run: echo "workflow manual/read"
