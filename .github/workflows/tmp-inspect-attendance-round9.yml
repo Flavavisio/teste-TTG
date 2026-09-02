@@ -1,0 +1,36 @@
+name: Inspect attendance round 9
+
+on:
+  push:
+    branches:
+      - refactor/separar-index-app
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/separar-index-app
+      - name: Inspecionar funções seguras de ponto
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          text = Path('app.html').read_text(encoding='utf-8')
+          anchor = text.index('// ---------- Navegador de picagens por dia/semana (Registo de Ponto) ----------')
+          tail = text[anchor:]
+          matches = list(re.finditer(r'^        function ([A-Za-z0-9_$]+)\(([^\n]*)', tail, re.M))[:14]
+          for i, m in enumerate(matches):
+              start = m.start()
+              end = matches[i+1].start() if i + 1 < len(matches) else min(len(tail), start + 8000)
+              block = tail[start:end]
+              print('FUNCTION', m.group(1), 'CHARS', len(block), 'LINES', block.count('\n') + 1)
+              print(block[:1800])
+              print('---END---')
+          PY
