@@ -543,6 +543,41 @@
     return true;
   }
 
+  function mergeAttendanceRecords(pointRecords, longWorkRecords, works) {
+    return [
+      ...(Array.isArray(pointRecords) ? pointRecords : []),
+      ...buildLongWorkAttendanceRecords(longWorkRecords, works)
+    ];
+  }
+
+  function prepareAttendanceVisibleRecords(options) {
+    const o = options || {};
+    return filterAttendanceRecordsForViewer(
+      mergeAttendanceRecords(o.pointRecords, o.longWorkRecords, o.works),
+      o.user,
+      o.tenantId
+    );
+  }
+
+  function prepareAttendancePeriods(records, options) {
+    const o = options || {};
+    return selectRecentAttendanceRecords(records, {
+      weekStart: o.weekStart,
+      recentStart: o.recentStart || attendanceRecentStart(o.currentDate || new Date())
+    });
+  }
+
+  function prepareAttendanceBaseState(options) {
+    const o = options || {};
+    const visibleRecords = prepareAttendanceVisibleRecords(o);
+    const periods = prepareAttendancePeriods(visibleRecords, o);
+    return {
+      visibleRecords,
+      weekRecords: periods.weekRecords,
+      recentRecords: periods.recentRecords
+    };
+  }
+
   window.TotalGestAttendanceView = {
     startOfWeekMonday,
     formatHours,
@@ -592,6 +627,10 @@
     applyAttendanceEmptyState,
     prepareAttendanceNavigation,
     attendanceTimingConfig,
-    applyAttendanceAccordionState
+    applyAttendanceAccordionState,
+    mergeAttendanceRecords,
+    prepareAttendanceVisibleRecords,
+    prepareAttendancePeriods,
+    prepareAttendanceBaseState
   };
 })();

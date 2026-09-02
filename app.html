@@ -7386,30 +7386,17 @@
             renderizarResumoPontoAdmin();
             const attendanceElements = window.TotalGestAttendanceView.attendanceViewElements(document);
             const empty = attendanceElements.empty;
-            // _ehObraLonga: true marca estes registos como vindos do timer de obra (obraPontoLonga),
-            // que corre em PARALELO ao ponto geral (não é um turno à parte) — por isso continuam a
-            // aparecer na listagem (para se ver em que obra a pessoa esteve), mas não podem somar
-            // por cima das horas do ponto geral, senão o mesmo período fica contado a dobrar.
-            const _longosComoRegistro = window.TotalGestAttendanceView.buildLongWorkAttendanceRecords(
-                dados.obraPontoLonga || [],
-                dados.obras || []
-            );
-            let registros = [...(dados.ponto || []), ..._longosComoRegistro];
-
-            registros = window.TotalGestAttendanceView.filterAttendanceRecordsForViewer(
-                registros,
-                usuarioLogado,
-                _tenantId()
-            );
-
-            const _wsP = _inicioSemana();
-            const _msP = window.TotalGestAttendanceView.attendanceRecentStart(new Date()); // início do mês ANTERIOR — mostra o mês corrente + o mês anterior
-            const _periodRecords = window.TotalGestAttendanceView.selectRecentAttendanceRecords(registros, {
-                weekStart: _wsP,
-                recentStart: _msP
+            const attendanceBaseState = window.TotalGestAttendanceView.prepareAttendanceBaseState({
+                pointRecords: dados.ponto || [],
+                longWorkRecords: dados.obraPontoLonga || [],
+                works: dados.obras || [],
+                user: usuarioLogado,
+                tenantId: _tenantId(),
+                weekStart: _inicioSemana(),
+                currentDate: new Date()
             });
-            const _registrosSemana = _periodRecords.weekRecords;
-            registros = _periodRecords.recentRecords;
+            const _registrosSemana = attendanceBaseState.weekRecords;
+            let registros = attendanceBaseState.recentRecords;
 
             if (window.TotalGestAttendanceView.applyAttendanceEmptyState(attendanceElements, registros.length === 0)) return;
 
