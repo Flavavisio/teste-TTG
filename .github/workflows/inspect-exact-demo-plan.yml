@@ -1,44 +1,56 @@
-name: Inspect app migration boundary
+name: Apply alerts safe batch 28
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [refactor/separar-index-app]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos extraídos
+      - name: Migrate and validate alerts batch
         run: |
+          python3 scripts/tmp-migrate-alerts-safe-batch-28.py
           node --check assets/js/app-alerts-view.js
-          node --check assets/js/app-attendance-view.js
           node --check sw.js
           git diff --check
+          node - <<'NODE'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert');
+          const c={window:{}}; vm.createContext(c); vm.runInContext(fs.readFileSync('assets/js/app-alerts-view.js','utf8'),c); const v=c.window.TotalGestAlertsView;
+          const state=x=>({chave:x,dias:x==='a_vencer'?12:90});
+          const mc=v.prepareMaintenanceContractAlerts({contracts:[{id:'c1',adminId:'a1'}],adminId:'a1',getNextMaintenance:()=>1,getMaintenanceState:()=>state('a_vencer')}); assert.strictEqual(mc.items.length,1); assert.ok(mc.alert);
+          assert.strictEqual(v.licenseExpiryState({licenca:{dataExpiracao:10}},x=>x).days,10);
+          const rr=v.prepareRegulatoryRenewals({admin:{registoPrevioValidade:'2026-09-10'},calculateDaysRemaining:()=>8,thresholdDays:180}); assert.ok(rr.registoPrevio && rr.registoPrevio.alert.tipo==='danger');
+          const sh=v.prepareShstRenewals({employees:[{id:'f1',adminId:'a1',nome:'A',dataNascimento:'1980-01-01',shstUltimaConsulta:'2025-09-01'}],managers:[],adminId:'a1',calculateDaysRemaining:()=>1,now:new Date('2026-09-02')}); assert.strictEqual(sh.length,1);
+          const wa=v.prepareWarehouseAlerts({articles:[{id:'x',adminId:'a1',alertaStock:true,stockMinimo:2}],workMaterials:[{adminId:'a1',obraId:'o1',qtdConsumida:3,qtdPrevista:2}],adminId:'a1',getCurrentStock:()=>1}); assert.strictEqual(wa.length,2);
+          console.log('SAFE_BATCH_28_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8')
+          t=Path('app.html').read_text()
           def block(marker):
-              s=text.index(marker); e=text.index('\n        function ',s+len(marker)); return text[s:e]
-          services=block('        function renderizarServicos() {')
-          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
-              assert services.count(item)==1
-          point=block('        function renderizarPonto() {')
-          for item in ['prepareAttendanceBaseState({','prepareAttendanceViewState({','createAttendancePersonEntryRenderer({','renderAttendancePersonEntry(fid, porPessoa[fid], _ausenciaHoje)','applyAttendanceAccordionState(attendanceElements, htmlAcc, Object.keys(porPessoa).length)']:
-              assert point.count(item)==1
-          assert point.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
-          alerts=block('        function renderizarAlertas() {')
-          for item in ['isEmployeeAlertsRole(','employeeAlertState({','applyEmployeeAlertState({ container: cont, globalContainer: contGlobal }, employeeAlertState)','birthdayAlert({','pendingServiceOrdersAlert(','pendingAssistancesAlert(','pendingRequisitionsAlert(','pendingLeaveRequestsAlert(','prepareFleetAttention({','alertsCard({']:
-              assert alerts.count(item)==1,(item,alerts.count(item))
-          for item in ["_notificarPorFaseVencimento('contrato_vencer_", "_notificarPorFaseVencimento('frota_vencer_", "_notificarPorFaseVencimento('licenca_", "_notificarPorFaseVencimento('registo_previo_", "_notificarPorFaseVencimento('anepc_", "_notificarPorFaseVencimento('shst_"]:
-              assert alerts.count(item)==1,(item,alerts.count(item))
-          av=Path('assets/js/app-alerts-view.js').read_text(encoding='utf-8')
-          for item in ['function latestFleetMaintenance(','function fleetVehicleAttention(','function prepareFleetAttention(','window.TotalGestAlertsView = {']:
-              assert av.count(item)==1,(item,av.count(item))
-          assert "const CACHE = 'totalgest-v170';" in Path('sw.js').read_text(encoding='utf-8')
-          print('RENDER_PONTO_CHARS=',len(point)); print('ALERTS_CHARS=',len(alerts)); print('ALERTS_LINES=',alerts.count('\n')+1); print('APP_MIGRATION_BOUNDARY=OK')
+              s=t.index(marker); e=t.index('\n        function ',s+len(marker)); return t[s:e]
+          a=block('        function renderizarAlertas() {')
+          for x in ['prepareMaintenanceContractAlerts({','licenseExpiryState(','prepareRegulatoryRenewals({','prepareShstRenewals({','prepareWarehouseAlerts({']:
+              assert a.count(x)==1,(x,a.count(x))
+          for x in ["_notificarPorFaseVencimento('contrato_vencer_", "_notificarPorFaseVencimento('frota_vencer_", "_notificarPorFaseVencimento('licenca_", "_notificarPorFaseVencimento('registo_previo_", "_notificarPorFaseVencimento('anepc_", "_notificarPorFaseVencimento('shst_"]:
+              assert a.count(x)==1,(x,a.count(x))
+          assert "const CACHE = 'totalgest-v171';" in Path('sw.js').read_text()
+          print('SAFE_BATCH_28_VERIFY=OK')
           PY
+      - name: Commit functional alerts
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-alerts-view.js sw.js
+          git diff --cached --check
+          test "$(git diff --cached --name-only | wc -l)" -eq 3
+          git commit -m "Extrair alertas seguros de contratos e conformidade"
+          git push origin HEAD:refactor/separar-index-app
