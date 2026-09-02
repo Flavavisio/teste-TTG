@@ -6650,18 +6650,19 @@
                     user: usuarioLogado,
                     getPendingTypes: serviceId => _tiposEspecialidadePendentes(serviceId)
                 });
-                avisoDiv.innerHTML = window.TotalGestServicesView.specialtyAndHistoryNoticeFromState({
+                window.TotalGestServicesView.applySpecialtyAndHistoryNotice({
+                    element: avisoDiv,
                     pendingState: _pendingSpecialty,
                     loadedSince: _servicosCarregadoDesde
                 });
             }
 
-            servicos = window.TotalGestServicesSelection.filterAndSortServices({
-                services: servicos,
+            const filterServices = window.TotalGestServicesSelection.createServiceFilterSorter({
                 applyFilterSort: _aplicarFiltroOrdenacao,
                 getTableState: _getTableState,
                 getClientName: obterNomeCliente
             });
+            servicos = filterServices(servicos);
             const hasRows = window.TotalGestServicesView.renderServicesTableState({
                 totalCount: totalGeralOS,
                 visibleCount: servicos.length,
@@ -6680,16 +6681,15 @@
                 hasMaterials: _osTemMateriais,
                 isErpActive: moduloErpAtivo
             });
+            const renderRow = window.TotalGestServicesView.createServiceRowRenderer({
+                role: usuarioLogado?.role || '',
+                getBadgeClass: statusBadge,
+                escapeDescription: escapeHtmlSimples,
+                getWorkTypesHtml: _tiposTrabalhoBadgesHTML
+            });
             tbody.innerHTML = servicos.map(s => {
                 const rowData = prepareRow(s);
-                return window.TotalGestServicesView.serviceRowFromData({
-                    service: s,
-                    rowData,
-                    role: usuarioLogado?.role || '',
-                    badgeClass: statusBadge(s.status),
-                    descriptionHtml: escapeHtmlSimples(s.descricao || '-'),
-                    workTypesHtml: _tiposTrabalhoBadgesHTML(s),
-                    actions: {
+                return renderRow(s, rowData, {
                         serviceId: s.id,
                         status: s.status,
                         role: usuarioLogado?.role || '',
@@ -6708,7 +6708,6 @@
                         guideMoloniUrl: s.guiaMoloniUrl || '',
                         creditNoteMoloniId: s.notaCreditoMoloniId || '',
                         creditNoteMoloniUrl: s.notaCreditoMoloniUrl || ''
-                    }
                 });
             }).join('');
         }

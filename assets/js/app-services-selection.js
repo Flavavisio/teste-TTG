@@ -125,6 +125,18 @@
     };
   }
 
+  function createServiceFilterSorter(options) {
+    options = options || {};
+    return function (services) {
+      return filterAndSortServices({
+        services: services || [],
+        applyFilterSort: options.applyFilterSort,
+        getTableState: options.getTableState,
+        getClientName: options.getClientName
+      });
+    };
+  }
+
   function filterAndSortServices(options) {
     options = options || {};
     const services = Array.isArray(options.services) ? options.services : [];
@@ -150,6 +162,7 @@
     selectPendingSpecialtyServicesForUser: selectPendingSpecialtyServicesForUser,
     prepareServiceRow: prepareServiceRow,
     createServiceRowPreparer: createServiceRowPreparer,
+    createServiceFilterSorter: createServiceFilterSorter,
     filterAndSortServices: filterAndSortServices
   };
 })();
