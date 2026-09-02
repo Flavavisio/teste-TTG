@@ -17,20 +17,23 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspecionar funções seguras de ponto
+      - name: Inspecionar blocos exatos de navegação
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
           text = Path('app.html').read_text(encoding='utf-8')
-          anchor = text.index('// ---------- Navegador de picagens por dia/semana (Registo de Ponto) ----------')
-          tail = text[anchor:]
-          matches = list(re.finditer(r'^        function ([A-Za-z0-9_$]+)\(([^\n]*)', tail, re.M))[:14]
-          for i, m in enumerate(matches):
-              start = m.start()
-              end = matches[i+1].start() if i + 1 < len(matches) else min(len(tail), start + 8000)
-              block = tail[start:end]
-              print('FUNCTION', m.group(1), 'CHARS', len(block), 'LINES', block.count('\n') + 1)
-              print(block[:1800])
-              print('---END---')
+          for name in ['_pontoAccMover', '_pontoAccAtualizarControlos']:
+              marker = f'        function {name}('
+              start = text.index(marker)
+              end = text.index('\n        function ', start + len(marker))
+              print(f'BEGIN_{name}')
+              print(text[start:end])
+              print(f'END_{name}')
+          marker='        function renderizarPonto() {'
+          start=text.index(marker)
+          end=text.index('\n        function ', start+len(marker))
+          block=text[start:end]
+          print('RENDER_PONTO_COUNTS')
+          for needle in ['_pontoNavData','_pontoNavModo','_inicioSemana()','toLocaleDateString(\'pt-PT\'','Date.UTC(']:
+              print(needle, block.count(needle))
           PY
