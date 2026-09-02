@@ -1,10 +1,10 @@
-/* Total Gest — tema de marca Blueberry + Cream Soda.
- * Blueberry: #243B8F | Cream Soda: #FFF0C9
+/* Total Gest — tema de marca Quantum Blue + Ice Glass.
+ * Quantum Blue: #2457FF | Ice Glass: #DFF7FF
  * Mantém cores semânticas de sucesso/aviso/erro intactas.
  */
 :root {
-  --tg-brand-blue: #243B8F;
-  --tg-brand-cream: #FFF0C9;
+  --tg-brand-blue: #2457FF;
+  --tg-brand-cream: #DFF7FF;
   --tg-brand-blue-hover: color-mix(in srgb, var(--tg-brand-blue) 88%, #000);
   --tg-brand-blue-soft: color-mix(in srgb, var(--tg-brand-blue) 10%, #fff);
   --tg-brand-cream-soft: color-mix(in srgb, var(--tg-brand-cream) 58%, #fff);
