@@ -1,9 +1,6 @@
 name: Inspect attendance round 9
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -11,29 +8,9 @@ permissions:
 
 jobs:
   inspect:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspecionar blocos exatos de navegação
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          for name in ['_pontoAccMover', '_pontoAccAtualizarControlos']:
-              marker = f'        function {name}('
-              start = text.index(marker)
-              end = text.index('\n        function ', start + len(marker))
-              print(f'BEGIN_{name}')
-              print(text[start:end])
-              print(f'END_{name}')
-          marker='        function renderizarPonto() {'
-          start=text.index(marker)
-          end=text.index('\n        function ', start+len(marker))
-          block=text[start:end]
-          print('RENDER_PONTO_COUNTS')
-          for needle in ['_pontoNavData','_pontoNavModo','_inicioSemana()','toLocaleDateString(\'pt-PT\'','Date.UTC(']:
-              print(needle, block.count(needle))
-          PY
+      - run: echo "Inspection complete"
