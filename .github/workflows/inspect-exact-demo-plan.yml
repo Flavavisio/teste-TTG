@@ -1,77 +1,49 @@
-name: Apply thirteenth safe attendance batch
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Migrar e validar décimo terceiro lote seguro
+      - name: Estado dos módulos extraídos
         run: |
-          python3 scripts/tmp-migrate-attendance-safe-batch-13.py
-          node --check assets/js/app-attendance-view.js
-          node --check sw.js
-          git diff --check
-          node - <<'NODE'
-          const fs=require('fs'),vm=require('vm'),assert=require('assert');
-          const context={window:{}}; vm.createContext(context);
-          vm.runInContext(fs.readFileSync('assets/js/app-attendance-view.js','utf8'),context);
-          const v=context.window.TotalGestAttendanceView;
-          const records=[
-            {data:'2026-09-02',entrada:'13:00',saida:'17:00'},
-            {data:'2026-09-02',entrada:'08:00',saida:'12:00',pausaAlmoco:true},
-            {data:'2026-09-02',entrada:'09:00',saida:'10:00',servicoId:'os1'}
-          ];
-          const prepared=v.preparePersonAttendanceRecords(records);
-          assert.strictEqual(prepared.personRecords[0].entrada,'08:00');
-          assert.strictEqual(prepared.generalRecords.length,2);
-          const general=v.calculateGeneralAttendanceState(prepared.generalRecords,'18:00',(a,b)=>{
-            const m=x=>{const p=x.split(':').map(Number);return p[0]*60+p[1]}; return (m(b)-m(a))/60;
-          });
-          assert.strictEqual(general.generalHours,8);
-          assert.strictEqual(general.generalOpen,false);
-          const deducted=v.applyAttendanceLunchDeduction([{entrada:'08:00',saida:'17:00'}],{generalOpen:false,generalHours:9});
-          assert.strictEqual(deducted.generalHours,8); assert.strictEqual(deducted.lunchDeducted,true);
-          assert.strictEqual(v.isAttendanceBelowEightHours({entrada:'08:00'},false,7.5),true);
-          assert.strictEqual(v.isAttendanceBelowEightHours({entrada:'08:00'},true,7.5),false);
-          assert.strictEqual(v.isAttendanceLate({absence:{},generalRecord:{entrada:'10:00'},lateLimit:'09:15'}),false);
-          assert.strictEqual(v.isAttendanceLate({absence:null,generalRecord:{entrada:'10:00'},lateLimit:'09:15'}),true);
-          assert.strictEqual(v.isAttendanceLate({absence:null,generalRecord:null,selectedDateIsToday:true,recordsCount:0,nowTime:'10:00',lateLimit:'09:15'}),true);
-          console.log('SAFE_BATCH_13_UNIT=OK');
-          NODE
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
-          marker='        function renderizarPonto() {'
-          s=text.index(marker); e=text.index('\n        function ',s+len(marker)); block=text[s:e]
-          for item in ['preparePersonAttendanceRecords(porPessoa[fid])','calculateGeneralAttendanceState(regsGeral, agoraHM, calcularHoras)','applyAttendanceLunchDeduction(regsPessoa, {','isAttendanceBelowEightHours(geral, geralAberto, horasGeral)','isAttendanceLate({']:
-              assert block.count(item)==1,(item,block.count(item))
-          assert block.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
-          assert block.index('isAttendanceBelowEightHours(') < block.index('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);') < block.index('isAttendanceLate({')
+
+          marker='        function renderizarServicos() {'
+          s=text.index(marker); e=text.index('\n        function ',s+len(marker)); services=text[s:e]
+          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
+              assert services.count(item)==1,(item,services.count(item))
+          for item in ['invoiceTOId:','invoiceMoloniId:','invoiceMoloniUrl:','receiptMoloniUrl:','guideMoloniId:','guideMoloniUrl:','creditNoteMoloniId:','creditNoteMoloniUrl:']:
+              assert services.count(item)==1,(item,services.count(item))
+
+          render_marker='        function renderizarPonto() {'
+          rs=text.index(render_marker); re=text.index('\n        function ',rs+len(render_marker)); render=text[rs:re]
+          for item in ['buildLongWorkAttendanceRecords(','selectRecentAttendanceRecords(registros, {','selectAttendanceNavigationRecords(','groupAttendanceByPerson(registrosHoje)','attendanceLateLimit(_horaEsperada, _tolerMin)','attendancePhotoHtml(r.foto)','attendanceGpsHtml(r.lat, r.lng)','attendanceGpsHtml(r.latSaida, r.lngSaida)','attendanceDateCell(r.data, _pontoNavModo)','attendanceRecordRow({','attendanceAccordionItem({','attendanceAlertsHtml({','attendancePersonSummaryHtml({','attendanceEditTitle(r, escapeHtmlSimples)','attendanceEntryExitHtml(r, tituloEdicao)','preparePersonAttendanceRecords(porPessoa[fid])','calculateGeneralAttendanceState(regsGeral, agoraHM, calcularHoras)','applyAttendanceLunchDeduction(regsPessoa, {','isAttendanceBelowEightHours(geral, geralAberto, horasGeral)','isAttendanceLate({']:
+              assert render.count(item)==1,(item,render.count(item))
+          for item in ["(dados.obraPontoLonga || []).map(x => {","const _registrosSemana = registros.filter(p =>","const porPessoa = {};","const _limiteAtraso = (() =>",'const cabecalho = `<div class="ponto-acc-sub-row"','return `<div class="ponto-acc-sub-row">','const fotoHtml = r.foto ?','const gpsEntradaHtml = (r.lat && r.lng) ?','const alertaHtml = (menosDe8h ?','let resumoGeral;','const foiEditado = !!(r.editadoPor && r.editadoEm);','const saidaTxtBase = r.pausaAlmoco ?',"const regsPessoa = porPessoa[fid].sort((a, b) =>","const regsGeral = regsPessoa.filter(r => !r.servicoId && !r.obraId)",'regsGeral.forEach(r => {','const temPausaGeral = regsPessoa.some(r => r.pausaAlmoco && r.saida);','const atrasado = _ausenciaHoje ? false :','guardarDados(dados)']:
+              assert render.count(item)==0,(item,render.count(item))
+          assert render.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
+          assert render.index('isAttendanceBelowEightHours(') < render.index('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);') < render.index('isAttendanceLate({')
+          assert render.count('atualizarEstadoPonto();')==1
+          assert render.count('renderizarResumoPontoAdmin();')==1
+
           attendance=Path('assets/js/app-attendance-view.js').read_text(encoding='utf-8')
-          for item in ['function preparePersonAttendanceRecords(','function calculateGeneralAttendanceState(','function applyAttendanceLunchDeduction(','function isAttendanceBelowEightHours(','function isAttendanceLate(']:
+          for item in ['function startOfWeekMonday(','function formatHours(','function teamSummaryRow(','function teamSummaryCard(','function moveNavigationDate(','function canNavigateAttendance(','function attendanceNavigationLabel(','function isAttendanceNextDisabled(','function buildLongWorkAttendanceRecords(','function selectRecentAttendanceRecords(','function selectAttendanceNavigationRecords(','function groupAttendanceByPerson(','function attendanceLateLimit(','function attendancePhotoHtml(','function attendanceGpsHtml(','function attendanceDateCell(','function attendanceRecordRow(','function attendanceAccordionItem(','function attendanceAlertsHtml(','function attendancePersonSummaryHtml(','function attendanceEditTitle(','function attendanceEntryExitHtml(','function preparePersonAttendanceRecords(','function calculateGeneralAttendanceState(','function applyAttendanceLunchDeduction(','function isAttendanceBelowEightHours(','function isAttendanceLate(','window.TotalGestAttendanceView = {']:
               assert attendance.count(item)==1,(item,attendance.count(item))
-          assert "const CACHE = 'totalgest-v156';" in Path('sw.js').read_text(encoding='utf-8')
-          print('SAFE_BATCH_13_VERIFY=OK')
+          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
+          assert shell.count("attendanceView: './assets/js/app-attendance-view.js'")==1
+          sw=Path('sw.js').read_text(encoding='utf-8')
+          assert sw.count("'./assets/js/app-attendance-view.js'")==1
+          assert "const CACHE = 'totalgest-v156';" in sw
+          print('APP_MIGRATION_BOUNDARY=OK')
           PY
-      - name: Commit funcional
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add app.html assets/js/app-attendance-view.js sw.js
-          git diff --cached --check
-          test -n "$(git diff --cached --name-only)"
-          test "$(git diff --cached --name-only | wc -l)" -eq 3
-          git commit -m "Extrair estado seguro por pessoa do registo de ponto"
-          git push origin HEAD:refactor/separar-index-app
