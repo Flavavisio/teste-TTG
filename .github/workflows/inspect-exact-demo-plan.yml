@@ -1,36 +1,56 @@
-name: Apply brand and prepare deploy
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  apply:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Apply brand theme everywhere
+      - name: Estado final do refactor e tema
         run: |
-          python3 scripts/tmp-apply-brand-deploy.py
+          node --check assets/js/app-alerts-view.js
+          node --check assets/js/app-attendance-view.js
+          node --check assets/js/app-clients-view.js
+          node --check assets/js/app-team-view.js
+          node --check assets/js/app-requisitions-view.js
+          node --check assets/js/app-inventory-view.js
+          node --check assets/js/app-works-view.js
+          node --check assets/js/app-tools-view.js
+          node --check assets/js/app-shell.js
+          node --check sw.js
           git diff --check
           grep -q 'assets/css/brand-theme.css' index.html
           grep -q 'assets/css/brand-theme.css' app.html
+          grep -q '#243B8F' assets/css/brand-theme.css
+          grep -q '#FFF0C9' assets/css/brand-theme.css
           grep -q '#243B8F' assets/css/login.css
           grep -q '#243B8F' assets/css/registar.css
           grep -q '#243B8F' assets/css/redefinir-password.css
           grep -q "const CACHE = 'totalgest-v180';" sw.js
-      - name: Commit brand application
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add index.html app.html login.html registar.html redefinir-password.html confirmar-trial.html assets/css/login.css assets/css/registar.css assets/css/redefinir-password.css sw.js
-          git diff --cached --check
-          git commit -m "Aplicar cores de marca em todo o acesso"
-          git push origin HEAD:refactor/separar-index-app
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('app.html').read_text(encoding='utf-8')
+          assert 'bootstrapSupabase()' in text
+          for marker,delegate in [
+            ('function renderizarServicos() {','createServicesAreaRendererFromDocument({'),
+            ('function renderizarPonto() {','prepareAttendanceViewState({'),
+            ('function renderizarAlertas() {','applyAlertsState('),
+            ('function renderizarClientes() {','renderClientsArea({'),
+            ('function renderizarFuncionarios() {','renderEmployeesArea({'),
+            ('function renderizarEncarregados() {','renderManagersArea({'),
+            ('function renderizarRequisicoes() {','renderRequisitionsArea({'),
+            ('function renderizarArtigos() {','renderArticlesArea({'),
+            ('function renderizarFornecedores() {','renderSuppliersArea({'),
+            ('function renderizarObras() {','renderWorksArea({'),
+            ('function renderizarFerramentas() {','renderToolsArea({')]:
+              s=text.index(marker)
+              assert delegate in text[s:s+9000], (marker,delegate)
+          print('FINAL_REFACTOR_AND_BRAND=OK')
+          PY
