@@ -593,6 +593,16 @@
       mode: o.mode
     });
     const timing = attendanceTimingConfig(o.admin);
+    const missingAttendanceState = applyMissingAttendancePeople(navigation.groupedRecords, {
+      selectedDate: navigation.selectedDate,
+      today: o.today,
+      role: o.role,
+      nowTime,
+      lateLimit: timing.lateLimit,
+      employees: o.employees,
+      managers: o.managers,
+      tenantId: o.tenantId
+    });
     return {
       weeklyBalanceLabel: attendanceWeeklyBalanceLabel(totalHours, weeklyTarget),
       selectedDate: navigation.selectedDate,
@@ -600,7 +610,8 @@
       nowTime,
       expectedTime: timing.expectedTime,
       toleranceMinutes: timing.toleranceMinutes,
-      lateLimit: timing.lateLimit
+      lateLimit: timing.lateLimit,
+      missingAttendanceState
     };
   }
 

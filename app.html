@@ -7404,8 +7404,10 @@
                 weekRecords: _registrosSemana,
                 recentRecords: registros,
                 user: usuarioLogado,
+                role: usuarioLogado?.role || '',
                 employees: dados.funcionarios || [],
                 managers: dados.encarregados || [],
+                tenantId: _tenantId(),
                 selectedDate: _pontoNavData,
                 today: getDataHoje(),
                 mode: _pontoNavModo,
@@ -7421,16 +7423,6 @@
             const _horaEsperada = attendanceViewState.expectedTime;
             const _tolerMin = attendanceViewState.toleranceMinutes;
             const _limiteAtraso = attendanceViewState.lateLimit;
-            window.TotalGestAttendanceView.applyMissingAttendancePeople(porPessoa, {
-                selectedDate: _hojeSoP,
-                today: getDataHoje(),
-                role: usuarioLogado?.role || '',
-                nowTime: agoraHM,
-                lateLimit: _limiteAtraso,
-                employees: dados.funcionarios || [],
-                managers: dados.encarregados || [],
-                tenantId: _tenantId()
-            });
             const htmlAcc = Object.keys(porPessoa).map(fid => {
                 const nomePessoa = window.TotalGestAttendanceView.attendancePersonName(
                     fid,
