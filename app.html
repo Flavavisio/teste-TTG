@@ -12749,32 +12749,17 @@
                 });
             }
 
-            const veics = (dados.veiculos || []).filter(v => v.adminId === adminId);
-            const crit = ['vencido', 'urgente', 'a_vencer'];
-            const _ultimaIntervManut = (veiculoId) => {
-                const doVeiculo = (dados.veiculoIntervencoes || []).filter(i => i.veiculoId === veiculoId && i.proximaData);
-                if (!doVeiculo.length) return null;
-                return doVeiculo.sort((a, b) => (b.data || '').localeCompare(a.data || '') || (b.dataCriacao || 0) - (a.dataCriacao || 0))[0];
-            };
-            const veicsAtencaoLista = veics.filter(v => {
-                const insp = estadoDataFrota(v.inspecaoValidade).chave;
-                const seg = estadoDataFrota(v.seguroValidade).chave;
-                const ultimaManut = _ultimaIntervManut(v.id);
-                const manut = ultimaManut && crit.includes(estadoDataFrota(ultimaManut.proximaData).chave);
-                return crit.includes(insp) || crit.includes(seg) || manut;
+            const fleetAttention = window.TotalGestAlertsView.prepareFleetAttention({
+                vehicles: dados.veiculos || [],
+                interventions: dados.veiculoIntervencoes || [],
+                adminId: adminId,
+                getDateState: estadoDataFrota
             });
-            if (veicsAtencaoLista.length) alertas.push({ tipo: 'warning', titulo: `${veicsAtencaoLista.length} ${veicsAtencaoLista.length === 1 ? 'frota a vencer manutenção' : 'frota a vencer manutenção'}`, sub: 'Verifique a frota e agende a manutenção.', acao: "abrirSecao('frota')" });
-            veicsAtencaoLista.forEach(v => {
-                const insp = estadoDataFrota(v.inspecaoValidade);
-                const seg = estadoDataFrota(v.seguroValidade);
-                const ultimaManut = _ultimaIntervManut(v.id);
-                const manutEstado = ultimaManut ? estadoDataFrota(ultimaManut.proximaData) : null;
-                const motivos = [];
-                if (crit.includes(insp.chave)) motivos.push('inspeção');
-                if (crit.includes(seg.chave)) motivos.push('seguro');
-                if (manutEstado && crit.includes(manutEstado.chave)) motivos.push('manutenção');
-                const candidatos = [insp, seg].concat(manutEstado ? [manutEstado] : []).filter(x => crit.includes(x.chave));
-                const dias = candidatos.length ? Math.min(...candidatos.map(x => x.dias)) : 30;
+            if (fleetAttention.alert) alertas.push(fleetAttention.alert);
+            fleetAttention.items.forEach(item => {
+                const v = item.vehicle;
+                const motivos = item.reasons;
+                const dias = item.days;
                 _notificarPorFaseVencimento('frota_vencer_' + adminId, v.id, isFinite(dias) ? dias : 30, () => {
                     _notificarAdminESubadmin(adminId, '🚗 Veículo a vencer', 'Matrícula ' + (v.matricula || '—') + ' — ' + motivos.join(' e ') + ' a vencer em ' + (isFinite(dias) ? dias : '30') + ' dia(s).', "abrirSecao('frota')");
                 });

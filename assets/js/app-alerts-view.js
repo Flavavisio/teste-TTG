@@ -160,6 +160,47 @@
     return { tipo: 'info', titulo: count + ' ' + (count === 1 ? 'pedido de férias/faltas pendente' : 'pedidos de férias/faltas pendentes'), sub: 'Há pedidos a aguardar aprovação.', acao: "abrirSecao('pedidos')" };
   }
 
+  function latestFleetMaintenance(interventions, vehicleId) {
+    const list = (Array.isArray(interventions) ? interventions : []).filter(function (item) {
+      return item.veiculoId === vehicleId && item.proximaData;
+    });
+    if (!list.length) return null;
+    return list.sort(function (a, b) {
+      return (b.data || '').localeCompare(a.data || '') || (b.dataCriacao || 0) - (a.dataCriacao || 0);
+    })[0];
+  }
+
+  function fleetVehicleAttention(vehicle, interventions, getDateState) {
+    const critical = ['vencido', 'urgente', 'a_vencer'];
+    const inspection = getDateState(vehicle.inspecaoValidade);
+    const insurance = getDateState(vehicle.seguroValidade);
+    const latestMaintenance = latestFleetMaintenance(interventions, vehicle.id);
+    const maintenance = latestMaintenance ? getDateState(latestMaintenance.proximaData) : null;
+    const reasons = [];
+    if (critical.includes(inspection.chave)) reasons.push('inspeção');
+    if (critical.includes(insurance.chave)) reasons.push('seguro');
+    if (maintenance && critical.includes(maintenance.chave)) reasons.push('manutenção');
+    const candidates = [inspection, insurance].concat(maintenance ? [maintenance] : []).filter(function (state) {
+      return critical.includes(state.chave);
+    });
+    const days = candidates.length ? Math.min.apply(null, candidates.map(function (state) { return state.dias; })) : 30;
+    return { vehicle: vehicle, reasons: reasons, days: days, needsAttention: reasons.length > 0 };
+  }
+
+  function prepareFleetAttention(options) {
+    const o = options || {};
+    const vehicles = (Array.isArray(o.vehicles) ? o.vehicles : []).filter(function (vehicle) {
+      return vehicle.adminId === o.adminId;
+    });
+    const items = vehicles.map(function (vehicle) {
+      return fleetVehicleAttention(vehicle, o.interventions, o.getDateState);
+    }).filter(function (item) { return item.needsAttention; });
+    return {
+      items: items,
+      alert: items.length ? { tipo: 'warning', titulo: items.length + ' frota a vencer manutenção', sub: 'Verifique a frota e agende a manutenção.', acao: "abrirSecao('frota')" } : null
+    };
+  }
+
   window.TotalGestAlertsView = {
     alertsCard: alertsCard,
     isEmployeeAlertsRole: isEmployeeAlertsRole,
@@ -171,6 +212,9 @@
     pendingServiceOrdersAlert: pendingServiceOrdersAlert,
     pendingAssistancesAlert: pendingAssistancesAlert,
     pendingRequisitionsAlert: pendingRequisitionsAlert,
-    pendingLeaveRequestsAlert: pendingLeaveRequestsAlert
+    pendingLeaveRequestsAlert: pendingLeaveRequestsAlert,
+    latestFleetMaintenance: latestFleetMaintenance,
+    fleetVehicleAttention: fleetVehicleAttention,
+    prepareFleetAttention: prepareFleetAttention
   };
 })();
