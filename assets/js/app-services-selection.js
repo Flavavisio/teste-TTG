@@ -149,6 +149,14 @@
     });
   }
 
+  function createServiceRenderDependencies(options) {
+    options = options || {};
+    return {
+      selectPendingSpecialty: createPendingSpecialtySelector({ user: options.user || null, getPendingTypes: options.getPendingTypes }),
+      prepareRow: createServiceRowPreparerFromData({ data: options.data || {}, getEmployeeName: options.getEmployeeName, getClientName: options.getClientName, generateNumber: options.generateNumber, hasMaterials: options.hasMaterials, isErpActive: options.isErpActive })
+    };
+  }
+
   function prepareServicesForRendering(options) {
     options = options || {};
     const sourceServices = selectVisibleServicesFromData({
@@ -206,6 +214,7 @@
     prepareServiceRow: prepareServiceRow,
     createServiceRowPreparer: createServiceRowPreparer,
     createServiceRowPreparerFromData: createServiceRowPreparerFromData,
+    createServiceRenderDependencies: createServiceRenderDependencies,
     prepareServicesForRendering: prepareServicesForRendering,
     createServiceFilterSorter: createServiceFilterSorter,
     filterAndSortServices: filterAndSortServices

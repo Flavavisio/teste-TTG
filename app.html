@@ -6642,36 +6642,22 @@
                 getTableState: _getTableState,
                 getClientName: obterNomeCliente
             });
-            const servicos = selectionState.services;
-
-            const selectPendingSpecialty = window.TotalGestServicesSelection.createPendingSpecialtySelector({
-                user: usuarioLogado,
-                getPendingTypes: serviceId => _tiposEspecialidadePendentes(serviceId)
-            });
-            window.TotalGestServicesView.renderPendingSpecialtyNotice({
-                element: viewElements.noticeElement,
-                services: selectionState.sourceServices,
-                selectPending: selectPendingSpecialty,
-                loadedSince: _servicosCarregadoDesde
-            });
-
-            const renderTableState = window.TotalGestServicesView.createServicesTableStateRenderer({
-                renderToolbar: _toolbarHtml,
-                elements: viewElements
-            });
-            if (!renderTableState(selectionState.totalCount, servicos.length)) return;
-
-            const prepareRow = window.TotalGestServicesSelection.createServiceRowPreparerFromData({
+            const renderDependencies = window.TotalGestServicesSelection.createServiceRenderDependencies({
                 data: dados,
+                user: usuarioLogado,
+                getPendingTypes: serviceId => _tiposEspecialidadePendentes(serviceId),
                 getEmployeeName: obterNomeFuncionario,
                 getClientName: obterNomeCliente,
                 generateNumber: gerarNumeroRegisto,
                 hasMaterials: _osTemMateriais,
                 isErpActive: moduloErpAtivo
             });
-            const renderPreparedRows = window.TotalGestServicesView.createServiceRowsRenderer({
+            const renderServicesArea = window.TotalGestServicesView.createServicesAreaRenderer({
                 elements: viewElements,
-                prepareRow,
+                selectPending: renderDependencies.selectPendingSpecialty,
+                loadedSince: _servicosCarregadoDesde,
+                renderToolbar: _toolbarHtml,
+                prepareRow: renderDependencies.prepareRow,
                 role: usuarioLogado?.role || '',
                 getBadgeClass: statusBadge,
                 escapeDescription: escapeHtmlSimples,
@@ -6697,7 +6683,7 @@
                         creditNoteMoloniUrl: s.notaCreditoMoloniUrl || ''
                 })
             });
-            renderPreparedRows(servicos);
+            renderServicesArea(selectionState);
         }
 
         function finalizarEGerarReportOS(osId) {

@@ -62,6 +62,11 @@
     });
   }
 
+  function createPendingSpecialtyNoticeRenderer(options) {
+    const opts = options || {};
+    return function (services) { return renderPendingSpecialtyNotice({ element: opts.element, services: services || [], selectPending: opts.selectPending, loadedSince: opts.loadedSince }); };
+  }
+
   function servicesTableState(options) {
     const opts = options || {};
     const totalCount = Number(opts.totalCount) || 0;
@@ -279,10 +284,24 @@
     });
   }
 
+  function createServicesAreaRenderer(options) {
+    const opts = options || {}, elements = opts.elements || {};
+    const renderNotice = createPendingSpecialtyNoticeRenderer({ element: elements.noticeElement, selectPending: opts.selectPending, loadedSince: opts.loadedSince });
+    const renderTableState = createServicesTableStateRenderer({ renderToolbar: opts.renderToolbar, elements });
+    const renderRows = createServiceRowsRenderer({ elements, prepareRow: opts.prepareRow, role: opts.role, getBadgeClass: opts.getBadgeClass, escapeDescription: opts.escapeDescription, getWorkTypesHtml: opts.getWorkTypesHtml, buildActions: opts.buildActions });
+    return function (selectionState) {
+      const state = selectionState || {}, services = Array.isArray(state.services) ? state.services : [];
+      renderNotice(state.sourceServices || []);
+      if (!renderTableState(state.totalCount, services.length)) return false;
+      renderRows(services);
+      return true;
+    };
+  }
+
   function serviceRow(options) {
     const opts = options || {};
     return `<tr>${rowLeadingCells(opts.leadingCells || {})}${rowActions(opts.actions || {})}</tr>`;
   }
 
-  window.TotalGestServicesView = { servicesViewElements, serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, specialtyAndHistoryNoticeFromState, applySpecialtyAndHistoryNotice, renderPendingSpecialtyNotice, servicesTableState, applyServicesTableState, renderServicesTableState, createServicesTableStateRenderer, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRowFromData, createServiceRowRenderer, renderServiceRowsToTable, createPreparedServiceRowsRenderer, createServiceRowsRenderer, serviceRow };
+  window.TotalGestServicesView = { servicesViewElements, serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, specialtyAndHistoryNoticeFromState, applySpecialtyAndHistoryNotice, renderPendingSpecialtyNotice, createPendingSpecialtyNoticeRenderer, servicesTableState, applyServicesTableState, renderServicesTableState, createServicesTableStateRenderer, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRowFromData, createServiceRowRenderer, renderServiceRowsToTable, createPreparedServiceRowsRenderer, createServiceRowsRenderer, createServicesAreaRenderer, serviceRow };
 })();
