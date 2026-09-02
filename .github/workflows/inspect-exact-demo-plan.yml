@@ -1,73 +1,45 @@
-name: Apply eighth safe attendance batch
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Migrar e validar oitavo lote seguro
+      - name: Estado dos módulos extraídos
         run: |
-          python3 scripts/tmp-migrate-attendance-safe-batch-8.py
-          node --check assets/js/app-attendance-view.js
-          node --check assets/js/app-shell.js
-          node --check sw.js
-          git diff --check
-          node - <<'NODE'
-          const fs = require('fs');
-          const vm = require('vm');
-          const assert = require('assert');
-          const context = { window: {} };
-          vm.createContext(context);
-          vm.runInContext(fs.readFileSync('assets/js/app-attendance-view.js', 'utf8'), context);
-          const view = context.window.TotalGestAttendanceView;
-          assert.strictEqual(view.formatHours(0), '0h 0m');
-          assert.strictEqual(view.formatHours(1.5), '1h 30m');
-          const monday = view.startOfWeekMonday(new Date('2026-09-02T12:00:00Z'));
-          assert.strictEqual(monday.getDay(), 1);
-          assert.strictEqual(monday.getDate(), 31);
-          const row = view.teamSummaryRow({ name:'Ana', type:'Funcionário', appBadge:'APP', serviceBadge:'SERV', workplace:'Obra A', hoursToday:7.5, hoursWeek:35, contractedHours:40, balance:-5, balanceText:'−5h 0m' });
-          assert(row.includes('Ana'));
-          assert(row.includes('7h 30m'));
-          assert(row.includes('−5h 0m'));
-          const card = view.teamSummaryCard({ inServiceCount:1, peopleCount:2, rowsHtml:row });
-          assert(card.includes('1 em serviço · 1 fora'));
-          assert(card.includes(row));
-          assert(view.teamSummaryCard({ peopleCount:0, inServiceCount:0, rowsHtml:'' }).includes('Sem funcionários ou encarregados.'));
-          console.log('SAFE_BATCH_8_UNIT=OK');
-          NODE
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
-          assert text.count('window.TotalGestAttendanceView.startOfWeekMonday()') == 1
-          assert text.count('window.TotalGestAttendanceView.formatHours(h)') == 1
-          assert text.count('window.TotalGestAttendanceView.teamSummaryRow({') == 1
-          assert text.count('window.TotalGestAttendanceView.teamSummaryCard({') == 1
+          marker='        function renderizarServicos() {'
+          s=text.index(marker); e=text.index('\n        function ',s+len(marker)); block=text[s:e]
+          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderDependencies: runtimeState.renderDependencies','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
+              assert block.count(item)==1,(item,block.count(item))
+          for item in ['servicesViewElements(document)','prepareServicesForRendering({','createServiceRenderDependencies({','createServicesAreaRenderer({','selectPending: renderDependencies.selectPendingSpecialty','prepareRow: renderDependencies.prepareRow','const servicos = selectionState.services;','createPendingSpecialtySelector({','renderPendingSpecialtyNotice({','createServicesTableStateRenderer({','renderTableState(','createServiceRowPreparerFromData({','createServiceRowsRenderer({','renderPreparedRows(']:
+              assert block.count(item)==0,(item,block.count(item))
+          for item in ['invoiceTOId:','invoiceMoloniId:','invoiceMoloniUrl:','receiptMoloniUrl:','guideMoloniId:','guideMoloniUrl:','creditNoteMoloniId:','creditNoteMoloniUrl:']:
+              assert block.count(item)==1,(item,block.count(item))
+
+          for item in ['window.TotalGestAttendanceView.startOfWeekMonday()','window.TotalGestAttendanceView.formatHours(h)','window.TotalGestAttendanceView.teamSummaryRow({','window.TotalGestAttendanceView.teamSummaryCard({']:
+              assert text.count(item)==1,(item,text.count(item))
+          point_marker='        function renderizarResumoPontoAdmin() {'
+          ps=text.index(point_marker); pe=text.index('\n        // ---------- Navegador de picagens',ps); point=text[ps:pe]
+          for item in ['const contaParaTotal = x => x._ehObraLonga || (!x.servicoId && !x.obraId);','if (x.entrada && x.saida) horasHoje += calcularHoras(x.entrada, x.saida);','if (x.entrada && x.saida) horasSemana += calcularHoras(x.entrada, x.saida);','const naApp = p.atividade && (Date.now() - p.atividade) < LIMITE_ONLINE_MS;']:
+              assert point.count(item)==1,(item,point.count(item))
           shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
-          assert shell.count("attendanceView: './assets/js/app-attendance-view.js'") == 1
+          assert shell.count("attendanceView: './assets/js/app-attendance-view.js'")==1
+          attendance=Path('assets/js/app-attendance-view.js').read_text(encoding='utf-8')
+          for item in ['function startOfWeekMonday(','function formatHours(','function teamSummaryRow(','function teamSummaryCard(','window.TotalGestAttendanceView = {']:
+              assert attendance.count(item)==1,(item,attendance.count(item))
           sw=Path('sw.js').read_text(encoding='utf-8')
-          assert sw.count("'./assets/js/app-attendance-view.js'") == 1
+          assert sw.count("'./assets/js/app-attendance-view.js'")==1
           assert "const CACHE = 'totalgest-v151';" in sw
-          print('SAFE_BATCH_8_VERIFY=OK')
+          print('APP_MIGRATION_BOUNDARY=OK')
           PY
-      - name: Commit funcional
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add app.html assets/js/app-shell.js assets/js/app-attendance-view.js sw.js
-          git diff --cached --check
-          test -n "$(git diff --cached --name-only)"
-          test "$(git diff --cached --name-only | wc -l)" -eq 4
-          git commit -m "Extrair apresentação segura do resumo de ponto"
-          git push origin HEAD:refactor/separar-index-app
