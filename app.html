@@ -6644,18 +6644,16 @@
 
             const totalGeralOS = servicos.length;
 
-            const avisoDiv = viewElements.noticeElement;
-            if (avisoDiv) {
-                const selectPendingSpecialty = window.TotalGestServicesSelection.createPendingSpecialtySelector({
-                    user: usuarioLogado,
-                    getPendingTypes: serviceId => _tiposEspecialidadePendentes(serviceId)
-                });
-                window.TotalGestServicesView.applySpecialtyAndHistoryNotice({
-                    element: avisoDiv,
-                    pendingState: selectPendingSpecialty(servicos),
-                    loadedSince: _servicosCarregadoDesde
-                });
-            }
+            const selectPendingSpecialty = window.TotalGestServicesSelection.createPendingSpecialtySelector({
+                user: usuarioLogado,
+                getPendingTypes: serviceId => _tiposEspecialidadePendentes(serviceId)
+            });
+            window.TotalGestServicesView.renderPendingSpecialtyNotice({
+                element: viewElements.noticeElement,
+                services: servicos,
+                selectPending: selectPendingSpecialty,
+                loadedSince: _servicosCarregadoDesde
+            });
 
             const filterServices = window.TotalGestServicesSelection.createServiceFilterSorter({
                 applyFilterSort: _aplicarFiltroOrdenacao,
@@ -6663,15 +6661,13 @@
                 getClientName: obterNomeCliente
             });
             servicos = filterServices(servicos);
-            const hasRows = window.TotalGestServicesView.renderServicesTableState({
-                totalCount: totalGeralOS,
-                visibleCount: servicos.length,
+            const renderTableState = window.TotalGestServicesView.createServicesTableStateRenderer({
                 renderToolbar: _toolbarHtml,
                 toolbarElement: viewElements.toolbarElement,
                 tbody,
                 emptyElement: empty
             });
-            if (!hasRows) return;
+            if (!renderTableState(totalGeralOS, servicos.length)) return;
 
             const prepareRow = window.TotalGestServicesSelection.createServiceRowPreparer({
                 administrators: dados.administradores || [],
@@ -6687,12 +6683,11 @@
                 escapeDescription: escapeHtmlSimples,
                 getWorkTypesHtml: _tiposTrabalhoBadgesHTML
             });
-            window.TotalGestServicesView.renderServiceRowsToTable({
+            const renderPreparedRows = window.TotalGestServicesView.createPreparedServiceRowsRenderer({
                 tbody,
-                services: servicos,
-                renderItem: s => {
-                    const rowData = prepareRow(s);
-                    return renderRow(s, rowData, {
+                prepareRow,
+                renderRow,
+                buildActions: (s, rowData) => ({
                         serviceId: s.id,
                         status: s.status,
                         role: usuarioLogado?.role || '',
@@ -6711,9 +6706,9 @@
                         guideMoloniUrl: s.guiaMoloniUrl || '',
                         creditNoteMoloniId: s.notaCreditoMoloniId || '',
                         creditNoteMoloniUrl: s.notaCreditoMoloniUrl || ''
-                    });
-                }
+                })
             });
+            renderPreparedRows(servicos);
         }
 
         function finalizarEGerarReportOS(osId) {

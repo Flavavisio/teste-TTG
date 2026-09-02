@@ -51,6 +51,17 @@
     return true;
   }
 
+  function renderPendingSpecialtyNotice(options) {
+    const opts = options || {};
+    if (!opts.element) return false;
+    const selectPending = typeof opts.selectPending === 'function' ? opts.selectPending : function () { return { canSeePending: false, pendingServices: [] }; };
+    return applySpecialtyAndHistoryNotice({
+      element: opts.element,
+      pendingState: selectPending(opts.services || []),
+      loadedSince: opts.loadedSince
+    });
+  }
+
   function servicesTableState(options) {
     const opts = options || {};
     const totalCount = Number(opts.totalCount) || 0;
@@ -90,6 +101,20 @@
       tbody: opts.tbody,
       emptyElement: opts.emptyElement
     });
+  }
+
+  function createServicesTableStateRenderer(options) {
+    const opts = options || {};
+    return function (totalCount, visibleCount) {
+      return renderServicesTableState({
+        totalCount,
+        visibleCount,
+        renderToolbar: opts.renderToolbar,
+        toolbarElement: opts.toolbarElement,
+        tbody: opts.tbody,
+        emptyElement: opts.emptyElement
+      });
+    };
   }
 
   function statusControl(options) {
@@ -219,10 +244,27 @@
     return true;
   }
 
+  function createPreparedServiceRowsRenderer(options) {
+    const opts = options || {};
+    const prepareRow = typeof opts.prepareRow === 'function' ? opts.prepareRow : function () { return {}; };
+    const renderRow = typeof opts.renderRow === 'function' ? opts.renderRow : function () { return ''; };
+    const buildActions = typeof opts.buildActions === 'function' ? opts.buildActions : function () { return {}; };
+    return function (services) {
+      return renderServiceRowsToTable({
+        tbody: opts.tbody,
+        services: services || [],
+        renderItem: service => {
+          const rowData = prepareRow(service);
+          return renderRow(service, rowData, buildActions(service, rowData));
+        }
+      });
+    };
+  }
+
   function serviceRow(options) {
     const opts = options || {};
     return `<tr>${rowLeadingCells(opts.leadingCells || {})}${rowActions(opts.actions || {})}</tr>`;
   }
 
-  window.TotalGestServicesView = { servicesViewElements, serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, specialtyAndHistoryNoticeFromState, applySpecialtyAndHistoryNotice, servicesTableState, applyServicesTableState, renderServicesTableState, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRowFromData, createServiceRowRenderer, renderServiceRowsToTable, serviceRow };
+  window.TotalGestServicesView = { servicesViewElements, serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, specialtyAndHistoryNoticeFromState, applySpecialtyAndHistoryNotice, renderPendingSpecialtyNotice, servicesTableState, applyServicesTableState, renderServicesTableState, createServicesTableStateRenderer, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRowFromData, createServiceRowRenderer, renderServiceRowsToTable, createPreparedServiceRowsRenderer, serviceRow };
 })();
