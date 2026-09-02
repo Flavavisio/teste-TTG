@@ -45,10 +45,47 @@
                 </div>`;
   }
 
+  function moveNavigationDate(options) {
+    const o = options || {};
+    const value = o.value || o.today;
+    if (!value) return null;
+    const parts = String(value).split('-').map(Number);
+    const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    dt.setUTCDate(dt.getUTCDate() + Number(o.direction || 0) * (o.mode === 'semana' ? 7 : 1));
+    const next = dt.getUTCFullYear() + '-' + String(dt.getUTCMonth() + 1).padStart(2, '0') + '-' + String(dt.getUTCDate()).padStart(2, '0');
+    if (Number(o.direction || 0) > 0 && o.today && next > o.today) return null;
+    return next;
+  }
+
+  function canNavigateAttendance(role) {
+    return ['admin', 'subadmin', 'funcionario', 'encarregado', 'vendedor'].includes(role);
+  }
+
+  function attendanceNavigationLabel(value, mode) {
+    const parts = String(value || '').split('-').map(Number);
+    const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    if (mode === 'semana') {
+      const start = new Date(dt);
+      start.setUTCDate(dt.getUTCDate() - (dt.getUTCDay() === 0 ? 6 : dt.getUTCDay() - 1));
+      const end = new Date(start);
+      end.setUTCDate(start.getUTCDate() + 6);
+      return `${start.getUTCDate()}/${start.getUTCMonth() + 1} a ${end.getUTCDate()}/${end.getUTCMonth() + 1}`;
+    }
+    return dt.toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
+  }
+
+  function isAttendanceNextDisabled(value, today) {
+    return String(value || '') >= String(today || '');
+  }
+
   window.TotalGestAttendanceView = {
     startOfWeekMonday,
     formatHours,
     teamSummaryRow,
-    teamSummaryCard
+    teamSummaryCard,
+    moveNavigationDate,
+    canNavigateAttendance,
+    attendanceNavigationLabel,
+    isAttendanceNextDisabled
   };
 })();
