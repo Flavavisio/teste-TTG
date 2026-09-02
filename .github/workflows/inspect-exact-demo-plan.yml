@@ -19,6 +19,19 @@ jobs:
           ref: refactor/separar-index-app
       - name: Migrar e validar quinto lote seguro
         run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/tmp-migrate-services-safe-batch-5.py')
+          text = path.read_text(encoding='utf-8')
+          old = "'createServicesTableStateRenderer({','elements: viewElements','renderTableState(selectionState.totalCount, servicos.length)'"
+          new = "'createServicesTableStateRenderer({','renderTableState(selectionState.totalCount, servicos.length)'"
+          assert text.count(old) == 1
+          text = text.replace(old, new, 1)
+          anchor = "for item in ['selectVisibleServicesFromData({','createServiceFilterSorter({','filterServices(servicos)'"
+          assert text.count(anchor) == 1
+          text = text.replace(anchor, "assert block.count('elements: viewElements') == 2, block.count('elements: viewElements')\n" + anchor, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
           python3 scripts/tmp-migrate-services-safe-batch-5.py
       - name: Commit funcional
         run: |
