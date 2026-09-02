@@ -81,6 +81,7 @@
     reportsView: './assets/js/app-reports-view.js',
     alertsView: './assets/js/app-alerts-view.js',
     clientsView: './assets/js/app-clients-view.js',
+    teamView: './assets/js/app-team-view.js',
     servicesSelection: './assets/js/app-services-selection.js',
     servicesView: './assets/js/app-services-view.js',
     attendanceView: './assets/js/app-attendance-view.js',
@@ -201,6 +202,7 @@
     if (options.reportsView === true) pedidos.push(MODULOS.reportsView);
     if (options.alertsView === true) pedidos.push(MODULOS.alertsView);
     if (options.clientsView === true) pedidos.push(MODULOS.clientsView);
+    if (options.teamView === true) pedidos.push(MODULOS.teamView);
     if (options.servicesSelection === true) pedidos.push(MODULOS.servicesSelection);
     if (options.servicesView === true) pedidos.push(MODULOS.servicesView);
     if (options.dashboardCounts === true) pedidos.push(MODULOS.dashboardCounts);

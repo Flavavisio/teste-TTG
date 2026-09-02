@@ -6270,110 +6270,44 @@
             return { transitados, transitadosRestantes, quotaAno, quotaRestante, total };
         }
         function renderizarFuncionarios() {
-            const tbody = document.getElementById('tabelaFuncionarios');
-            const empty = document.getElementById('emptyFunc');
-            let lista = [];
-            if (usuarioLogado && (usuarioLogado.role === 'admin' || usuarioLogado.role === 'subadmin')) {
-                const encs = (dados.encarregados || []).filter(e => e.adminId === _tenantId()).map(e => ({ ...e, role: 'encarregado', _tipo: 'encarregado' }));
-                lista = [...getFuncionariosByAdmin(_tenantId()), ...encs];
-            } else if (usuarioLogado && usuarioLogado.role === 'encarregado') {
-                const encarregado = dados.encarregados?.find(e => e.id === usuarioLogado.id);
-                if (encarregado) {
-                    lista = dados.funcionarios?.filter(f =>
-                        f.adminId === encarregado.adminId &&
-                        encarregado.funcionariosIds?.includes(f.id) &&
-                        f.role !== 'admin' &&
-                        f.role !== 'superadmin'
-                    ) || [];
-                }
-            } else if (usuarioLogado && usuarioLogado.role === 'funcionario') {
-                lista = [];
-            }
-            if (lista.length === 0) {
-                tbody.innerHTML = '';
-                empty.style.display = 'block';
-                return;
-            }
-            empty.style.display = 'none';
-            lista = _aplicarFiltroOrdenacao('funcionarios', lista, [], {
-                nome: (a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt', { sensitivity: 'base' }),
-                role: (a, b) => (a.role || 'funcionario').localeCompare(b.role || 'funcionario', 'pt', { sensitivity: 'base' })
+            const tenantId = _tenantId();
+            const employeeState = window.TotalGestTeamView.prepareEmployeesForRendering({
+                employees: dados.funcionarios || [],
+                managers: dados.encarregados || [],
+                user: usuarioLogado,
+                tenantId,
+                getEmployeesByAdmin: getFuncionariosByAdmin,
+                applyFilterSort: lista => _aplicarFiltroOrdenacao('funcionarios', lista, [], {
+                    nome: (a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt', { sensitivity: 'base' }),
+                    role: (a, b) => (a.role || 'funcionario').localeCompare(b.role || 'funcionario', 'pt', { sensitivity: 'base' })
+                })
             });
-            const _mobileFunc = _ehPerfilMobile();
-            tbody.innerHTML = lista.map(f => {
-                const _nomeHtml = _mobileFunc ? escapeHtmlSimples(f.nome).split(' ').join('<br>') : escapeHtmlSimples(f.nome);
-                const _avatarHtml = f.foto ? `<img src="${f.foto}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:1px solid #e2e8f0;flex:none;" />` : `<span style="width:38px;height:38px;border-radius:50%;background:#e0e7ff;color:#4f46e5;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex:none;">${escapeHtmlSimples((f.nome || '?').charAt(0).toUpperCase())}</span>`;
-                const _celulaNome = _mobileFunc
-                    ? `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;width:74px;">${_avatarHtml}<strong style="font-size:.78rem;line-height:1.25;">${_nomeHtml}</strong>${f.suspenso ? '<span class="badge" style="background:#fee2e2;color:#991b1b;">Suspenso</span>' : ''}</div>`
-                    : `<div style="display:flex;align-items:center;gap:10px;">${_avatarHtml}<strong>${_nomeHtml}</strong>${f.suspenso ? '<span class="badge" style="background:#fee2e2;color:#991b1b;margin-left:4px;">Suspenso</span>' : ''}</div>`;
-                return `
-                    <tr style="${f.suspenso ? 'opacity:.5;' : ''}">
-                        <td>${_celulaNome}</td>
-                        <td>${escapeHtmlSimples(f.cargo || '-')}</td>
-                        <td>${escapeHtmlSimples(f.telefone || '-')}</td>
-                        <td>${escapeHtmlSimples(f.email || '-')}</td>
-                        <td><span class="badge ${f.role === 'encarregado' ? 'badge-encarregado' : 'badge-pendente'}">${f.role || 'funcionario'}</span></td>
-                        <td>${f.horasSemanais || 40}h</td>
-                        <td>${(() => { const disp = feriasDisponiveis(f.id); const tot = feriasTotaisPessoa(f.id); const cor = disp <= 0 ? '#dc2626' : (disp <= 5 ? '#d97706' : '#16a34a'); return `<span style="font-weight:700;color:${cor};">${disp}</span> <span style="color:#94a3b8;">/ ${tot}</span>`; })()}</td>
-                        <td>
-                            <div class="acoes">
-                                ${(usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin') ? `
-                                    ${(f.role === 'subadmin' && usuarioLogado?.role === 'admin') ? `<button class="btn btn-sm" style="background:#0e7490;color:#fff;" onclick="abrirModalPermissoes('${f.id}')" title="Permissões deste Sub-Admin"><i class="fas fa-shield-halved"></i></button>` : ''}
-                                    <button class="btn btn-sm" style="background:${f.suspenso ? '#16a34a' : '#b45309'};color:#fff;" onclick="toggleSuspensaoPessoa('${f._tipo === 'encarregado' ? 'encarregado' : 'funcionario'}','${f.id}')" title="${f.suspenso ? 'Reativar' : 'Suspender'}"><i class="fas ${f.suspenso ? 'fa-rotate-left' : 'fa-user-slash'}"></i></button>
-                                    <button class="btn btn-sm" style="background:#6d28d9;color:#fff;" onclick="definirPin('${f._tipo === 'encarregado' ? 'encarregado' : 'funcionario'}','${f.id}')" title="Definir PIN do Modo Quiosque"><i class="fas fa-hashtag"></i></button>
-                                    <button class="btn btn-sm" style="background:#0f6b5c;color:#fff;" onclick="repararContaAcesso('${f._tipo === 'encarregado' ? 'encarregado' : 'funcionario'}','${f.id}')" title="Criar/reparar conta de acesso (login)"><i class="fas fa-key"></i></button>
-                                    ${f._tipo === 'encarregado'
-                                        ? `<button class="btn btn-sm btn-warning" onclick="abrirModalEditarEncarregado('${f.id}')"><i class="fas fa-edit"></i></button>
-                                           <button class="btn btn-sm btn-danger" onclick="excluirEncarregado('${f.id}')"><i class="fas fa-trash"></i></button>`
-                                        : `<button class="btn btn-sm btn-warning" onclick="abrirModal('funcionario','${f.id}')"><i class="fas fa-edit"></i></button>
-                                           <button class="btn btn-sm btn-danger" onclick="excluirEntidade('funcionario','${f.id}')"><i class="fas fa-trash"></i></button>`}
-                                ` : ''}
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-            _atualizarSetaOrdenacao('funcionarios');
+            window.TotalGestTeamView.renderEmployeesArea({
+                document,
+                list: employeeState.list,
+                hasBaseItems: employeeState.hasBaseItems,
+                mobile: _ehPerfilMobile(),
+                userRole: usuarioLogado?.role || '',
+                escapeHtml: escapeHtmlSimples,
+                getAvailableVacation: feriasDisponiveis,
+                getTotalVacation: feriasTotaisPessoa,
+                updateSortArrow: _atualizarSetaOrdenacao
+            });
         }
-
         function renderizarEncarregados() {
-            const tbody = document.getElementById('tabelaEncarregados');
-            const empty = document.getElementById('emptyEncarregados');
-            if (usuarioLogado?.role !== 'admin' && usuarioLogado?.role !== 'subadmin') {
-                tbody.innerHTML = '';
-                empty.style.display = 'block';
-                empty.textContent = 'Apenas administradores podem ver esta secção.';
-                return;
-            }
-            const encarregados = dados.encarregados?.filter(e => e.adminId === _tenantId()) || [];
-            if (encarregados.length === 0) {
-                tbody.innerHTML = '';
-                empty.style.display = 'block';
-                return;
-            }
-            empty.style.display = 'none';
-            tbody.innerHTML = encarregados.map(e => {
-                const funcNomes = getFuncionariosNomes(e.funcionariosIds);
-                return `
-                        <tr>
-                            <td><strong>${escapeHtmlSimples(e.nome)}</strong></td>
-                            <td>${escapeHtmlSimples(e.email || '')}</td>
-                            <td>${funcNomes}</td>
-                            <td>
-                                <div class="acoes">
-                                    <button class="btn btn-sm" style="background:#6d28d9;color:#fff;" onclick="definirPin('encarregado','${e.id}')" title="Definir PIN do Modo Quiosque"><i class="fas fa-hashtag"></i></button>
-                                    <button class="btn btn-sm" style="background:#0f6b5c;color:#fff;" onclick="repararContaAcesso('encarregado','${e.id}')" title="Criar/reparar conta de acesso (login)"><i class="fas fa-key"></i></button>
-                                    <button class="btn btn-sm btn-warning" onclick="abrirModalEditarEncarregado('${e.id}')"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn-sm btn-danger" onclick="excluirEncarregado('${e.id}')"><i class="fas fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-            }).join('');
+            const managerState = window.TotalGestTeamView.selectManagersForUser({
+                managers: dados.encarregados || [],
+                user: usuarioLogado,
+                tenantId: _tenantId()
+            });
+            window.TotalGestTeamView.renderManagersArea({
+                document,
+                list: managerState.list,
+                allowed: managerState.allowed,
+                escapeHtml: escapeHtmlSimples,
+                getEmployeeNames: getFuncionariosNomes
+            });
         }
-
-        // ===== Motor genérico de filtro/ordenação de tabelas =====
-        const _tableState = {};
         function _getTableState(key) { if (!_tableState[key]) _tableState[key] = { filtro: '', sortCol: null, sortDir: 1 }; return _tableState[key]; }
         function _aplicarFiltroOrdenacao(key, lista, camposTexto, sortFns) {
             const st = _getTableState(key);
@@ -28496,7 +28430,7 @@ window._relPrefill = function(msg){
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
             syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, reportsView: true, alertsView: true,
-            clientsView: true, dashboardCounts: true,
+            clientsView: true, teamView: true, dashboardCounts: true,
                 dashboardAnalyticsMetrics: true, licenseAddons: true, servicesSelection: true, servicesView: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
