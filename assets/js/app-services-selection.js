@@ -53,6 +53,17 @@
     return services;
   }
 
+  function selectVisibleServicesFromData(options) {
+    options = options || {};
+    const data = options.data || {};
+    return selectVisibleServices({
+      services: data.servicos || [],
+      user: options.user || null,
+      encarregados: data.encarregados || [],
+      funcionarios: data.funcionarios || []
+    });
+  }
+
   function selectPendingSpecialtyServices(options) {
     options = options || {};
     const role = options.role || '';
@@ -66,6 +77,15 @@
           .filter(item => item.types.length > 0)
       : [];
     return { canSeePending, pendingServices };
+  }
+
+  function selectPendingSpecialtyServicesForUser(options) {
+    options = options || {};
+    return selectPendingSpecialtyServices({
+      services: options.services,
+      role: options.user?.role || '',
+      getPendingTypes: options.getPendingTypes
+    });
   }
 
   function prepareServiceRow(options) {
@@ -125,7 +145,9 @@
 
   window.TotalGestServicesSelection = {
     selectVisibleServices: selectVisibleServices,
+    selectVisibleServicesFromData: selectVisibleServicesFromData,
     selectPendingSpecialtyServices: selectPendingSpecialtyServices,
+    selectPendingSpecialtyServicesForUser: selectPendingSpecialtyServicesForUser,
     prepareServiceRow: prepareServiceRow,
     createServiceRowPreparer: createServiceRowPreparer,
     filterAndSortServices: filterAndSortServices

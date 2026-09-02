@@ -6636,26 +6636,23 @@
         function renderizarServicos() {
             const tbody = document.getElementById('tabelaServicos');
             const empty = document.getElementById('emptyServ');
-            let servicos = window.TotalGestServicesSelection.selectVisibleServices({
-                services: dados.servicos || [],
-                user: usuarioLogado,
-                encarregados: dados.encarregados || [],
-                funcionarios: dados.funcionarios || []
+            let servicos = window.TotalGestServicesSelection.selectVisibleServicesFromData({
+                data: dados,
+                user: usuarioLogado
             });
 
             const totalGeralOS = servicos.length;
 
             const avisoDiv = document.getElementById('servicosAvisoEspecialidade');
             if (avisoDiv) {
-                const _pendingSpecialty = window.TotalGestServicesSelection.selectPendingSpecialtyServices({
+                const _pendingSpecialty = window.TotalGestServicesSelection.selectPendingSpecialtyServicesForUser({
                     services: servicos,
-                    role: usuarioLogado?.role || '',
+                    user: usuarioLogado,
                     getPendingTypes: serviceId => _tiposEspecialidadePendentes(serviceId)
                 });
-                avisoDiv.innerHTML = window.TotalGestServicesView.specialtyAndHistoryNotice({
-                    canSeePending: _pendingSpecialty.canSeePending,
-                    pendingServices: _pendingSpecialty.pendingServices,
-                    loadedSinceLabel: window.TotalGestServicesView.serviceHistoryLoadedSinceLabel(_servicosCarregadoDesde)
+                avisoDiv.innerHTML = window.TotalGestServicesView.specialtyAndHistoryNoticeFromState({
+                    pendingState: _pendingSpecialty,
+                    loadedSince: _servicosCarregadoDesde
                 });
             }
 
@@ -6665,15 +6662,11 @@
                 getTableState: _getTableState,
                 getClientName: obterNomeCliente
             });
-            const tableState = window.TotalGestServicesView.servicesTableState({
+            const hasRows = window.TotalGestServicesView.renderServicesTableState({
                 totalCount: totalGeralOS,
                 visibleCount: servicos.length,
-                renderToolbar: _toolbarHtml
-            });
-            const tbOS = document.getElementById('servicosToolbar');
-            const hasRows = window.TotalGestServicesView.applyServicesTableState({
-                state: tableState,
-                toolbarElement: tbOS,
+                renderToolbar: _toolbarHtml,
+                toolbarElement: document.getElementById('servicosToolbar'),
                 tbody,
                 emptyElement: empty
             });

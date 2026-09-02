@@ -21,6 +21,16 @@
     return html;
   }
 
+  function specialtyAndHistoryNoticeFromState(options) {
+    const opts = options || {};
+    const pendingState = opts.pendingState || {};
+    return specialtyAndHistoryNotice({
+      canSeePending: pendingState.canSeePending === true,
+      pendingServices: pendingState.pendingServices,
+      loadedSinceLabel: serviceHistoryLoadedSinceLabel(opts.loadedSince)
+    });
+  }
+
   function servicesTableState(options) {
     const opts = options || {};
     const totalCount = Number(opts.totalCount) || 0;
@@ -45,6 +55,21 @@
     }
     opts.emptyElement.style.display = state.emptyDisplay || 'none';
     return true;
+  }
+
+  function renderServicesTableState(options) {
+    const opts = options || {};
+    const state = servicesTableState({
+      totalCount: opts.totalCount,
+      visibleCount: opts.visibleCount,
+      renderToolbar: opts.renderToolbar
+    });
+    return applyServicesTableState({
+      state,
+      toolbarElement: opts.toolbarElement,
+      tbody: opts.tbody,
+      emptyElement: opts.emptyElement
+    });
   }
 
   function statusControl(options) {
@@ -151,5 +176,5 @@
     return `<tr>${rowLeadingCells(opts.leadingCells || {})}${rowActions(opts.actions || {})}</tr>`;
   }
 
-  window.TotalGestServicesView = { serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, servicesTableState, applyServicesTableState, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRowFromData, serviceRow };
+  window.TotalGestServicesView = { serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, specialtyAndHistoryNoticeFromState, servicesTableState, applyServicesTableState, renderServicesTableState, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRowFromData, serviceRow };
 })();
