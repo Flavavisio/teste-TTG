@@ -1,49 +1,69 @@
-name: Inspect app migration boundary
+name: Apply twelfth safe attendance batch
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos extraídos
+      - name: Migrar e validar décimo segundo lote seguro
         run: |
+          python3 scripts/tmp-migrate-attendance-safe-batch-12.py
+          node --check assets/js/app-attendance-view.js
+          node --check sw.js
+          git diff --check
+          node - <<'NODE'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert');
+          const context={window:{}}; vm.createContext(context);
+          vm.runInContext(fs.readFileSync('assets/js/app-attendance-view.js','utf8'),context);
+          const v=context.window.TotalGestAttendanceView;
+          const alerts=v.attendanceAlertsHtml({lessThanEightHours:true,late:true,hasGeneralRecord:true,lateLimit:'09:15',lunchDeducted:true});
+          assert(alerts.includes('8 horas')); assert(alerts.includes('09:15')); assert(alerts.includes('descontada 1h'));
+          const summary=v.attendancePersonSummaryHtml({generalRecord:{entrada:'08:00'},generalRecords:[{entrada:'08:00',saida:'12:00',pausaAlmoco:true},{entrada:'13:00',saida:'17:00'}],generalOpen:false,generalHoursText:'8h 0m',alertsHtml:''});
+          assert(summary.includes('08:00')); assert(summary.includes('13:00')); assert(summary.includes('17:00')); assert(summary.includes('8h 0m'));
+          const title=v.attendanceEditTitle({editadoPor:'Admin',editadoEm:'2026-09-02T10:00:00Z',motivoEdicao:'Correção'},x=>x);
+          assert(title.includes('Admin')); assert(title.includes('Correção'));
+          const times=v.attendanceEntryExitHtml({editadoPor:'Admin',editadoEm:'x',entrada:'08:00',saida:'17:00'},'T');
+          assert(times.entryHtml.includes('fa-pen')); assert(times.exitHtml.includes('fa-pen'));
+          const lunch=v.attendanceEntryExitHtml({entrada:'08:00',saida:'12:00',pausaAlmoco:true},'');
+          assert(lunch.exitHtml.includes('fa-utensils'));
+          console.log('SAFE_BATCH_12_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
-
-          marker='        function renderizarServicos() {'
-          s=text.index(marker); e=text.index('\n        function ',s+len(marker)); services=text[s:e]
-          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
-              assert services.count(item)==1,(item,services.count(item))
-          for item in ['invoiceTOId:','invoiceMoloniId:','invoiceMoloniUrl:','receiptMoloniUrl:','guideMoloniId:','guideMoloniUrl:','creditNoteMoloniId:','creditNoteMoloniUrl:']:
-              assert services.count(item)==1,(item,services.count(item))
-
-          render_marker='        function renderizarPonto() {'
-          rs=text.index(render_marker); re=text.index('\n        function ',rs+len(render_marker)); render=text[rs:re]
-          for item in ['buildLongWorkAttendanceRecords(','selectRecentAttendanceRecords(registros, {','selectAttendanceNavigationRecords(','groupAttendanceByPerson(registrosHoje)','attendanceLateLimit(_horaEsperada, _tolerMin)','attendancePhotoHtml(r.foto)','attendanceGpsHtml(r.lat, r.lng)','attendanceGpsHtml(r.latSaida, r.lngSaida)','attendanceDateCell(r.data, _pontoNavModo)','attendanceRecordRow({','attendanceAccordionItem({']:
-              assert render.count(item)==1,(item,render.count(item))
-          for item in ["(dados.obraPontoLonga || []).map(x => {","const _registrosSemana = registros.filter(p =>","const porPessoa = {};","const _limiteAtraso = (() =>",'const cabecalho = `<div class="ponto-acc-sub-row"','return `<div class="ponto-acc-sub-row">','const fotoHtml = r.foto ?','const gpsEntradaHtml = (r.lat && r.lng) ?','guardarDados(dados)']:
-              assert render.count(item)==0,(item,render.count(item))
-          for protected in ['const temPausaGeral = regsPessoa.some(r => r.pausaAlmoco && r.saida);','if (!temPausaGeral && !geralAberto && horasGeral > 6) {','const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);','const atrasado = _ausenciaHoje ? false :']:
-              assert render.count(protected)==1,(protected,render.count(protected))
-          assert render.count('atualizarEstadoPonto();')==1
-          assert render.count('renderizarResumoPontoAdmin();')==1
-
+          marker='        function renderizarPonto() {'
+          s=text.index(marker); e=text.index('\n        function ',s+len(marker)); block=text[s:e]
+          for item in ['attendanceAlertsHtml({','attendancePersonSummaryHtml({','attendanceEditTitle(r, escapeHtmlSimples)','attendanceEntryExitHtml(r, tituloEdicao)']:
+              assert block.count(item)==1,(item,block.count(item))
+          for item in ['const alertaHtml = (menosDe8h ?','let resumoGeral;','const foiEditado = !!(r.editadoPor && r.editadoEm);','const saidaTxtBase = r.pausaAlmoco ?']:
+              assert block.count(item)==0,(item,block.count(item))
+          for item in ['const menosDe8h = geral && !geralAberto && horasGeral > 0 && horasGeral < 8;','const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);','const atrasado = _ausenciaHoje ? false :','if (!temPausaGeral && !geralAberto && horasGeral > 6) {']:
+              assert block.count(item)==1,(item,block.count(item))
           attendance=Path('assets/js/app-attendance-view.js').read_text(encoding='utf-8')
-          for item in ['function startOfWeekMonday(','function formatHours(','function teamSummaryRow(','function teamSummaryCard(','function moveNavigationDate(','function canNavigateAttendance(','function attendanceNavigationLabel(','function isAttendanceNextDisabled(','function buildLongWorkAttendanceRecords(','function selectRecentAttendanceRecords(','function selectAttendanceNavigationRecords(','function groupAttendanceByPerson(','function attendanceLateLimit(','function attendancePhotoHtml(','function attendanceGpsHtml(','function attendanceDateCell(','function attendanceRecordRow(','function attendanceAccordionItem(','window.TotalGestAttendanceView = {']:
+          for item in ['function attendanceAlertsHtml(','function attendancePersonSummaryHtml(','function attendanceEditTitle(','function attendanceEntryExitHtml(']:
               assert attendance.count(item)==1,(item,attendance.count(item))
-          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
-          assert shell.count("attendanceView: './assets/js/app-attendance-view.js'")==1
-          sw=Path('sw.js').read_text(encoding='utf-8')
-          assert sw.count("'./assets/js/app-attendance-view.js'")==1
-          assert "const CACHE = 'totalgest-v154';" in sw
-          print('APP_MIGRATION_BOUNDARY=OK')
+          assert "const CACHE = 'totalgest-v155';" in Path('sw.js').read_text(encoding='utf-8')
+          print('SAFE_BATCH_12_VERIFY=OK')
           PY
+      - name: Commit funcional
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-attendance-view.js sw.js
+          git diff --cached --check
+          test -n "$(git diff --cached --name-only)"
+          test "$(git diff --cached --name-only | wc -l)" -eq 3
+          git commit -m "Extrair resumo visual seguro do registo de ponto"
+          git push origin HEAD:refactor/separar-index-app
