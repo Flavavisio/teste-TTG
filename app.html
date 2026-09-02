@@ -12704,38 +12704,37 @@
         }
 
         function renderizarAlertas() {
-            const cont = document.getElementById('alertasPendencias');
-            const contGlobal = document.getElementById('alertaPontoGlobal');
+            const alertElements = window.TotalGestAlertsView.alertsViewElements(document);
+            const cont = alertElements.container;
+            const contGlobal = alertElements.globalContainer;
             if (!cont) return;
             if (window.TotalGestAlertsView.isEmployeeAlertsRole(usuarioLogado?.role)) {
-                const precisaAtivarPush = (typeof Notification !== 'undefined' && Notification.permission === 'default') && moduloNotificacoesAtivo(adminDoUtilizador());
+                const precisaAtivarPush = window.TotalGestAlertsView.needsEmployeePushNotification(
+                    typeof Notification !== 'undefined' ? Notification.permission : '',
+                    moduloNotificacoesAtivo(adminDoUtilizador())
+                );
                 const employeeAlertState = window.TotalGestAlertsView.employeeAlertState({
                     points: dados.ponto || [],
                     userId: usuarioLogado.id,
                     today: getDataHoje(),
                     needsPush: precisaAtivarPush
                 });
-                window.TotalGestAlertsView.applyEmployeeAlertState({ container: cont, globalContainer: contGlobal }, employeeAlertState);
+                window.TotalGestAlertsView.applyEmployeeAlertState(alertElements, employeeAlertState);
                 return;
             }
-            if (contGlobal) { contGlobal.classList.remove('mostrar'); contGlobal.innerHTML = ''; }
-            if (usuarioLogado?.role !== 'admin' && usuarioLogado?.role !== 'subadmin') { cont.style.display = 'none'; cont.innerHTML = ''; return; }
-            const adminId = usuarioLogado.role === 'admin' ? usuarioLogado.id : usuarioLogado.adminId;
-            const alertas = [];
-
-            const birthdayAlert = window.TotalGestAlertsView.birthdayAlert({
+            window.TotalGestAlertsView.clearGlobalAlert(contGlobal);
+            if (!window.TotalGestAlertsView.isAdminAlertsRole(usuarioLogado?.role)) {
+                window.TotalGestAlertsView.applyAlertsState(cont, [], false);
+                return;
+            }
+            const adminId = window.TotalGestAlertsView.resolveAlertsAdminId(usuarioLogado);
+            const alertas = window.TotalGestAlertsView.prepareInitialAdminAlerts({
                 employees: dados.funcionarios || [],
                 managers: dados.encarregados || [],
+                services: dados.servicos || [],
                 adminId: adminId,
                 now: new Date()
             });
-            if (birthdayAlert) alertas.push(birthdayAlert);
-
-            const pendingServiceOrdersAlert = window.TotalGestAlertsView.pendingServiceOrdersAlert(dados.servicos || [], adminId);
-            if (pendingServiceOrdersAlert) alertas.push(pendingServiceOrdersAlert);
-
-            const pendingAssistancesAlert = window.TotalGestAlertsView.pendingAssistancesAlert(dados.servicos || [], adminId);
-            if (pendingAssistancesAlert) alertas.push(pendingAssistancesAlert);
 
             const adminRecAlerta = dados.administradores?.find(a => a.id === adminId);
             if (moduloContratosAtivo(adminRecAlerta)) {
@@ -12771,11 +12770,11 @@
                 });
             });
 
-            const pendingRequisitionsAlert = window.TotalGestAlertsView.pendingRequisitionsAlert(dados.requisicoes || [], adminId);
-            if (pendingRequisitionsAlert) alertas.push(pendingRequisitionsAlert);
-
-            const pendingLeaveRequestsAlert = window.TotalGestAlertsView.pendingLeaveRequestsAlert(dados.pedidos || [], adminId);
-            if (pendingLeaveRequestsAlert) alertas.push(pendingLeaveRequestsAlert);
+            window.TotalGestAlertsView.preparePendingAdminRequestsAlerts({
+                requisitions: dados.requisicoes || [],
+                requests: dados.pedidos || [],
+                adminId: adminId
+            }).forEach(alert => alertas.push(alert));
 
             const licenseExpiry = window.TotalGestAlertsView.licenseExpiryState(adminRecAlerta, calcularDiasRestantes);
             if (licenseExpiry) {
@@ -12832,12 +12831,7 @@
                 warehouseAlerts.forEach(alert => alertas.push(alert));
             }
 
-            if (!alertas.length) { cont.style.display = 'none'; cont.innerHTML = ''; return; }
-            cont.style.display = 'block';
-            cont.innerHTML = window.TotalGestAlertsView.alertsCard({
-                alertas: alertas,
-                mobile: _ehPerfilMobile()
-            });
+            window.TotalGestAlertsView.applyAlertsState(cont, alertas, _ehPerfilMobile());
         }
 
         // ==================== ARMAZÉM / STOCK (Fase 1) ====================

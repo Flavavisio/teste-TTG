@@ -279,6 +279,65 @@
     return alerts;
   }
 
+  function alertsViewElements(doc) {
+    return {
+      container: doc && doc.getElementById ? doc.getElementById('alertasPendencias') : null,
+      globalContainer: doc && doc.getElementById ? doc.getElementById('alertaPontoGlobal') : null
+    };
+  }
+
+  function needsEmployeePushNotification(permission, notificationsActive) {
+    return permission === 'default' && notificationsActive === true;
+  }
+
+  function clearGlobalAlert(globalContainer) {
+    if (!globalContainer) return false;
+    globalContainer.classList.remove('mostrar');
+    globalContainer.innerHTML = '';
+    return true;
+  }
+
+  function isAdminAlertsRole(role) {
+    return role === 'admin' || role === 'subadmin';
+  }
+
+  function resolveAlertsAdminId(user) {
+    if (!user) return null;
+    return user.role === 'admin' ? user.id : user.adminId;
+  }
+
+  function prepareInitialAdminAlerts(options) {
+    const o = options || {}, alerts = [];
+    const birthday = birthdayAlert({ employees: o.employees, managers: o.managers, adminId: o.adminId, now: o.now });
+    if (birthday) alerts.push(birthday);
+    const serviceOrders = pendingServiceOrdersAlert(o.services, o.adminId);
+    if (serviceOrders) alerts.push(serviceOrders);
+    const assistances = pendingAssistancesAlert(o.services, o.adminId);
+    if (assistances) alerts.push(assistances);
+    return alerts;
+  }
+
+  function preparePendingAdminRequestsAlerts(options) {
+    const o = options || {}, alerts = [];
+    const requisitions = pendingRequisitionsAlert(o.requisitions, o.adminId);
+    if (requisitions) alerts.push(requisitions);
+    const requests = pendingLeaveRequestsAlert(o.requests, o.adminId);
+    if (requests) alerts.push(requests);
+    return alerts;
+  }
+
+  function applyAlertsState(container, alerts, mobile) {
+    if (!container) return false;
+    if (!Array.isArray(alerts) || !alerts.length) {
+      container.style.display = 'none';
+      container.innerHTML = '';
+      return false;
+    }
+    container.style.display = 'block';
+    container.innerHTML = alertsCard({ alertas: alerts, mobile: mobile === true });
+    return true;
+  }
+
   window.TotalGestAlertsView = {
     alertsCard: alertsCard,
     isEmployeeAlertsRole: isEmployeeAlertsRole,
@@ -298,6 +357,14 @@
     licenseExpiryState: licenseExpiryState,
     prepareRegulatoryRenewals: prepareRegulatoryRenewals,
     prepareShstRenewals: prepareShstRenewals,
-    prepareWarehouseAlerts: prepareWarehouseAlerts
+    prepareWarehouseAlerts: prepareWarehouseAlerts,
+    alertsViewElements: alertsViewElements,
+    needsEmployeePushNotification: needsEmployeePushNotification,
+    clearGlobalAlert: clearGlobalAlert,
+    isAdminAlertsRole: isAdminAlertsRole,
+    resolveAlertsAdminId: resolveAlertsAdminId,
+    prepareInitialAdminAlerts: prepareInitialAdminAlerts,
+    preparePendingAdminRequestsAlerts: preparePendingAdminRequestsAlerts,
+    applyAlertsState: applyAlertsState
   };
 })();
