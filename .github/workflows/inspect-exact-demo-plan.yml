@@ -1,48 +1,71 @@
-name: Inspect app migration boundary
+name: Apply seventeenth safe attendance batch
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos extraídos
+      - name: Migrar e validar décimo sétimo lote seguro
         run: |
+          python3 scripts/tmp-migrate-attendance-safe-batch-17.py
           node --check assets/js/app-attendance-view.js
           node --check sw.js
           git diff --check
+          node - <<'NODE'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert');
+          const context={window:{}}; vm.createContext(context);
+          vm.runInContext(fs.readFileSync('assets/js/app-attendance-view.js','utf8'),context);
+          const v=context.window.TotalGestAttendanceView;
+          const records=[
+            {adminId:'t1',funcionarioId:'f1',data:'2026-09-02',entrada:'08:00',saida:'12:00'},
+            {adminId:'t1',funcionarioId:'f1',data:'2026-09-02',entrada:'13:00',saida:'17:00'},
+            {adminId:'t1',funcionarioId:'f1',data:'2026-09-02',entrada:'09:00',saida:'10:00',servicoId:'s1'},
+            {adminId:'t2',funcionarioId:'f2',data:'2026-09-02',entrada:'08:00',saida:'09:00'}
+          ];
+          assert.strictEqual(v.filterAttendanceRecordsForViewer(records,{role:'admin'},'t1').length,3);
+          assert.strictEqual(v.filterAttendanceRecordsForViewer(records,{role:'funcionario',id:'f1'},'t1').length,3);
+          assert.strictEqual(v.filterAttendanceRecordsForViewer(records,{role:'subadmin',id:'x'},'t1').length,0);
+          const recent=v.attendanceRecentStart(new Date(2026,8,2));
+          assert.strictEqual(recent.getFullYear(),2026); assert.strictEqual(recent.getMonth(),7); assert.strictEqual(recent.getDate(),1);
+          const calc=(a,b)=>{const m=x=>{const p=x.split(':').map(Number);return p[0]*60+p[1]};return (m(b)-m(a))/60};
+          assert.strictEqual(v.calculateWeeklyAttendanceTotal(records,{today:'2026-09-02',nowTime:'18:00',calculateHours:calc}),9);
+          assert.strictEqual(v.attendanceWeeklyTarget({role:'funcionario',id:'f1'},[{id:'f1',horasSemanais:35}],[]),35);
+          assert.strictEqual(v.attendanceWeeklyTarget({role:'admin',id:'a1'},[],[]),null);
+          assert.strictEqual(v.attendanceWeeklyBalanceLabel(8.5,40),'Horas esta semana: 8h 30m / 40h');
+          console.log('SAFE_BATCH_17_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
-          def block(marker):
-              s=text.index(marker); e=text.index('\n        function ',s+len(marker)); return text[s:e]
-          services=block('        function renderizarServicos() {')
-          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
-              assert services.count(item)==1,(item,services.count(item))
-          for item in ['invoiceTOId:','invoiceMoloniId:','invoiceMoloniUrl:','receiptMoloniUrl:','guideMoloniId:','guideMoloniUrl:','creditNoteMoloniId:','creditNoteMoloniUrl:']:
-              assert services.count(item)==1,(item,services.count(item))
-          point=block('        function renderizarPonto() {')
-          for item in ['buildLongWorkAttendanceRecords(','selectRecentAttendanceRecords(registros, {','selectAttendanceNavigationRecords(','groupAttendanceByPerson(registrosHoje)','attendanceLateLimit(_horaEsperada, _tolerMin)','shouldIncludeMissingAttendancePeople({','eligibleAttendancePersonIds(','missingAttendancePersonIds(porPessoa, _todosIds)','addMissingAttendancePeople(porPessoa, idsSemPicagem)','prepareAttendanceAccordionPerson(porPessoa[fid], {','attendanceAccordionItem({']:
-              assert point.count(item)==1,(item,point.count(item))
-          assert point.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
-          for old in ['preparePersonAttendanceRecords(porPessoa[fid])','calculateGeneralAttendanceState(regsGeral, agoraHM, calcularHoras)','applyAttendanceLunchDeduction(regsPessoa, {','attendanceAlertsHtml({','attendancePersonSummaryHtml({','prepareAttendanceRecordRow(r, {','guardarDados(dados)']:
-              assert old not in point, old
-          assert point.count('atualizarEstadoPonto();')==1
-          assert point.count('renderizarResumoPontoAdmin();')==1
+          marker='        function renderizarPonto() {'
+          s=text.index(marker); e=text.index('\n        function ',s+len(marker)); block=text[s:e]
+          for item in ['filterAttendanceRecordsForViewer(','attendanceRecentStart(new Date())','calculateWeeklyAttendanceTotal(_registrosSemana, {','attendanceWeeklyTarget(','attendanceWeeklyBalanceLabel(totalHoras, _alvoSem)']:
+              assert block.count(item)==1,(item,block.count(item))
           attendance=Path('assets/js/app-attendance-view.js').read_text(encoding='utf-8')
-          for item in ['function prepareAttendancePersonState(','function attendancePersonPresentation(','function attendancePersonRows(','function prepareAttendanceAccordionPerson(','function shouldIncludeMissingAttendancePeople(','function eligibleAttendancePersonIds(','function missingAttendancePersonIds(','function addMissingAttendancePeople(','window.TotalGestAttendanceView = {']:
+          for item in ['function filterAttendanceRecordsForViewer(','function attendanceRecentStart(','function calculateWeeklyAttendanceTotal(','function attendanceWeeklyTarget(','function attendanceWeeklyBalanceLabel(']:
               assert attendance.count(item)==1,(item,attendance.count(item))
-          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
-          assert shell.count("attendanceView: './assets/js/app-attendance-view.js'")==1
-          sw=Path('sw.js').read_text(encoding='utf-8')
-          assert sw.count("'./assets/js/app-attendance-view.js'")==1
-          assert "const CACHE = 'totalgest-v159';" in sw
-          print('APP_MIGRATION_BOUNDARY=OK')
+          assert "const CACHE = 'totalgest-v160';" in Path('sw.js').read_text(encoding='utf-8')
+          print('SAFE_BATCH_17_VERIFY=OK')
           PY
+      - name: Commit funcional
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-attendance-view.js sw.js
+          git diff --cached --check
+          test -n "$(git diff --cached --name-only)"
+          test "$(git diff --cached --name-only | wc -l)" -eq 3
+          git commit -m "Extrair preparação semanal segura do registo de ponto"
+          git push origin HEAD:refactor/separar-index-app
