@@ -1,4 +1,4 @@
-name: Inspect inventory domain boundary
+name: Apply inventory domain batch 34
 
 on:
   push:
@@ -7,32 +7,72 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspect articles and suppliers exact
+      - name: Separate inventory domain and validate
         run: |
+          python3 scripts/tmp-migrate-inventory-domain-batch-34.py
+          node --check assets/js/app-inventory-view.js
+          node --check assets/js/app-shell.js
+          node --check sw.js
+          git diff --check
+          node - <<'NODE'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert');
+          const c={window:{}}; vm.createContext(c); vm.runInContext(fs.readFileSync('assets/js/app-inventory-view.js','utf8'),c); const v=c.window.TotalGestInventoryView;
+          const arts=[
+            {id:'a1',adminId:'t1',nome:'Cabo UTP',marca:'Hik',categoria:'Cabo',referencia:'R1',stockMinimo:5,alertaStock:true,unidade:'un'},
+            {id:'a2',adminId:'t1',nome:'Camara',marca:'Uni',categoria:'CCTV',referencia:'R2',stockMinimo:1,alertaStock:false,unidade:'un'},
+            {id:'a3',adminId:'t2',nome:'Outro',marca:'X',categoria:'Y',referencia:'R3'}
+          ];
+          assert.deepStrictEqual(v.selectArticlesForTenant(arts,'t1').map(x=>x.id),['a1','a2']);
+          assert.deepStrictEqual(v.uniqueSortedValues(arts.slice(0,2),'marca'),['Hik','Uni']);
+          assert.deepStrictEqual(v.filterArticles(arts.slice(0,2),{text:'cabo',brand:'',category:'',reference:''}).map(x=>x.id),['a1']);
+          assert.deepStrictEqual(v.filterArticles(arts.slice(0,2),{text:'',brand:'Uni',category:'',reference:''}).map(x=>x.id),['a2']);
+          const st=v.articleStockState(arts[0],4); assert.strictEqual(st.low,true); assert.strictEqual(st.monitored,true); assert.ok(st.badge.includes('Repor'));
+          const row=v.articleRowHtml(arts[0],{escapeHtml:String,getCurrentStock:()=>4,getUnitLabel:()=> 'un'}); assert.strictEqual(row.lowStockAlert,true);
+          for (const x of ["abrirModal('artigo','a1')","abrirAjusteStock('a1')","eliminarRegisto('artigos','a1')"]) assert.ok(row.html.includes(x),x);
+          const sup=v.supplierRowHtml({id:'f1',nome:'Fornecedor',nif:'1',contacto:'2',email:'x@y.pt'},String);
+          for (const x of ["abrirModal('fornecedor','f1')","eliminarRegisto('fornecedores','f1')"]) assert.ok(sup.includes(x),x);
+          assert.deepStrictEqual(v.selectSuppliersForTenant([{id:'f1',adminId:'t1'},{id:'f2',adminId:'t2'}],'t1').map(x=>x.id),['f1']);
+          console.log('INVENTORY_DOMAIN_BATCH_34_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8')
-          def block(name):
-              marker='        function '+name+'() {'
-              s=text.index(marker)
-              starts=[]
+          t=Path('app.html').read_text(encoding='utf-8')
+          def block(marker):
+              s=t.index(marker); starts=[]
               for pat in ['\n        function ','\n        async function ']:
-                  p=text.find(pat,s+len(marker))
+                  p=t.find(pat,s+len(marker))
                   if p!=-1: starts.append(p)
-              e=min(starts)
-              return text[s:e]
-          for name in ['renderizarArtigos','renderizarFornecedores']:
-              b=block(name)
-              print(name+'_CHARS=',len(b)); print(name+'_LINES=',b.count('\n')+1)
-              print('---'+name+'_START---'); print(b); print('---'+name+'_END---')
+              return t[s:min(starts)]
+          articles=block('        function renderizarArtigos() {'); suppliers=block('        function renderizarFornecedores() {')
+          assert articles.count('renderArticlesArea({')==1
+          assert suppliers.count('renderSuppliersArea({')==1
+          iv=Path('assets/js/app-inventory-view.js').read_text(encoding='utf-8')
+          for x in ['function inventoryViewElements(','function selectArticlesForTenant(','function uniqueSortedValues(','function populateFilterSelect(','function updateArticleFilterOptions(','function articleFilters(','function filterArticles(','function articleStockState(','function articleRowHtml(','function hasArticleFilters(','function renderArticlesArea(','function selectSuppliersForTenant(','function supplierRowHtml(','function renderSuppliersArea(','window.TotalGestInventoryView = {']:
+              assert iv.count(x)==1,(x,iv.count(x))
+          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
+          assert shell.count("inventoryView: './assets/js/app-inventory-view.js'")==1
+          assert shell.count('if (options.inventoryView === true) pedidos.push(MODULOS.inventoryView);')==1
+          assert t.count('inventoryView: true,')==1
+          assert 'bootstrapSupabase()' in t
+          assert "const CACHE = 'totalgest-v177';" in Path('sw.js').read_text(encoding='utf-8')
+          print('INVENTORY_DOMAIN_BATCH_34_VERIFY=OK')
           PY
+      - name: Commit functional inventory separation
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-inventory-view.js assets/js/app-shell.js sw.js
+          git diff --cached --check
+          test "$(git diff --cached --name-only | wc -l)" -eq 4
+          git commit -m "Separar apresentação do domínio armazém"
+          git push origin HEAD:refactor/separar-index-app
