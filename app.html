@@ -6576,63 +6576,23 @@
             reader.readAsArrayBuffer(file);
         }
         function renderizarClientes() {
-            const tbody = document.getElementById('tabelaClientes');
-            const empty = document.getElementById('emptyCli');
-            let lista = dados.clientes || [];
-            if (usuarioLogado && (usuarioLogado.role === 'admin' || usuarioLogado.role === 'subadmin')) {
-                const _tid = usuarioLogado.role === 'admin' ? usuarioLogado.id : usuarioLogado.adminId;
-                lista = lista.filter(c => c.adminId === _tid);
-            }
-            if (usuarioLogado?.role === 'superadmin' || usuarioLogado?.role === 'funcionario' || usuarioLogado?.role ===
-                'encarregado') {
-                lista = [];
-            }
-            const totalGeral = lista.length;
-            lista = _aplicarFiltroOrdenacao('clientes', lista, ['nome', 'numeroCliente', 'telefone', 'endereco', 'email'], {
-                nome: (a, b) => (a.nome || '').localeCompare(b.nome || ''),
-                numeroCliente: (a, b) => (a.numeroCliente || '').localeCompare(b.numeroCliente || '', undefined, { numeric: true })
+            const clientsState = window.TotalGestClientsView.prepareClientsForRendering({
+                clients: dados.clientes || [],
+                user: usuarioLogado,
+                applyFilterSort: lista => _aplicarFiltroOrdenacao('clientes', lista, ['nome', 'numeroCliente', 'telefone', 'endereco', 'email'], {
+                    nome: (a, b) => (a.nome || '').localeCompare(b.nome || ''),
+                    numeroCliente: (a, b) => (a.numeroCliente || '').localeCompare(b.numeroCliente || '', undefined, { numeric: true })
+                })
             });
-            const tb = document.getElementById('clientesToolbar');
-            if (tb) tb.innerHTML = totalGeral ? _toolbarHtml('clientes', 'Pesquisar por nome, telefone, email…', lista.length, totalGeral) : '';
-            if (lista.length === 0) {
-                tbody.innerHTML = '';
-                empty.style.display = totalGeral ? 'none' : 'block';
-                if (totalGeral && !lista.length) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;">Sem resultados para essa pesquisa.</td></tr>';
-                return;
-            }
-            empty.style.display = 'none';
-            tbody.innerHTML = lista.map(c => {
-                const numLocais = (dados.locais || []).filter(l => l.clienteId === c.id).length;
-                return `
-                    <tr>
-                        <td>${escapeHtmlSimples(c.numeroCliente || '-')}</td>
-                        <td>
-                            <button class="btn btn-sm" style="background:#f1f5f9;color:#334155;margin-right:6px;" onclick="_toggleAcordeaoCliente('${c.id}')" title="${numLocais > 0 ? (numLocais + ' instalação(ões) + Sede') : 'Ver Sede / intervenções'}"><i class="fas fa-chevron-down" id="acordeao-icone-${c.id}"></i></button>
-                            <strong>${escapeHtmlSimples(c.nome)}</strong>
-                            <span style="font-size:.7rem;color:#64748b;margin-left:6px;">(${numLocais > 0 ? (numLocais + 1) + ' instalações' : 'Sede'})</span>
-                        </td>
-                        <td>${escapeHtmlSimples(c.telefone || '-')}</td>
-                        <td>${escapeHtmlSimples(c.endereco || '-')}</td>
-                        <td>${escapeHtmlSimples(c.email || '-')}</td>
-                        <td>
-                            <div class="acoes">
-                                <button class="btn btn-sm" style="background:#0ea5e9;color:#fff;" onclick="abrirHistoricoCliente('${c.id}')" title="Histórico de intervenções"><i class="fas fa-clock-rotate-left"></i></button>
-                                <button class="btn btn-sm" style="background:#0f766e;color:#fff;" onclick="abrirModalNovoLocalCliente('${c.id}')" title="Adicionar outra morada/instalação"><i class="fas fa-map-pin"></i></button>
-                                <button class="btn btn-sm btn-warning" onclick="abrirModal('cliente','${c.id}')"><i class="fas fa-edit"></i></button>
-                                <button class="btn btn-sm btn-danger" onclick="excluirEntidade('cliente','${c.id}')"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr id="acordeao-cliente-${c.id}" style="display:none;background:#f8fafc;">
-                        <td colspan="5" style="padding:14px 20px;">
-                            <div id="acordeao-conteudo-${c.id}"><p style="color:#94a3b8;">A carregar…</p></div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+            window.TotalGestClientsView.renderClientsArea({
+                document,
+                list: clientsState.list,
+                total: clientsState.total,
+                locations: dados.locais || [],
+                toolbarHtml: _toolbarHtml,
+                escapeHtml: escapeHtmlSimples
+            });
         }
-
-        _registarTabela('servicos', renderizarServicos);
         function renderizarServicos() {
             const runtimeState = window.TotalGestServicesSelection.createServicesRuntimeState({
                 data: dados,
@@ -28535,7 +28495,8 @@ window._relPrefill = function(msg){
   <script src="./assets/js/app-shell.js"></script>
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
-            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, reportsView: true, alertsView: true, dashboardCounts: true,
+            syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, reportsView: true, alertsView: true,
+            clientsView: true, dashboardCounts: true,
                 dashboardAnalyticsMetrics: true, licenseAddons: true, servicesSelection: true, servicesView: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
