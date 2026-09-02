@@ -651,6 +651,29 @@
     });
   }
 
+  function createAttendancePersonRenderer(options) {
+    const o = options || {};
+    const viewState = o.viewState || {};
+    return function (personId, records, personOptions) {
+      const p = personOptions || {};
+      return prepareAttendancePersonAccordionItem(personId, records, {
+        absence: p.absence,
+        personName: p.personName,
+        nowTime: viewState.nowTime,
+        selectedDateIsToday: o.selectedDateIsToday,
+        lateLimit: viewState.lateLimit,
+        expectedTime: viewState.expectedTime,
+        toleranceMinutes: viewState.toleranceMinutes,
+        mode: o.mode,
+        calculateHours: o.calculateHours,
+        formatHours: o.formatHours,
+        getWorkDescription: o.getWorkDescription,
+        getClientName: o.getClientName,
+        escapeHtml: o.escapeHtml
+      });
+    };
+  }
+
   window.TotalGestAttendanceView = {
     startOfWeekMonday,
     formatHours,
@@ -709,6 +732,7 @@
     prepareMissingAttendanceState,
     applyMissingAttendancePeople,
     attendancePersonName,
-    prepareAttendancePersonAccordionItem
+    prepareAttendancePersonAccordionItem,
+    createAttendancePersonRenderer
   };
 })();

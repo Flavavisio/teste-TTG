@@ -7419,10 +7419,16 @@
             _pontoNavData = attendanceViewState.selectedDate;
             const _hojeSoP = attendanceViewState.selectedDate;
             const porPessoa = attendanceViewState.groupedRecords;
-            const agoraHM = attendanceViewState.nowTime;
-            const _horaEsperada = attendanceViewState.expectedTime;
-            const _tolerMin = attendanceViewState.toleranceMinutes;
-            const _limiteAtraso = attendanceViewState.lateLimit;
+            const renderAttendancePerson = window.TotalGestAttendanceView.createAttendancePersonRenderer({
+                viewState: attendanceViewState,
+                selectedDateIsToday: _hojeSoP === getDataHoje(),
+                mode: _pontoNavModo,
+                calculateHours: calcularHoras,
+                formatHours: _fmtH,
+                getWorkDescription: obterDescricaoOS,
+                getClientName: obterNomeCliente,
+                escapeHtml: escapeHtmlSimples
+            });
             const htmlAcc = Object.keys(porPessoa).map(fid => {
                 const nomePessoa = window.TotalGestAttendanceView.attendancePersonName(
                     fid,
@@ -7430,20 +7436,9 @@
                     obterNomeFuncionario
                 );
                 const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);
-                return window.TotalGestAttendanceView.prepareAttendancePersonAccordionItem(fid, porPessoa[fid], {
+                return renderAttendancePerson(fid, porPessoa[fid], {
                     absence: _ausenciaHoje,
-                    personName: nomePessoa,
-                    nowTime: agoraHM,
-                    selectedDateIsToday: _hojeSoP === getDataHoje(),
-                    lateLimit: _limiteAtraso,
-                    expectedTime: _horaEsperada,
-                    toleranceMinutes: _tolerMin,
-                    mode: _pontoNavModo,
-                    calculateHours: calcularHoras,
-                    formatHours: _fmtH,
-                    getWorkDescription: obterDescricaoOS,
-                    getClientName: obterNomeCliente,
-                    escapeHtml: escapeHtmlSimples
+                    personName: nomePessoa
                 });
             }).join('');
             if (!window.TotalGestAttendanceView.applyAttendanceAccordionState(attendanceElements, htmlAcc, Object.keys(porPessoa).length)) return;
