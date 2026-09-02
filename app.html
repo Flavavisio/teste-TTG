@@ -12737,37 +12737,15 @@
             });
 
             const adminRecAlerta = dados.administradores?.find(a => a.id === adminId);
-            if (moduloContratosAtivo(adminRecAlerta)) {
-                const contractAttention = window.TotalGestAlertsView.prepareMaintenanceContractAlerts({
-                    contracts: dados.contratos || [],
-                    adminId: adminId,
-                    getNextMaintenance: calcularProximaManutencao,
-                    getMaintenanceState: estadoManutencao
-                });
-                if (contractAttention.alert) alertas.push(contractAttention.alert);
-                contractAttention.items.forEach(item => {
-                    const c = item.contract;
-                    const dias = item.days;
-                    _notificarPorFaseVencimento('contrato_vencer_' + adminId, c.id, dias, () => {
-                        _notificarAdminESubadmin(adminId, '📄 Contrato de manutenção a vencer', 'Contrato ' + (c.numero || '#' + c.id) + ' — ' + _clienteLabel(dados.clientes?.find(cl => cl.id === c.clienteId) || {}) + ' vence em ' + dias + ' dia(s).', "abrirSecao('contratos')");
-                    });
-                });
-            }
-
-            const fleetAttention = window.TotalGestAlertsView.prepareFleetAttention({
-                vehicles: dados.veiculos || [],
-                interventions: dados.veiculoIntervencoes || [],
-                adminId: adminId,
-                getDateState: estadoDataFrota
+            window.TotalGestAlertsView.runMaintenanceContractAlertFlow({
+                enabled: moduloContratosAtivo(adminRecAlerta), contracts: dados.contratos || [], clients: dados.clientes || [], adminId,
+                alerts: alertas, getNextMaintenance: calcularProximaManutencao, getMaintenanceState: estadoManutencao,
+                getClientLabel: _clienteLabel, notifyByPhase: _notificarPorFaseVencimento, notifyAdmin: _notificarAdminESubadmin
             });
-            if (fleetAttention.alert) alertas.push(fleetAttention.alert);
-            fleetAttention.items.forEach(item => {
-                const v = item.vehicle;
-                const motivos = item.reasons;
-                const dias = item.days;
-                _notificarPorFaseVencimento('frota_vencer_' + adminId, v.id, isFinite(dias) ? dias : 30, () => {
-                    _notificarAdminESubadmin(adminId, '🚗 Veículo a vencer', 'Matrícula ' + (v.matricula || '—') + ' — ' + motivos.join(' e ') + ' a vencer em ' + (isFinite(dias) ? dias : '30') + ' dia(s).', "abrirSecao('frota')");
-                });
+
+            window.TotalGestAlertsView.runFleetAlertFlow({
+                vehicles: dados.veiculos || [], interventions: dados.veiculoIntervencoes || [], adminId, alerts: alertas,
+                getDateState: estadoDataFrota, notifyByPhase: _notificarPorFaseVencimento, notifyAdmin: _notificarAdminESubadmin
             });
 
             window.TotalGestAlertsView.preparePendingAdminRequestsAlerts({
@@ -12776,60 +12754,25 @@
                 adminId: adminId
             }).forEach(alert => alertas.push(alert));
 
-            const licenseExpiry = window.TotalGestAlertsView.licenseExpiryState(adminRecAlerta, calcularDiasRestantes);
-            if (licenseExpiry) {
-                const diasLic = licenseExpiry.days;
-                _notificarPorFaseVencimento('licenca_' + adminId, 'atual', diasLic, () => {
-                    _notificarAdminESubadmin(adminId, '⏰ Licença a expirar', 'A licença da tua empresa expira em ' + diasLic + ' dia(s). Renova em "Minha Licença" para não perderes acesso.', "abrirSecao('minha-licenca')");
-                });
-            }
-
-            const regulatoryAlerts = window.TotalGestAlertsView.prepareRegulatoryRenewals({
-                admin: adminRecAlerta,
-                calculateDaysRemaining: calcularDiasRestantes,
-                thresholdDays: 180
+            window.TotalGestAlertsView.runLicenseAlertFlow({
+                admin: adminRecAlerta, adminId, calculateDaysRemaining: calcularDiasRestantes,
+                notifyByPhase: _notificarPorFaseVencimento, notifyAdmin: _notificarAdminESubadmin
             });
-            if (regulatoryAlerts.registoPrevio) {
-                const diasRP = regulatoryAlerts.registoPrevio.days;
-                alertas.push(regulatoryAlerts.registoPrevio.alert);
-                _notificarPorFaseVencimento('registo_previo_' + adminId, 'atual', diasRP, () => {
-                    _notificarAdminESubadmin(adminId, '⚠️ Registo prévio a renovar', 'O registo prévio da tua empresa vence em ' + diasRP + ' dia(s). Trata da renovação junto da PSP.', "abrirEditarPerfil()");
-                });
-            }
-            if (regulatoryAlerts.anepc) {
-                const diasAN = regulatoryAlerts.anepc.days;
-                alertas.push(regulatoryAlerts.anepc.alert);
-                _notificarPorFaseVencimento('anepc_' + adminId, 'atual', diasAN, () => {
-                    _notificarAdminESubadmin(adminId, '⚠️ Registo ANEPC a renovar', 'O registo ANEPC da tua empresa vence em ' + diasAN + ' dia(s). Trata da renovação junto da ANEPC.', "abrirEditarPerfil()");
-                });
-            }
-            if (adminRecAlerta?.shstAtivo) {
-                const shstRenewals = window.TotalGestAlertsView.prepareShstRenewals({
-                    employees: dados.funcionarios || [],
-                    managers: dados.encarregados || [],
-                    adminId: adminId,
-                    calculateDaysRemaining: calcularDiasRestantes,
-                    now: new Date()
-                });
-                shstRenewals.forEach(item => {
-                    const p = item.person;
-                    const diasSHST = item.days;
-                    alertas.push(item.alert);
-                    _notificarPorFaseVencimento('shst_' + p.id, 'atual', diasSHST, () => {
-                        _notificarAdminESubadmin(adminId, '⚠️ SHST a renovar', 'A consulta de medicina do trabalho de ' + p.nome + ' vence em ' + diasSHST + ' dia(s).', `abrirModal('funcionario','${p.id}')`);
-                    });
-                });
-            }
 
-            if (moduloArmazemAtivo(adminAtual())) {
-                const warehouseAlerts = window.TotalGestAlertsView.prepareWarehouseAlerts({
-                    articles: dados.artigos || [],
-                    workMaterials: dados.obraMateriais || [],
-                    adminId: adminId,
-                    getCurrentStock: stockAtualArtigo
-                });
-                warehouseAlerts.forEach(alert => alertas.push(alert));
-            }
+            window.TotalGestAlertsView.runRegulatoryAlertFlow({
+                admin: adminRecAlerta, adminId, alerts: alertas, thresholdDays: 180, calculateDaysRemaining: calcularDiasRestantes,
+                notifyByPhase: _notificarPorFaseVencimento, notifyAdmin: _notificarAdminESubadmin
+            });
+            window.TotalGestAlertsView.runShstAlertFlow({
+                enabled: adminRecAlerta?.shstAtivo === true, employees: dados.funcionarios || [], managers: dados.encarregados || [],
+                adminId, alerts: alertas, calculateDaysRemaining: calcularDiasRestantes, now: new Date(),
+                notifyByPhase: _notificarPorFaseVencimento, notifyAdmin: _notificarAdminESubadmin
+            });
+
+            window.TotalGestAlertsView.runWarehouseAlertFlow({
+                enabled: moduloArmazemAtivo(adminAtual()), articles: dados.artigos || [], workMaterials: dados.obraMateriais || [],
+                adminId, alerts: alertas, getCurrentStock: stockAtualArtigo
+            });
 
             window.TotalGestAlertsView.applyAlertsState(cont, alertas, _ehPerfilMobile());
         }

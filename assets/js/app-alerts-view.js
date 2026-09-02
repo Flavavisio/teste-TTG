@@ -338,6 +338,89 @@
     return true;
   }
 
+  function appendAlert(alerts, alert) {
+    if (Array.isArray(alerts) && alert) alerts.push(alert);
+  }
+
+  function runMaintenanceContractAlertFlow(options) {
+    const o = options || {};
+    if (!o.enabled) return { items: [], alert: null };
+    const state = prepareMaintenanceContractAlerts(o);
+    appendAlert(o.alerts, state.alert);
+    state.items.forEach(function (item) {
+      const contract = item.contract, days = item.days;
+      o.notifyByPhase('contrato_vencer_' + o.adminId, contract.id, days, function () {
+        const client = (Array.isArray(o.clients) ? o.clients : []).find(function (item) { return item.id === contract.clienteId; }) || {};
+        o.notifyAdmin(o.adminId, '📄 Contrato de manutenção a vencer', 'Contrato ' + (contract.numero || '#' + contract.id) + ' — ' + o.getClientLabel(client) + ' vence em ' + days + ' dia(s).', "abrirSecao('contratos')");
+      });
+    });
+    return state;
+  }
+
+  function runFleetAlertFlow(options) {
+    const o = options || {}, state = prepareFleetAttention(o);
+    appendAlert(o.alerts, state.alert);
+    state.items.forEach(function (item) {
+      const vehicle = item.vehicle, reasons = item.reasons, days = item.days;
+      const safeDays = isFinite(days) ? days : 30;
+      o.notifyByPhase('frota_vencer_' + o.adminId, vehicle.id, safeDays, function () {
+        o.notifyAdmin(o.adminId, '🚗 Veículo a vencer', 'Matrícula ' + (vehicle.matricula || '—') + ' — ' + reasons.join(' e ') + ' a vencer em ' + (isFinite(days) ? days : '30') + ' dia(s).', "abrirSecao('frota')");
+      });
+    });
+    return state;
+  }
+
+  function runLicenseAlertFlow(options) {
+    const o = options || {}, state = licenseExpiryState(o.admin, o.calculateDaysRemaining);
+    if (!state) return null;
+    const days = state.days;
+    o.notifyByPhase('licenca_' + o.adminId, 'atual', days, function () {
+      o.notifyAdmin(o.adminId, '⏰ Licença a expirar', 'A licença da tua empresa expira em ' + days + ' dia(s). Renova em "Minha Licença" para não perderes acesso.', "abrirSecao('minha-licenca')");
+    });
+    return state;
+  }
+
+  function runRegulatoryAlertFlow(options) {
+    const o = options || {}, state = prepareRegulatoryRenewals(o);
+    if (state.registoPrevio) {
+      const days = state.registoPrevio.days;
+      appendAlert(o.alerts, state.registoPrevio.alert);
+      o.notifyByPhase('registo_previo_' + o.adminId, 'atual', days, function () {
+        o.notifyAdmin(o.adminId, '⚠️ Registo prévio a renovar', 'O registo prévio da tua empresa vence em ' + days + ' dia(s). Trata da renovação junto da PSP.', "abrirEditarPerfil()");
+      });
+    }
+    if (state.anepc) {
+      const days = state.anepc.days;
+      appendAlert(o.alerts, state.anepc.alert);
+      o.notifyByPhase('anepc_' + o.adminId, 'atual', days, function () {
+        o.notifyAdmin(o.adminId, '⚠️ Registo ANEPC a renovar', 'O registo ANEPC da tua empresa vence em ' + days + ' dia(s). Trata da renovação junto da ANEPC.', "abrirEditarPerfil()");
+      });
+    }
+    return state;
+  }
+
+  function runShstAlertFlow(options) {
+    const o = options || {};
+    if (!o.enabled) return [];
+    const items = prepareShstRenewals(o);
+    items.forEach(function (item) {
+      const person = item.person, days = item.days;
+      appendAlert(o.alerts, item.alert);
+      o.notifyByPhase('shst_' + person.id, 'atual', days, function () {
+        o.notifyAdmin(o.adminId, '⚠️ SHST a renovar', 'A consulta de medicina do trabalho de ' + person.nome + ' vence em ' + days + ' dia(s).', "abrirModal('funcionario','" + person.id + "')");
+      });
+    });
+    return items;
+  }
+
+  function runWarehouseAlertFlow(options) {
+    const o = options || {};
+    if (!o.enabled) return [];
+    const alerts = prepareWarehouseAlerts(o);
+    alerts.forEach(function (alert) { appendAlert(o.alerts, alert); });
+    return alerts;
+  }
+
   window.TotalGestAlertsView = {
     alertsCard: alertsCard,
     isEmployeeAlertsRole: isEmployeeAlertsRole,
@@ -365,6 +448,12 @@
     resolveAlertsAdminId: resolveAlertsAdminId,
     prepareInitialAdminAlerts: prepareInitialAdminAlerts,
     preparePendingAdminRequestsAlerts: preparePendingAdminRequestsAlerts,
-    applyAlertsState: applyAlertsState
+    applyAlertsState: applyAlertsState,
+    runMaintenanceContractAlertFlow: runMaintenanceContractAlertFlow,
+    runFleetAlertFlow: runFleetAlertFlow,
+    runLicenseAlertFlow: runLicenseAlertFlow,
+    runRegulatoryAlertFlow: runRegulatoryAlertFlow,
+    runShstAlertFlow: runShstAlertFlow,
+    runWarehouseAlertFlow: runWarehouseAlertFlow
   };
 })();
