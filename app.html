@@ -7504,36 +7504,34 @@
                 const menosDe8h = geral && !geralAberto && horasGeral > 0 && horasGeral < 8;
                 const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);
                 const atrasado = _ausenciaHoje ? false : (geral ? (geral.entrada && geral.entrada > _limiteAtraso) : (_hojeSoP === getDataHoje() && regsPessoa.length === 0 && agoraHM > _limiteAtraso));
-                const alertaHtml = (menosDe8h ? ` <i class="fas fa-triangle-exclamation" title="Ainda não completou as 8 horas diárias" style="color:#dc2626;"></i>` : '')
-                    + (atrasado ? ` <i class="fas fa-clock" title="${geral ? 'Entrada depois das ' + _limiteAtraso : 'Ainda não picou (esperado ' + _horaEsperada + ' + ' + _tolerMin + 'min de tolerância)'}" style="color:#d97706;"></i>` : '')
-                    + (almocoDescontado ? ` <i class="fas fa-utensils" title="Não picou saída/regresso do almoço — foi descontada 1h automaticamente" style="color:#d97706;"></i>` : '');
-                let resumoGeral;
-                if (_ausenciaHoje) {
-                    resumoGeral = `<span style="color:${_ausenciaHoje.cor};font-weight:600;"><i class="fas ${_ausenciaHoje.icon}"></i> ${nomePessoa} está de ${_ausenciaHoje.label}</span>`;
-                } else if (geral) {
-                    const ultimoGeral = regsGeral[regsGeral.length - 1];
-                    const partes = [geral.entrada || '--:--'];
-                    regsGeral.forEach(r => {
-                        if (r.pausaAlmoco && r.saida) {
-                            partes.push(`<i class="fas fa-utensils" title="Pausa almoço" style="color:#d97706;"></i> ${r.saida}`);
-                            const retomaReg = regsGeral.find(x => !x.pausaAlmoco && x.entrada && x.entrada > r.saida);
-                            partes.push(retomaReg ? retomaReg.entrada : '<span style="color:#d97706;">ainda em pausa</span>');
-                        }
-                    });
-                    partes.push(geralAberto ? '<span style="color:#16a34a;font-weight:700;">em serviço</span>' : (ultimoGeral?.saida || '--:--'));
-                    resumoGeral = `${partes.join(' → ')} <span style="color:#64748b;">(${_fmtH(horasGeral)})</span>${alertaHtml}`;
-                } else {
-                    resumoGeral = `<span style="color:#94a3b8;">${regsPessoa.length === 0 ? (_hojeSoP === getDataHoje() ? 'ainda não picou hoje' : 'sem picagens neste dia') : 'sem picagem geral'}</span>${alertaHtml}`;
-                }
+                const alertaHtml = window.TotalGestAttendanceView.attendanceAlertsHtml({
+                    lessThanEightHours: menosDe8h,
+                    late: atrasado,
+                    hasGeneralRecord: !!geral,
+                    lateLimit: _limiteAtraso,
+                    expectedTime: _horaEsperada,
+                    toleranceMinutes: _tolerMin,
+                    lunchDeducted: almocoDescontado
+                });
+                const resumoGeral = window.TotalGestAttendanceView.attendancePersonSummaryHtml({
+                    absence: _ausenciaHoje,
+                    personName: nomePessoa,
+                    generalRecord: geral,
+                    generalRecords: regsGeral,
+                    generalOpen: geralAberto,
+                    generalHoursText: _fmtH(horasGeral),
+                    alertsHtml: alertaHtml,
+                    recordsCount: regsPessoa.length,
+                    isToday: _hojeSoP === getDataHoje()
+                });
                 const corpo = regsPessoa.map(r => {
                     const horas = r.saida ? calcularHoras(r.entrada, r.saida) : null;
                     const obra = escapeHtmlSimples(r.servicoId ? obterDescricaoOS(r.servicoId) : (r.obraDescricao || (r.obraId ? 'Obra' : 'Escritório/Exterior')));
                     const clienteNome = r.clienteId ? (obterNomeCliente(r.clienteId) || '-') : '-';
-                    const foiEditado = !!(r.editadoPor && r.editadoEm);
-                    const tituloEdicao = foiEditado ? `Alterado por ${escapeHtmlSimples(r.editadoPor)} em ${new Date(r.editadoEm).toLocaleString('pt-PT')} — Motivo: ${escapeHtmlSimples(r.motivoEdicao || '—')}` : '';
-                    const entradaTxt = foiEditado ? `<span style="color:#0ea5e9;" title="${tituloEdicao}">${r.entrada || '--:--'} <i class="fas fa-pen" style="font-size:.65em;"></i></span>` : (r.entrada || '--:--');
-                    const saidaTxtBase = r.pausaAlmoco ? `<span style="color:#d97706;"><i class="fas fa-utensils" title="Pausa almoço"></i> ${r.saida || '--:--'}</span>` : (r.saidaAutomatica ? `${r.saida} <i class="fas fa-triangle-exclamation" title="Saída automática após 12h" style="color:#d97706;"></i>` : (r.saida || '--:--'));
-                    const saidaTxt = (foiEditado && !r.pausaAlmoco) ? `<span style="color:#0ea5e9;" title="${tituloEdicao}">${saidaTxtBase} <i class="fas fa-pen" style="font-size:.65em;"></i></span>` : saidaTxtBase;
+                    const tituloEdicao = window.TotalGestAttendanceView.attendanceEditTitle(r, escapeHtmlSimples);
+                    const timePresentation = window.TotalGestAttendanceView.attendanceEntryExitHtml(r, tituloEdicao);
+                    const entradaTxt = timePresentation.entryHtml;
+                    const saidaTxt = timePresentation.exitHtml;
                     const fotoHtml = window.TotalGestAttendanceView.attendancePhotoHtml(r.foto);
                     const gpsEntradaHtml = window.TotalGestAttendanceView.attendanceGpsHtml(r.lat, r.lng);
                     const gpsSaidaHtml = window.TotalGestAttendanceView.attendanceGpsHtml(r.latSaida, r.lngSaida);

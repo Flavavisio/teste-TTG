@@ -184,6 +184,54 @@
                 </div>`;
   }
 
+  function attendanceAlertsHtml(options) {
+    const o = options || {};
+    return (o.lessThanEightHours ? ` <i class="fas fa-triangle-exclamation" title="Ainda não completou as 8 horas diárias" style="color:#dc2626;"></i>` : '')
+      + (o.late ? ` <i class="fas fa-clock" title="${o.hasGeneralRecord ? 'Entrada depois das ' + o.lateLimit : 'Ainda não picou (esperado ' + o.expectedTime + ' + ' + o.toleranceMinutes + 'min de tolerância)'}" style="color:#d97706;"></i>` : '')
+      + (o.lunchDeducted ? ` <i class="fas fa-utensils" title="Não picou saída/regresso do almoço — foi descontada 1h automaticamente" style="color:#d97706;"></i>` : '');
+  }
+
+  function attendancePersonSummaryHtml(options) {
+    const o = options || {};
+    if (o.absence) {
+      return `<span style="color:${o.absence.cor};font-weight:600;"><i class="fas ${o.absence.icon}"></i> ${o.personName} está de ${o.absence.label}</span>`;
+    }
+    if (o.generalRecord) {
+      const records = Array.isArray(o.generalRecords) ? o.generalRecords : [];
+      const last = records[records.length - 1];
+      const parts = [o.generalRecord.entrada || '--:--'];
+      records.forEach(function (record) {
+        if (record.pausaAlmoco && record.saida) {
+          parts.push(`<i class="fas fa-utensils" title="Pausa almoço" style="color:#d97706;"></i> ${record.saida}`);
+          const resume = records.find(function (item) { return !item.pausaAlmoco && item.entrada && item.entrada > record.saida; });
+          parts.push(resume ? resume.entrada : '<span style="color:#d97706;">ainda em pausa</span>');
+        }
+      });
+      parts.push(o.generalOpen ? '<span style="color:#16a34a;font-weight:700;">em serviço</span>' : ((last && last.saida) || '--:--'));
+      return `${parts.join(' → ')} <span style="color:#64748b;">(${o.generalHoursText || '0h 0m'})</span>${o.alertsHtml || ''}`;
+    }
+    const emptyLabel = Number(o.recordsCount || 0) === 0 ? (o.isToday ? 'ainda não picou hoje' : 'sem picagens neste dia') : 'sem picagem geral';
+    return `<span style="color:#94a3b8;">${emptyLabel}</span>${o.alertsHtml || ''}`;
+  }
+
+  function attendanceEditTitle(record, escapeHtml) {
+    const r = record || {};
+    if (!(r.editadoPor && r.editadoEm)) return '';
+    const escape = typeof escapeHtml === 'function' ? escapeHtml : function (value) { return String(value == null ? '' : value); };
+    return `Alterado por ${escape(r.editadoPor)} em ${new Date(r.editadoEm).toLocaleString('pt-PT')} — Motivo: ${escape(r.motivoEdicao || '—')}`;
+  }
+
+  function attendanceEntryExitHtml(record, editTitle) {
+    const r = record || {};
+    const edited = !!(r.editadoPor && r.editadoEm);
+    const entryHtml = edited ? `<span style="color:#0ea5e9;" title="${editTitle || ''}">${r.entrada || '--:--'} <i class="fas fa-pen" style="font-size:.65em;"></i></span>` : (r.entrada || '--:--');
+    const exitBase = r.pausaAlmoco
+      ? `<span style="color:#d97706;"><i class="fas fa-utensils" title="Pausa almoço"></i> ${r.saida || '--:--'}</span>`
+      : (r.saidaAutomatica ? `${r.saida} <i class="fas fa-triangle-exclamation" title="Saída automática após 12h" style="color:#d97706;"></i>` : (r.saida || '--:--'));
+    const exitHtml = (edited && !r.pausaAlmoco) ? `<span style="color:#0ea5e9;" title="${editTitle || ''}">${exitBase} <i class="fas fa-pen" style="font-size:.65em;"></i></span>` : exitBase;
+    return { entryHtml, exitHtml };
+  }
+
   window.TotalGestAttendanceView = {
     startOfWeekMonday,
     formatHours,
@@ -202,6 +250,10 @@
     attendanceGpsHtml,
     attendanceDateCell,
     attendanceRecordRow,
-    attendanceAccordionItem
+    attendanceAccordionItem,
+    attendanceAlertsHtml,
+    attendancePersonSummaryHtml,
+    attendanceEditTitle,
+    attendanceEntryExitHtml
   };
 })();
