@@ -1,4 +1,4 @@
-name: Inspect collaborators domain boundary
+name: Inspect collaborators function name
 
 on:
   push:
@@ -17,18 +17,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspect renderizarColaboradores exact
+      - name: Locate collaborators rendering functions
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
-          marker='        function renderizarColaboradores() {'
-          s=text.index(marker)
-          e=text.index('\n        function ',s+len(marker))
-          block=text[s:e]
-          print('COLLABORATORS_CHARS=',len(block))
-          print('COLLABORATORS_LINES=',block.count('\n')+1)
-          print('---COLLABORATORS_START---')
-          print(block)
-          print('---COLLABORATORS_END---')
+          for i,line in enumerate(text.splitlines(),1):
+              low=line.lower()
+              if ('function ' in line or 'renderizar' in low) and ('colabor' in low or 'funcion' in low or 'encarreg' in low or 'equipa' in low):
+                  print(f'{i}: {line}')
+          for needle in ['tabelaFuncionarios','tabelaColaboradores','colaboradoresToolbar','funcionariosToolbar','emptyFunc','emptyColab']:
+              print('---',needle,'---')
+              for i,line in enumerate(text.splitlines(),1):
+                  if needle in line:
+                      print(f'{i}: {line}')
           PY
