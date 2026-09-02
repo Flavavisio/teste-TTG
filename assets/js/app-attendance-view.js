@@ -286,6 +286,54 @@
     return !!(o.selectedDateIsToday && Number(o.recordsCount || 0) === 0 && o.nowTime > o.lateLimit);
   }
 
+  function attendanceRecordHours(record, calculateHours, formatHoursFn) {
+    const r = record || {};
+    if (!r.saida) return '';
+    const calc = typeof calculateHours === 'function' ? calculateHours : function () { return 0; };
+    const format = typeof formatHoursFn === 'function' ? formatHoursFn : formatHours;
+    return format(calc(r.entrada, r.saida));
+  }
+
+  function attendanceRecordWorkplace(record, options) {
+    const r = record || {}, o = options || {};
+    const getWorkDescription = typeof o.getWorkDescription === 'function' ? o.getWorkDescription : function () { return ''; };
+    const getClientName = typeof o.getClientName === 'function' ? o.getClientName : function () { return '-'; };
+    const escape = typeof o.escapeHtml === 'function' ? o.escapeHtml : function (value) { return String(value == null ? '' : value); };
+    const work = escape(r.servicoId ? getWorkDescription(r.servicoId) : (r.obraDescricao || (r.obraId ? 'Obra' : 'Escritório/Exterior')));
+    const clientName = r.clienteId ? (getClientName(r.clienteId) || '-') : '-';
+    return { workHtml: work, clientName };
+  }
+
+  function attendanceRecordMedia(record, mode) {
+    const r = record || {};
+    return {
+      photoHtml: attendancePhotoHtml(r.foto),
+      gpsEntryHtml: attendanceGpsHtml(r.lat, r.lng),
+      gpsExitHtml: attendanceGpsHtml(r.latSaida, r.lngSaida),
+      dateHtml: attendanceDateCell(r.data, mode)
+    };
+  }
+
+  function prepareAttendanceRecordRow(record, options) {
+    const r = record || {}, o = options || {};
+    const editTitle = attendanceEditTitle(r, o.escapeHtml);
+    const times = attendanceEntryExitHtml(r, editTitle);
+    const workplace = attendanceRecordWorkplace(r, o);
+    const media = attendanceRecordMedia(r, o.mode);
+    return {
+      dateHtml: media.dateHtml,
+      entryHtml: times.entryHtml,
+      exitHtml: times.exitHtml,
+      hoursHtml: attendanceRecordHours(r, o.calculateHours, o.formatHours),
+      clientName: workplace.clientName,
+      workHtml: workplace.workHtml,
+      photoHtml: media.photoHtml,
+      gpsEntryHtml: media.gpsEntryHtml,
+      gpsExitHtml: media.gpsExitHtml,
+      recordId: r.id
+    };
+  }
+
   window.TotalGestAttendanceView = {
     startOfWeekMonday,
     formatHours,
@@ -313,6 +361,10 @@
     calculateGeneralAttendanceState,
     applyAttendanceLunchDeduction,
     isAttendanceBelowEightHours,
-    isAttendanceLate
+    isAttendanceLate,
+    attendanceRecordHours,
+    attendanceRecordWorkplace,
+    attendanceRecordMedia,
+    prepareAttendanceRecordRow
   };
 })();

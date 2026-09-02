@@ -7529,31 +7529,16 @@
                     recordsCount: regsPessoa.length,
                     isToday: _hojeSoP === getDataHoje()
                 });
-                const corpo = regsPessoa.map(r => {
-                    const horas = r.saida ? calcularHoras(r.entrada, r.saida) : null;
-                    const obra = escapeHtmlSimples(r.servicoId ? obterDescricaoOS(r.servicoId) : (r.obraDescricao || (r.obraId ? 'Obra' : 'Escritório/Exterior')));
-                    const clienteNome = r.clienteId ? (obterNomeCliente(r.clienteId) || '-') : '-';
-                    const tituloEdicao = window.TotalGestAttendanceView.attendanceEditTitle(r, escapeHtmlSimples);
-                    const timePresentation = window.TotalGestAttendanceView.attendanceEntryExitHtml(r, tituloEdicao);
-                    const entradaTxt = timePresentation.entryHtml;
-                    const saidaTxt = timePresentation.exitHtml;
-                    const fotoHtml = window.TotalGestAttendanceView.attendancePhotoHtml(r.foto);
-                    const gpsEntradaHtml = window.TotalGestAttendanceView.attendanceGpsHtml(r.lat, r.lng);
-                    const gpsSaidaHtml = window.TotalGestAttendanceView.attendanceGpsHtml(r.latSaida, r.lngSaida);
-                    const dataHtml = window.TotalGestAttendanceView.attendanceDateCell(r.data, _pontoNavModo);
-                    return window.TotalGestAttendanceView.attendanceRecordRow({
-                        dateHtml: dataHtml,
-                        entryHtml: entradaTxt,
-                        exitHtml: saidaTxt,
-                        hoursHtml: horas != null ? _fmtH(horas) : '',
-                        clientName: clienteNome,
-                        workHtml: obra,
-                        photoHtml: fotoHtml,
-                        gpsEntryHtml: gpsEntradaHtml,
-                        gpsExitHtml: gpsSaidaHtml,
-                        recordId: r.id
-                    });
-                }).join('');
+                const corpo = regsPessoa.map(r => window.TotalGestAttendanceView.attendanceRecordRow(
+                    window.TotalGestAttendanceView.prepareAttendanceRecordRow(r, {
+                        mode: _pontoNavModo,
+                        calculateHours: calcularHoras,
+                        formatHours: _fmtH,
+                        getWorkDescription: obterDescricaoOS,
+                        getClientName: obterNomeCliente,
+                        escapeHtml: escapeHtmlSimples
+                    })
+                )).join('');
                 return window.TotalGestAttendanceView.attendanceAccordionItem({
                     personId: fid,
                     nameHtml: escapeHtmlSimples(nomePessoa),
