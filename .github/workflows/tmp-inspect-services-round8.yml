@@ -17,20 +17,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Confirmar âncoras do módulo de ponto
+      - name: Localizar carga dos módulos extraídos
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          text = Path('app.html').read_text(encoding='utf-8')
-          for needle in [
-              '<script src="assets/js/app-services-view.js"></script>',
-              '<script src="./assets/js/app-services-view.js"></script>',
-              '_inicioSemana()',
-              '_fmtH(',
-              'renderizarResumoPontoAdmin()'
-          ]:
-              print(repr(needle), 'COUNT=', text.count(needle))
-          for line in text.splitlines():
-              if 'app-services-view.js' in line or 'app-services-selection.js' in line:
-                  print('SCRIPT_LINE=', line)
+          for file in ['app.html','index.html','assets/js/app-bootstrap.js','assets/js/app-shell.js']:
+              p=Path(file)
+              if not p.exists(): continue
+              text=p.read_text(encoding='utf-8')
+              print('FILE=',file)
+              for i,line in enumerate(text.splitlines(),1):
+                  if 'app-services-' in line or 'assets/js/app-' in line and ('script' in line.lower() or 'src' in line.lower()):
+                      print(i, line)
           PY
