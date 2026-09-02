@@ -1,48 +1,40 @@
-name: Apply attendance safe batch 24
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches: [refactor/separar-index-app]
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Migrate and validate round 24
+      - name: Estado dos módulos extraídos
         run: |
-          python3 scripts/tmp-migrate-attendance-safe-batch-24.py
           node --check assets/js/app-attendance-view.js
           node --check sw.js
           git diff --check
-          node - <<'NODE'
-          const fs=require('fs'),vm=require('vm'),assert=require('assert'); const c={window:{}}; vm.createContext(c); vm.runInContext(fs.readFileSync('assets/js/app-attendance-view.js','utf8'),c); const v=c.window.TotalGestAttendanceView;
-          const render=v.createAttendancePersonEntryRenderer({administrators:[{id:'a1',nome:'Admin'}],getEmployeeName:()=> 'Fallback',viewState:{nowTime:'17:00',lateLimit:'09:15',expectedTime:'09:00',toleranceMinutes:15},selectedDateIsToday:true,mode:'dia',calculateHours:()=>8,formatHours:h=>String(h),getWorkDescription:()=>'',getClientName:()=>'',escapeHtml:x=>String(x)});
-          const html=render('a1',[{data:'2026-09-02',entrada:'08:00',saida:'16:00'}],null); assert.strictEqual(typeof html,'string'); assert.ok(html.includes('Admin')); console.log('SAFE_BATCH_24_UNIT=OK');
-          NODE
           python3 - <<'PY'
           from pathlib import Path
-          t=Path('app.html').read_text(); s=t.index('        function renderizarPonto() {'); e=t.index('\n        function ',s+10); p=t[s:e]
-          assert p.count('createAttendancePersonEntryRenderer({')==1
-          assert p.count('renderAttendancePersonEntry(fid, porPessoa[fid], _ausenciaHoje)')==1
-          assert p.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
-          assert 'attendancePersonName(' not in p
-          assert 'guardarDados(dados)' not in p
-          assert "const CACHE = 'totalgest-v167';" in Path('sw.js').read_text()
-          print('SAFE_BATCH_24_VERIFY=OK')
+          text=Path('app.html').read_text(encoding='utf-8')
+          def block(marker):
+              s=text.index(marker); e=text.index('\n        function ',s+len(marker)); return text[s:e]
+          services=block('        function renderizarServicos() {')
+          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
+              assert services.count(item)==1
+          point=block('        function renderizarPonto() {')
+          for item in ['prepareAttendanceBaseState({','prepareAttendanceViewState({','createAttendancePersonEntryRenderer({','renderAttendancePersonEntry(fid, porPessoa[fid], _ausenciaHoje)','applyAttendanceAccordionState(attendanceElements, htmlAcc, Object.keys(porPessoa).length)']:
+              assert point.count(item)==1,(item,point.count(item))
+          for old in ['applyMissingAttendancePeople(porPessoa, {','createAttendancePersonRenderer({','attendancePersonName(','prepareAttendancePersonAccordionItem(fid, porPessoa[fid], {','guardarDados(dados)']:
+              assert old not in point,old
+          assert point.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
+          attendance=Path('assets/js/app-attendance-view.js').read_text(encoding='utf-8')
+          for item in ['function prepareAttendanceBaseState(','function prepareAttendanceViewState(','function prepareMissingAttendanceState(','function applyMissingAttendancePeople(','function createAttendancePersonRenderer(','function createAttendancePersonEntryRenderer(','window.TotalGestAttendanceView = {']:
+              assert attendance.count(item)==1,(item,attendance.count(item))
+          assert "const CACHE = 'totalgest-v167';" in Path('sw.js').read_text(encoding='utf-8')
+          print('RENDER_PONTO_CHARS=',len(point)); print('RENDER_PONTO_LINES=',point.count('\n')+1); print('APP_MIGRATION_BOUNDARY=OK')
           PY
-      - name: Commit functional round 24
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add app.html assets/js/app-attendance-view.js sw.js
-          git diff --cached --check
-          test "$(git diff --cached --name-only | wc -l)" -eq 3
-          git commit -m "Extrair entrada final segura do acordeão de ponto"
-          git push origin HEAD:refactor/separar-index-app
