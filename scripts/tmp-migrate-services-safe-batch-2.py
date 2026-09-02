@@ -194,7 +194,6 @@ old_renderer_end = """                    }
 new_renderer_end = """                });
             }).join('');
 """
-# only target the row renderer ending nearest the actions block by bounded function rewrite
 start = app.index(marker)
 end = app.index('\n        function ', start + len(marker))
 current = app[start:end]
@@ -221,10 +220,11 @@ for item in ['specialtyAndHistoryNoticeFromState({','filterAndSortServices({','s
 for item in ['invoiceTOId:','invoiceMoloniId:','invoiceMoloniUrl:','receiptMoloniUrl:','guideMoloniId:','guideMoloniUrl:','creditNoteMoloniId:','creditNoteMoloniUrl:']:
     assert block.count(item) == 1, (item, block.count(item))
 actions_marker = '                return renderRow(s, rowData, {'
-actions_start_after = block.index(actions_marker) + len('                return renderRow(s, rowData, ')
+actions_start_after = block.index(actions_marker) + len(actions_marker)
 actions_end_after = block.index('\n                });', actions_start_after)
-actions_after = block[actions_start_after:actions_end_after]
-assert actions_after == actions_before.replace('                    actions: ', '', 1), (actions_before, actions_after)
+actions_after_body = block[actions_start_after:actions_end_after]
+actions_before_body = actions_before.split('                    actions: {', 1)[1].rsplit('\n                    }', 1)[0]
+assert actions_after_body == actions_before_body, (actions_before_body, actions_after_body)
 assert len(block) < len(before), (len(before), len(block))
 
 node_test = r"""
