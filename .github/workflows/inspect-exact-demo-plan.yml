@@ -1,4 +1,4 @@
-name: Inspect next extraction candidates
+name: Inspect inventory domain boundary
 
 on:
   push:
@@ -17,28 +17,22 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspect next candidates
+      - name: Inspect articles and suppliers exact
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
-          lines=text.splitlines()
-          names=['renderizarFerramentas','renderizarRelatorioPonto','_renderizarPontoRelatorio','_renderizarEscalasVisual','renderizarFornecedores','renderizarArtigos','renderizarObras']
-          for name in names:
-              markers=[f'        function {name}(',f'        async function {name}(']
-              found=None
-              for m in markers:
-                  try:
-                      s=text.index(m); found=m; break
-                  except ValueError: pass
-              if not found:
-                  print(name,'NOT_FOUND'); continue
+          def block(name):
+              marker='        function '+name+'() {'
+              s=text.index(marker)
               starts=[]
               for pat in ['\n        function ','\n        async function ']:
-                  p=text.find(pat,s+len(found))
+                  p=text.find(pat,s+len(marker))
                   if p!=-1: starts.append(p)
-              e=min(starts) if starts else len(text)
-              b=text[s:e]
-              print(f'{name}: CHARS={len(b)} LINES={b.count(chr(10))+1}')
-              print('  TOKENS:', {k:b.count(k) for k in ['supabase','fetch(','localStorage','_guardar','salvar','excluir','abrirModal','innerHTML','_aplicarFiltroOrdenacao','usuarioLogado','_tenantId()']})
+              e=min(starts)
+              return text[s:e]
+          for name in ['renderizarArtigos','renderizarFornecedores']:
+              b=block(name)
+              print(name+'_CHARS=',len(b)); print(name+'_LINES=',b.count('\n')+1)
+              print('---'+name+'_START---'); print(b); print('---'+name+'_END---')
           PY
