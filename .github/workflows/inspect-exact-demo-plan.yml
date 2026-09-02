@@ -1,32 +1,35 @@
-name: Apply services row preparer migration
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Migrar e validar
+      - name: Estado dos módulos de serviços
         run: |
-          python3 scripts/tmp-migrate-services-row-preparer.py
-      - name: Commit funcional
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add app.html assets/js/app-services-selection.js sw.js
-          git diff --cached --check
-          test -n "$(git diff --cached --name-only)"
-          test "$(git diff --cached --name-only | wc -l)" -eq 3
-          git commit -m "Extrair preparação das linhas de serviços"
-          git push origin HEAD:refactor/separar-index-app
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('app.html').read_text(encoding='utf-8')
+          marker = '        function renderizarServicos() {'
+          start = text.index(marker)
+          end = text.index('\n        function ', start + len(marker))
+          block = text[start:end]
+          for item in ['selectVisibleServices({','selectPendingSpecialtyServices({','createServiceRowPreparer({','filterAndSortServices({','specialtyAndHistoryNotice({','serviceHistoryLoadedSinceLabel(_servicosCarregadoDesde)','servicesTableState({','applyServicesTableState({','serviceRowFromData({']:
+              assert block.count(item) == 1, (item, block.count(item))
+          for item in ['prepareServiceRow({',"_aplicarFiltroOrdenacao('servicos'","_getTableState('servicos')",'servicos.sort(','_toolbarHtml(','servicos.length === 0','Sem resultados para essa pesquisa.',"new Date(_servicosCarregadoDesde + 'T00:00:00')",'statusControl({','serviceStatusControl({','const statusHtml =','const podeEditar =','workSheetActions({','rowLeadingCells({','rowActions({','serviceRow({','leadingCells: {','tbOS.innerHTML = tableState.toolbarHtml','tbody.innerHTML = tableState.emptyRowsHtml','empty.style.display = tableState.emptyDisplay','const folhaOS =','const btnCriarFolha =']:
+              assert block.count(item) == 0, (item, block.count(item))
+          assert block.count('const rowData = prepareRow(s);') == 1
+          assert block.count('badgeClass: statusBadge(s.status)') == 1
+          for item in ['invoiceTOId:','invoiceMoloniId:','invoiceMoloniUrl:','receiptMoloniUrl:','guideMoloniId:','guideMoloniUrl:','creditNoteMoloniId:','creditNoteMoloniUrl:']:
+              assert block.count(item) == 1, (item, block.count(item))
+          assert "const CACHE = 'totalgest-v143';" in Path('sw.js').read_text(encoding='utf-8')
+          print('APP_MIGRATION_BOUNDARY=OK')
+          PY
