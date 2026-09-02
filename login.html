@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entrar — Total Gest</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#243B8F" />
+  <link rel="icon" type="image/png" href="logo-totalgest.png" />
+  <link rel="stylesheet" href="assets/css/login.css" />
+</head>
+<body>
+  <main class="login-shell">
+    <section class="login-card" aria-labelledby="loginTitulo">
+      <a class="brand" href="index.html" aria-label="Voltar ao Total Gest"><img src="logo-totalgest.png" alt="Total Gest" /></a>
+      <div class="dominio">🔒 totalgest.pt</div>
+      <h1 id="loginTitulo">Entrar no Total Gest</h1>
+      <p class="intro">Use o seu email ou, no Portal do Cliente, o NIF.</p>
+      <form id="loginForm" novalidate>
+        <div class="field"><label for="loginEmail">Email ou NIF</label><input id="loginEmail" type="text" autocomplete="username" required /></div>
+        <div class="field"><label for="loginSenha">Palavra-passe</label><div class="password-row"><input id="loginSenha" type="password" autocomplete="current-password" required /><button id="togglePassword" class="eye" type="button" aria-label="Mostrar palavra-passe">👁</button></div></div>
+        <button id="loginButton" class="primary" type="submit">Entrar</button>
+      </form>
+      <button id="forgotButton" class="link-button" type="button">Esqueci-me da password</button>
+      <p id="loginMsg" class="msg" role="status" aria-live="polite"></p>
+      <div class="trial-box">
+        <strong>Ainda não usa o Total Gest?</strong>
+        <span>Experimente 14 dias grátis, sem cartão de crédito.</span>
+        <a class="trial-link" href="registar.html">Começar teste gratuito →</a>
+      </div>
+      <a class="back" href="index.html">← Voltar ao site</a>
+    </section>
+  </main>
+  <div id="companyChooser" class="overlay" hidden><div class="chooser" role="dialog" aria-modal="true" aria-labelledby="chooserTitle"><h2 id="chooserTitle">Escolha a empresa</h2><p>Este NIF tem Portal ativo em mais que uma empresa.</p><div id="companyList" class="company-list"></div><button id="companyCancel" class="secondary" type="button">Cancelar</button></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/auth-config.js"></script>
+  <script src="assets/js/login.js"></script>
+</body>
+</html>

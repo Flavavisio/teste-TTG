@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Experimente 14 dias grátis — Total Gest</title>
+  <meta name="description" content="Crie a sua conta Total Gest e experimente durante 14 dias grátis, sem cartão de crédito." />
+  <meta name="robots" content="noindex,follow" />
+  <meta name="theme-color" content="#243B8F" />
+  <link rel="icon" type="image/png" href="logo-totalgest.png" />
+  <link rel="stylesheet" href="assets/css/registar.css" />
+</head>
+<body>
+  <main class="signup-shell">
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="Voltar ao Total Gest"><img src="logo-totalgest.png" alt="Total Gest" /></a>
+      <a class="top-login" href="login.html">Já tem conta? <strong>Entrar →</strong></a>
+    </header>
+
+    <div class="signup-layout">
+      <section class="pitch" aria-labelledby="trialTitle">
+        <span class="eyebrow">14 dias grátis · sem cartão</span>
+        <h1 id="trialTitle">Veja a sua operação <span>organizada num só lugar.</span></h1>
+        <p class="lead">Crie a conta e teste o Total Gest com a sua equipa. Assim que confirmar o email, fica com acesso ao período gratuito de 14 dias.</p>
+        <div class="benefits">
+          <div class="benefit">Ordens de serviço, agenda e equipas ligadas.</div>
+          <div class="benefit">Clientes, equipamentos e histórico centralizados.</div>
+          <div class="benefit">Manutenção, obras, ponto e stock no mesmo sistema.</div>
+          <div class="benefit">Funciona no browser e instala como app no telemóvel.</div>
+        </div>
+        <p class="trust">Sem cartão de crédito. A conta só é ativada depois de confirmar o seu email.</p>
+      </section>
+
+      <section class="form-card" aria-labelledby="formTitle">
+        <h2 id="formTitle">Criar conta de teste</h2>
+        <p class="form-intro">Preencha os dados da empresa. São os mesmos dados usados no processo de registo atual do Total Gest.</p>
+        <form id="signupForm" novalidate>
+          <div class="field"><label for="su_empresa">Nome da empresa</label><input type="text" id="su_empresa" autocomplete="organization" placeholder="Ex: Construções Silva, Lda" required /></div>
+          <div class="field"><label for="su_nome">O seu nome</label><input type="text" id="su_nome" autocomplete="name" placeholder="Ex: João Silva" required /></div>
+          <div class="field"><label for="su_email">Email profissional</label><input type="email" id="su_email" autocomplete="email" placeholder="nome@empresa.com" required /></div>
+          <div class="grid2">
+            <div class="field"><label for="su_telefone">Telemóvel</label><input type="tel" id="su_telefone" autocomplete="tel" placeholder="Ex: +351 912 345 678" required /></div>
+            <div class="field"><label for="su_colaboradores">Nº colaboradores</label><input type="text" id="su_colaboradores" inputmode="numeric" placeholder="Ex: 8" required /></div>
+          </div>
+          <div class="field"><label for="su_nif">NIF da empresa</label><input type="text" id="su_nif" inputmode="numeric" autocomplete="off" maxlength="9" placeholder="9 dígitos" required /></div>
+          <div class="grid2">
+            <div class="field"><label for="su_senha">Palavra-passe</label><div class="password-wrap"><input type="password" id="su_senha" autocomplete="new-password" placeholder="Mín. 9 caracteres" required /><button class="eye" type="button" data-toggle-password="su_senha" aria-label="Mostrar palavra-passe">👁</button></div></div>
+            <div class="field"><label for="su_senha2">Confirmar palavra-passe</label><div class="password-wrap"><input type="password" id="su_senha2" autocomplete="new-password" placeholder="Repita a palavra-passe" required /><button class="eye" type="button" data-toggle-password="su_senha2" aria-label="Mostrar palavra-passe">👁</button></div></div>
+          </div>
+          <div id="passwordMsg" class="password-msg" aria-live="polite"></div>
+          <button id="signupButton" class="submit" type="submit">Começar 14 dias grátis</button>
+          <p class="form-note">Ao continuar, receberá um email de confirmação. O link de confirmação é válido durante 48 horas.</p>
+          <div id="signupStatus" class="status" role="status" aria-live="polite"></div>
+        </form>
+        <a class="back-home" href="index.html">← Voltar ao site</a>
+      </section>
+    </div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/auth-config.js"></script>
+  <script src="assets/js/registar.js"></script>
+</body>
+</html>

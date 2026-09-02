@@ -1,0 +1,90 @@
+/* Total Gest — tema de marca Blueberry + Cream Soda.
+ * Blueberry: #243B8F | Cream Soda: #FFF0C9
+ * Mantém cores semânticas de sucesso/aviso/erro intactas.
+ */
+:root {
+  --tg-brand-blue: #243B8F;
+  --tg-brand-cream: #FFF0C9;
+  --tg-brand-blue-hover: color-mix(in srgb, var(--tg-brand-blue) 88%, #000);
+  --tg-brand-blue-soft: color-mix(in srgb, var(--tg-brand-blue) 10%, #fff);
+  --tg-brand-cream-soft: color-mix(in srgb, var(--tg-brand-cream) 58%, #fff);
+}
+
+/* ===== Landing / index ===== */
+body#topo {
+  --navy: var(--tg-brand-blue);
+  --blue: var(--tg-brand-blue);
+  --orange: var(--tg-brand-blue);
+  --orange2: var(--tg-brand-blue);
+  --soft: var(--tg-brand-cream-soft);
+  background: #fffdf8;
+}
+body#topo .nav { background: color-mix(in srgb, #fff 92%, var(--tg-brand-cream)); border-bottom-color: color-mix(in srgb, var(--tg-brand-blue) 16%, #fff); }
+body#topo .nav-links { color: var(--tg-brand-blue); }
+body#topo .btn-primary { background: var(--tg-brand-blue); color: var(--tg-brand-cream); box-shadow: 0 12px 30px color-mix(in srgb, var(--tg-brand-blue) 22%, transparent); }
+body#topo .btn-primary:hover { background: var(--tg-brand-blue-hover); }
+body#topo .btn-dark { background: var(--tg-brand-blue); color: #fff; }
+body#topo .btn-outline { border-color: color-mix(in srgb, var(--tg-brand-blue) 28%, #fff); color: var(--tg-brand-blue); background: #fff; }
+body#topo .hero { background: radial-gradient(circle at 85% 20%, color-mix(in srgb, var(--tg-brand-cream) 72%, transparent), transparent 34%), linear-gradient(180deg,#fff 0%,var(--tg-brand-cream-soft) 100%); }
+body#topo .eyebrow { background: var(--tg-brand-cream); color: var(--tg-brand-blue); border-color: color-mix(in srgb, var(--tg-brand-blue) 18%, var(--tg-brand-cream)); }
+body#topo .hero h1, body#topo .hero h1 span, body#topo .section h2, body#topo .pain-section h2, body#topo .card h3, body#topo .step h3, body#topo .faq summary, body#topo .check b, body#topo .proof strong, body#topo .price strong { color: var(--tg-brand-blue); }
+body#topo .kicker, body#topo .kicker-light { color: var(--tg-brand-blue); }
+body#topo .icon { background: var(--tg-brand-cream); color: var(--tg-brand-blue); }
+body#topo .step:before { background: var(--tg-brand-blue); color: var(--tg-brand-cream); }
+body#topo .price.featured { border-color: var(--tg-brand-blue); box-shadow: 0 20px 50px color-mix(in srgb, var(--tg-brand-blue) 14%, transparent); }
+body#topo .price .tag { background: var(--tg-brand-cream); color: var(--tg-brand-blue); }
+body#topo .pain-section, body#topo .media-box, body#topo .cta-box { background: var(--tg-brand-blue); }
+body#topo .pain-section h2, body#topo .cta-box h2 { color: var(--tg-brand-cream); }
+body#topo .pain-list > div { background: color-mix(in srgb, var(--tg-brand-cream) 10%, transparent); border-color: color-mix(in srgb, var(--tg-brand-cream) 24%, transparent); }
+body#topo .cta-box:after { background: color-mix(in srgb, var(--tg-brand-cream) 24%, transparent); }
+body#topo .hero-card { border-color: color-mix(in srgb, var(--tg-brand-blue) 14%, #fff); box-shadow: 0 28px 70px color-mix(in srgb, var(--tg-brand-blue) 18%, transparent); }
+body#topo .hero-card:after { background: color-mix(in srgb, var(--tg-brand-blue) 14%, transparent); }
+
+/* ===== Aplicação ===== */
+body:not(#topo) { background: color-mix(in srgb, var(--tg-brand-cream) 30%, #f8fafc); }
+body:not(#topo) .header { background: var(--tg-brand-blue); }
+body:not(#topo) .btn-login,
+body:not(#topo) .btn-editar-empresa { background: var(--tg-brand-cream); color: var(--tg-brand-blue); }
+body:not(#topo) .btn-login:hover,
+body:not(#topo) .btn-editar-empresa:hover { background: color-mix(in srgb, var(--tg-brand-cream) 86%, #fff); }
+body:not(#topo) .btn-editar-perfil { background: var(--tg-brand-blue-soft); color: var(--tg-brand-blue); }
+body:not(#topo) .btn-super,
+body:not(#topo) .btn-encarregado,
+body:not(#topo) .btn-ponto-admin { background: var(--tg-brand-blue); color: #fff; }
+body:not(#topo) .btn-super:hover,
+body:not(#topo) .btn-encarregado:hover,
+body:not(#topo) .btn-ponto-admin:hover { background: var(--tg-brand-blue-hover); }
+body:not(#topo) .card-principal { border-left-color: var(--tg-brand-blue); }
+body:not(#topo) .card-principal .info h3,
+body:not(#topo) .card-principal .info .count,
+body:not(#topo) .tg-side-brand,
+body:not(#topo) .sino-head,
+body:not(#topo) .onb-opt-tit { color: var(--tg-brand-blue); }
+body:not(#topo) .grupo-cards,
+body:not(#topo) .grupo-cards[data-grupo="operacoes"],
+body:not(#topo) .grupo-cards[data-grupo="rh"],
+body:not(#topo) .grupo-cards[data-grupo="comercial"],
+body:not(#topo) .grupo-cards[data-grupo="gestao"],
+body:not(#topo) .grupo-cards[data-grupo="sistema"],
+body:not(#topo) .grupo-cards[data-grupo="armazem"],
+body:not(#topo) .destaque-grid,
+body:not(#topo) .destaque-grid .card-principal[data-card="funcionarios"],
+body:not(#topo) .destaque-grid .card-principal[data-card="clientes"],
+body:not(#topo) .destaque-grid .card-principal[data-card="frota"],
+body:not(#topo) .destaque-grid .card-principal[data-card="servicos"] { --ac: var(--tg-brand-blue); }
+body:not(#topo) .tg-nav-group { color: var(--tg-brand-blue); }
+body:not(#topo) .tg-side-brand i,
+body:not(#topo) .sino-ic { color: var(--tg-brand-blue); }
+body:not(#topo) .tg-nav-item.active,
+body:not(#topo) .tg-nav-item[aria-current="page"] { background: var(--tg-brand-cream); color: var(--tg-brand-blue); }
+body:not(#topo) .onb-opt.sel { border-color: var(--tg-brand-blue); background: var(--tg-brand-cream-soft); }
+body:not(#topo) .onb-opt .badge,
+body:not(#topo) .onb-mock-sidebar .m-side,
+body:not(#topo) .onb-mock-cards .m-bar { background: var(--tg-brand-blue); }
+body:not(#topo) .subgrupo-gestaoobras .subgrupo-header { color: var(--tg-brand-blue); }
+body:not(#topo) .subgrupo-gestaoobras .card-principal { border-left-color: var(--tg-brand-blue); }
+
+/* O modo escuro mantém fundos escuros; a marca aparece como acento sem reduzir contraste. */
+body.dark-mode:not(#topo) .tg-nav-group { color: var(--tg-brand-cream); }
+body.dark-mode:not(#topo) .tg-nav-item.active,
+body.dark-mode:not(#topo) .tg-nav-item[aria-current="page"] { background: color-mix(in srgb, var(--tg-brand-blue) 48%, #111827); color: var(--tg-brand-cream); }
