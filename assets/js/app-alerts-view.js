@@ -128,6 +128,38 @@
     return { tipo: 'info', titulo: '🎂 ' + (people.length === 1 ? people[0].nome + ' faz anos hoje' : names + ' fazem anos hoje'), sub: 'Aproveite para o(a) cumprimentar!', acao: '' };
   }
 
+  function pendingServiceOrdersAlert(services, adminId) {
+    const count = (Array.isArray(services) ? services : []).filter(function (service) {
+      return service.adminId === adminId && (service.status || 'pendente') === 'pendente';
+    }).length;
+    if (!count) return null;
+    return { tipo: 'info', titulo: count + ' ' + (count === 1 ? 'ordem de serviço pendente' : 'ordens de serviço pendentes'), sub: 'Atribua ou inicie as ordens para manter o fluxo.', acao: "abrirSecao('agenda-obras')" };
+  }
+
+  function pendingAssistancesAlert(services, adminId) {
+    const count = (Array.isArray(services) ? services : []).filter(function (service) {
+      return service.adminId === adminId && service.status === 'por aprovar';
+    }).length;
+    if (!count) return null;
+    return { tipo: 'warning', titulo: count + ' ' + (count === 1 ? 'pedido de assistência por aprovar' : 'pedidos de assistência por aprovar'), sub: 'Pedidos enviados pelos clientes no Portal. Aprove ou rejeite.', acao: "abrirSecao('servicos')" };
+  }
+
+  function pendingRequisitionsAlert(requisitions, adminId) {
+    const count = (Array.isArray(requisitions) ? requisitions : []).filter(function (request) {
+      return request.adminId === adminId && (request.status === 'pendente' || request.status === 'pendente_aprov');
+    }).length;
+    if (!count) return null;
+    return { tipo: 'info', titulo: count + ' ' + (count === 1 ? 'requisição pendente' : 'requisições pendentes'), sub: 'Há requisições a aguardar resposta.', acao: "abrirSecao('requisicoes')" };
+  }
+
+  function pendingLeaveRequestsAlert(requests, adminId) {
+    const count = (Array.isArray(requests) ? requests : []).filter(function (request) {
+      return request.adminId === adminId && (request.status === 'pendente' || request.status === 'pendente_aprov');
+    }).length;
+    if (!count) return null;
+    return { tipo: 'info', titulo: count + ' ' + (count === 1 ? 'pedido de férias/faltas pendente' : 'pedidos de férias/faltas pendentes'), sub: 'Há pedidos a aguardar aprovação.', acao: "abrirSecao('pedidos')" };
+  }
+
   window.TotalGestAlertsView = {
     alertsCard: alertsCard,
     isEmployeeAlertsRole: isEmployeeAlertsRole,
@@ -135,6 +167,10 @@
     employeeAlertCardHtml: employeeAlertCardHtml,
     employeeGlobalAlertHtml: employeeGlobalAlertHtml,
     applyEmployeeAlertState: applyEmployeeAlertState,
-    birthdayAlert: birthdayAlert
+    birthdayAlert: birthdayAlert,
+    pendingServiceOrdersAlert: pendingServiceOrdersAlert,
+    pendingAssistancesAlert: pendingAssistancesAlert,
+    pendingRequisitionsAlert: pendingRequisitionsAlert,
+    pendingLeaveRequestsAlert: pendingLeaveRequestsAlert
   };
 })();

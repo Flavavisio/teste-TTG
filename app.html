@@ -12731,11 +12731,11 @@
             });
             if (birthdayAlert) alertas.push(birthdayAlert);
 
-            const osPend = (dados.servicos || []).filter(s => s.adminId === adminId && (s.status || 'pendente') === 'pendente').length;
-            if (osPend) alertas.push({ tipo: 'info', titulo: `${osPend} ${osPend === 1 ? 'ordem de serviço pendente' : 'ordens de serviço pendentes'}`, sub: 'Atribua ou inicie as ordens para manter o fluxo.', acao: "abrirSecao('agenda-obras')" });
+            const pendingServiceOrdersAlert = window.TotalGestAlertsView.pendingServiceOrdersAlert(dados.servicos || [], adminId);
+            if (pendingServiceOrdersAlert) alertas.push(pendingServiceOrdersAlert);
 
-            const assistPend = (dados.servicos || []).filter(s => s.adminId === adminId && s.status === 'por aprovar').length;
-            if (assistPend) alertas.push({ tipo: 'warning', titulo: `${assistPend} ${assistPend === 1 ? 'pedido de assistência por aprovar' : 'pedidos de assistência por aprovar'}`, sub: 'Pedidos enviados pelos clientes no Portal. Aprove ou rejeite.', acao: "abrirSecao('servicos')" });
+            const pendingAssistancesAlert = window.TotalGestAlertsView.pendingAssistancesAlert(dados.servicos || [], adminId);
+            if (pendingAssistancesAlert) alertas.push(pendingAssistancesAlert);
 
             const adminRecAlerta = dados.administradores?.find(a => a.id === adminId);
             if (moduloContratosAtivo(adminRecAlerta)) {
@@ -12780,11 +12780,11 @@
                 });
             });
 
-            const reqPend = (dados.requisicoes || []).filter(r => r.adminId === adminId && (r.status === 'pendente' || r.status === 'pendente_aprov')).length;
-            if (reqPend) alertas.push({ tipo: 'info', titulo: `${reqPend} ${reqPend === 1 ? 'requisição pendente' : 'requisições pendentes'}`, sub: 'Há requisições a aguardar resposta.', acao: "abrirSecao('requisicoes')" });
+            const pendingRequisitionsAlert = window.TotalGestAlertsView.pendingRequisitionsAlert(dados.requisicoes || [], adminId);
+            if (pendingRequisitionsAlert) alertas.push(pendingRequisitionsAlert);
 
-            const pedPend = (dados.pedidos || []).filter(p => p.adminId === adminId && (p.status === 'pendente' || p.status === 'pendente_aprov')).length;
-            if (pedPend) alertas.push({ tipo: 'info', titulo: `${pedPend} ${pedPend === 1 ? 'pedido de férias/faltas pendente' : 'pedidos de férias/faltas pendentes'}`, sub: 'Há pedidos a aguardar aprovação.', acao: "abrirSecao('pedidos')" });
+            const pendingLeaveRequestsAlert = window.TotalGestAlertsView.pendingLeaveRequestsAlert(dados.pedidos || [], adminId);
+            if (pendingLeaveRequestsAlert) alertas.push(pendingLeaveRequestsAlert);
 
             if (adminRecAlerta?.licenca?.dataExpiracao) {
                 const diasLic = calcularDiasRestantes(adminRecAlerta.licenca.dataExpiracao);
