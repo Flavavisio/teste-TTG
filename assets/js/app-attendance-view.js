@@ -129,6 +129,61 @@
     return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
   }
 
+  function attendancePhotoHtml(url) {
+    return url ? `<img src="${url}" alt="foto" class="foto-miniatura" onclick="window.open('${url}','_blank')" />` : '';
+  }
+
+  function attendanceGpsHtml(lat, lng) {
+    return (lat && lng)
+      ? `<a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" title="Ver no mapa"><i class="fas fa-map-pin gps-icon"></i></a>`
+      : '<span style="color:#cbd5e1;">—</span>';
+  }
+
+  function attendanceDateCell(value, mode) {
+    if (mode !== 'semana') return '';
+    const label = value
+      ? new Date(value + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: '2-digit' })
+      : '—';
+    return `<span style="min-width:78px;font-weight:600;color:#1a5f7a;text-transform:capitalize;">${label}</span>`;
+  }
+
+  function attendanceRecordRow(options) {
+    const o = options || {};
+    return `<div class="ponto-acc-sub-row">
+                        ${o.dateHtml || ''}
+                        <span style="min-width:60px;font-weight:600;">${o.entryHtml || ''}</span>
+                        <span style="min-width:60px;font-weight:600;">${o.exitHtml || ''}</span>
+                        <span style="min-width:60px;">${o.hoursHtml || ''}</span>
+                        <span style="flex:1;min-width:160px;color:#334155;">${o.clientName !== '-' ? o.clientName + ' — ' : ''}${o.workHtml || ''}${o.photoHtml || ''}</span>
+                        <span style="min-width:26px;text-align:center;">${o.gpsEntryHtml || ''}</span>
+                        <span style="min-width:26px;text-align:center;">${o.gpsExitHtml || ''}</span>
+                        <span style="min-width:26px;text-align:center;"><button type="button" class="btn btn-sm btn-outline" style="padding:2px 6px;" title="Editar picagem" onclick="event.stopPropagation();_abrirEdicaoPontoRegisto('${o.recordId || ''}')"><i class="fas fa-pen"></i></button></span>
+                    </div>`;
+  }
+
+  function attendanceAccordionItem(options) {
+    const o = options || {};
+    const header = `<div class="ponto-acc-sub-row" style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#94a3b8;border-bottom:1px solid #e6eaf2;">
+                        ${o.mode === 'semana' ? '<span style="min-width:78px;">Dia</span>' : ''}
+                        <span style="min-width:60px;">Entrada</span>
+                        <span style="min-width:60px;">Saída</span>
+                        <span style="min-width:60px;">Total</span>
+                        <span style="flex:1;min-width:160px;">Local</span>
+                        <span style="min-width:26px;text-align:center;" title="GPS na entrada">GPS ent.</span>
+                        <span style="min-width:26px;text-align:center;" title="GPS na saída">GPS saí.</span>
+                        <span style="min-width:26px;text-align:center;"></span>
+                    </div>`;
+    const body = o.hasRecords ? header + (o.rowsHtml || '') : '<span style="color:#94a3b8;">Sem picagens hoje.</span>';
+    return `<div class="ponto-acc-item" id="ponto-acc-${o.personId || ''}">
+                    <div class="ponto-acc-head" onclick="document.getElementById('ponto-acc-${o.personId || ''}').classList.toggle('aberto')">
+                        <span class="nome">${o.nameHtml || ''}</span>
+                        <span>${o.summaryHtml || ''}</span>
+                        <i class="fas fa-chevron-right chevron"></i>
+                    </div>
+                    <div class="ponto-acc-body">${body}</div>
+                </div>`;
+  }
+
   window.TotalGestAttendanceView = {
     startOfWeekMonday,
     formatHours,
@@ -142,6 +197,11 @@
     selectRecentAttendanceRecords,
     selectAttendanceNavigationRecords,
     groupAttendanceByPerson,
-    attendanceLateLimit
+    attendanceLateLimit,
+    attendancePhotoHtml,
+    attendanceGpsHtml,
+    attendanceDateCell,
+    attendanceRecordRow,
+    attendanceAccordionItem
   };
 })();

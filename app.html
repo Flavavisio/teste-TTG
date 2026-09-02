@@ -7534,41 +7534,31 @@
                     const entradaTxt = foiEditado ? `<span style="color:#0ea5e9;" title="${tituloEdicao}">${r.entrada || '--:--'} <i class="fas fa-pen" style="font-size:.65em;"></i></span>` : (r.entrada || '--:--');
                     const saidaTxtBase = r.pausaAlmoco ? `<span style="color:#d97706;"><i class="fas fa-utensils" title="Pausa almoço"></i> ${r.saida || '--:--'}</span>` : (r.saidaAutomatica ? `${r.saida} <i class="fas fa-triangle-exclamation" title="Saída automática após 12h" style="color:#d97706;"></i>` : (r.saida || '--:--'));
                     const saidaTxt = (foiEditado && !r.pausaAlmoco) ? `<span style="color:#0ea5e9;" title="${tituloEdicao}">${saidaTxtBase} <i class="fas fa-pen" style="font-size:.65em;"></i></span>` : saidaTxtBase;
-                    const fotoHtml = r.foto ? `<img src="${r.foto}" alt="foto" class="foto-miniatura" onclick="window.open('${r.foto}','_blank')" />` : '';
-                    const gpsEntradaHtml = (r.lat && r.lng) ? `<a href="https://www.google.com/maps?q=${r.lat},${r.lng}" target="_blank" title="Ver no mapa"><i class="fas fa-map-pin gps-icon"></i></a>` : '<span style="color:#cbd5e1;">—</span>';
-                    const gpsSaidaHtml = (r.latSaida && r.lngSaida) ? `<a href="https://www.google.com/maps?q=${r.latSaida},${r.lngSaida}" target="_blank" title="Ver no mapa"><i class="fas fa-map-pin gps-icon"></i></a>` : '<span style="color:#cbd5e1;">—</span>';
-                    const dataHtml = _pontoNavModo === 'semana'
-                        ? `<span style="min-width:78px;font-weight:600;color:#1a5f7a;text-transform:capitalize;">${r.data ? new Date(r.data + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'short', day: '2-digit', month: '2-digit' }) : '—'}</span>`
-                        : '';
-                    return `<div class="ponto-acc-sub-row">
-                        ${dataHtml}
-                        <span style="min-width:60px;font-weight:600;">${entradaTxt}</span>
-                        <span style="min-width:60px;font-weight:600;">${saidaTxt}</span>
-                        <span style="min-width:60px;">${horas != null ? _fmtH(horas) : ''}</span>
-                        <span style="flex:1;min-width:160px;color:#334155;">${clienteNome !== '-' ? clienteNome + ' — ' : ''}${obra}${fotoHtml}</span>
-                        <span style="min-width:26px;text-align:center;">${gpsEntradaHtml}</span>
-                        <span style="min-width:26px;text-align:center;">${gpsSaidaHtml}</span>
-                        <span style="min-width:26px;text-align:center;"><button type="button" class="btn btn-sm btn-outline" style="padding:2px 6px;" title="Editar picagem" onclick="event.stopPropagation();_abrirEdicaoPontoRegisto('${r.id}')"><i class="fas fa-pen"></i></button></span>
-                    </div>`;
+                    const fotoHtml = window.TotalGestAttendanceView.attendancePhotoHtml(r.foto);
+                    const gpsEntradaHtml = window.TotalGestAttendanceView.attendanceGpsHtml(r.lat, r.lng);
+                    const gpsSaidaHtml = window.TotalGestAttendanceView.attendanceGpsHtml(r.latSaida, r.lngSaida);
+                    const dataHtml = window.TotalGestAttendanceView.attendanceDateCell(r.data, _pontoNavModo);
+                    return window.TotalGestAttendanceView.attendanceRecordRow({
+                        dateHtml: dataHtml,
+                        entryHtml: entradaTxt,
+                        exitHtml: saidaTxt,
+                        hoursHtml: horas != null ? _fmtH(horas) : '',
+                        clientName: clienteNome,
+                        workHtml: obra,
+                        photoHtml: fotoHtml,
+                        gpsEntryHtml: gpsEntradaHtml,
+                        gpsExitHtml: gpsSaidaHtml,
+                        recordId: r.id
+                    });
                 }).join('');
-                const cabecalho = `<div class="ponto-acc-sub-row" style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#94a3b8;border-bottom:1px solid #e6eaf2;">
-                        ${_pontoNavModo === 'semana' ? '<span style="min-width:78px;">Dia</span>' : ''}
-                        <span style="min-width:60px;">Entrada</span>
-                        <span style="min-width:60px;">Saída</span>
-                        <span style="min-width:60px;">Total</span>
-                        <span style="flex:1;min-width:160px;">Local</span>
-                        <span style="min-width:26px;text-align:center;" title="GPS na entrada">GPS ent.</span>
-                        <span style="min-width:26px;text-align:center;" title="GPS na saída">GPS saí.</span>
-                        <span style="min-width:26px;text-align:center;"></span>
-                    </div>`;
-                return `<div class="ponto-acc-item" id="ponto-acc-${fid}">
-                    <div class="ponto-acc-head" onclick="document.getElementById('ponto-acc-${fid}').classList.toggle('aberto')">
-                        <span class="nome">${escapeHtmlSimples(nomePessoa)}</span>
-                        <span>${resumoGeral}</span>
-                        <i class="fas fa-chevron-right chevron"></i>
-                    </div>
-                    <div class="ponto-acc-body">${regsPessoa.length ? cabecalho + corpo : '<span style="color:#94a3b8;">Sem picagens hoje.</span>'}</div>
-                </div>`;
+                return window.TotalGestAttendanceView.attendanceAccordionItem({
+                    personId: fid,
+                    nameHtml: escapeHtmlSimples(nomePessoa),
+                    summaryHtml: resumoGeral,
+                    rowsHtml: corpo,
+                    hasRecords: regsPessoa.length > 0,
+                    mode: _pontoNavModo
+                });
             }).join('');
             if (!Object.keys(porPessoa).length) { if (contAcc) contAcc.innerHTML = ''; empty.style.display = 'block'; return; }
             if (contAcc) contAcc.innerHTML = htmlAcc;
