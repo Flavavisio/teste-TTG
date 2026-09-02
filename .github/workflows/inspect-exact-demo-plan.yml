@@ -1,48 +1,28 @@
-name: Inspect app migration boundary
+name: Inspect attendance round 20
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [refactor/separar-index-app]
 
 permissions:
   contents: read
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos extraídos
+      - name: Inspect exact point block
         run: |
-          node --check assets/js/app-attendance-view.js
-          node --check sw.js
-          git diff --check
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
-          def block(marker):
-              s=text.index(marker); e=text.index('\n        function ',s+len(marker)); return text[s:e]
-          services=block('        function renderizarServicos() {')
-          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
-              assert services.count(item)==1,(item,services.count(item))
-          point=block('        function renderizarPonto() {')
-          for item in ['prepareAttendanceBaseState({','calculateWeeklyAttendanceTotal(_registrosSemana, {','attendanceWeeklyTarget(','attendanceWeeklyBalanceLabel(totalHoras, _alvoSem)','attendanceViewElements(document)','applyAttendanceEmptyState(attendanceElements, registros.length === 0)','prepareAttendanceNavigation(registros, {','attendanceTimingConfig(adminAtual())','shouldIncludeMissingAttendancePeople({','eligibleAttendancePersonIds(','missingAttendancePersonIds(porPessoa, _todosIds)','addMissingAttendancePeople(porPessoa, idsSemPicagem)','prepareAttendanceAccordionPerson(porPessoa[fid], {','attendanceAccordionItem({','applyAttendanceAccordionState(attendanceElements, htmlAcc, Object.keys(porPessoa).length)']:
-              assert point.count(item)==1,(item,point.count(item))
-          assert point.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
-          for old in ['buildLongWorkAttendanceRecords(','filterAttendanceRecordsForViewer(','attendanceRecentStart(new Date())','selectRecentAttendanceRecords(registros, {','guardarDados(dados)']:
-              assert old not in point, old
-          assert point.count('atualizarEstadoPonto();')==1
-          assert point.count('renderizarResumoPontoAdmin();')==1
-          attendance=Path('assets/js/app-attendance-view.js').read_text(encoding='utf-8')
-          for item in ['function mergeAttendanceRecords(','function prepareAttendanceVisibleRecords(','function prepareAttendancePeriods(','function prepareAttendanceBaseState(','function attendanceViewElements(','function prepareAttendanceNavigation(','function attendanceTimingConfig(','function prepareAttendanceAccordionPerson(','window.TotalGestAttendanceView = {']:
-              assert attendance.count(item)==1,(item,attendance.count(item))
-          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
-          assert shell.count("attendanceView: './assets/js/app-attendance-view.js'")==1
-          sw=Path('sw.js').read_text(encoding='utf-8')
-          assert sw.count("'./assets/js/app-attendance-view.js'")==1
-          assert "const CACHE = 'totalgest-v162';" in sw
-          print('RENDER_PONTO_CHARS=',len(point))
-          print('RENDER_PONTO_LINES=',point.count('\n')+1)
-          print('APP_MIGRATION_BOUNDARY=OK')
+          s=text.index('        function renderizarPonto() {')
+          e=text.index('\n        function ',s+10)
+          block=text[s:e]
+          print('CHARS=',len(block)); print('LINES=',block.count('\n')+1)
+          print(block)
           PY
