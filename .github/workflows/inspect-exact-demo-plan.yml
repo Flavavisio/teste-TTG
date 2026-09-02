@@ -1,82 +1,32 @@
-name: Inspect app migration boundary
+name: Inspect brand deployment boundary
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - refactor/separar-index-app
 
 permissions:
   contents: read
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos extraídos
+      - name: Inspect brand stylesheet loading
         run: |
-          node --check assets/js/app-alerts-view.js
-          node --check assets/js/app-attendance-view.js
-          node --check assets/js/app-clients-view.js
-          node --check assets/js/app-team-view.js
-          node --check assets/js/app-requisitions-view.js
-          node --check assets/js/app-inventory-view.js
-          node --check assets/js/app-works-view.js
-          node --check assets/js/app-tools-view.js
-          node --check assets/js/app-shell.js
-          node --check sw.js
-          git diff --check
           python3 - <<'PY'
           from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8')
-          def block(marker):
-              s=text.index(marker); starts=[]
-              for pat in ['\n        function ','\n        async function ']:
-                  p=text.find(pat,s+len(marker))
-                  if p!=-1: starts.append(p)
-              return text[s:min(starts)]
-          services=block('        function renderizarServicos() {')
-          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
-              assert services.count(item)==1
-          point=block('        function renderizarPonto() {')
-          for item in ['prepareAttendanceBaseState({','prepareAttendanceViewState({','createAttendancePersonEntryRenderer({','renderAttendancePersonEntry(fid, porPessoa[fid], _ausenciaHoje)','applyAttendanceAccordionState(attendanceElements, htmlAcc, Object.keys(porPessoa).length)']:
-              assert point.count(item)==1
-          assert point.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
-          alerts=block('        function renderizarAlertas() {')
-          for item in ['alertsViewElements(document)','prepareInitialAdminAlerts({','runMaintenanceContractAlertFlow({','runFleetAlertFlow({','preparePendingAdminRequestsAlerts({','runLicenseAlertFlow({','runRegulatoryAlertFlow({','runShstAlertFlow({','runWarehouseAlertFlow({','applyAlertsState(cont, alertas, _ehPerfilMobile())']:
-              assert alerts.count(item)==1,(item,alerts.count(item))
-          clients=block('        function renderizarClientes() {')
-          assert clients.count('prepareClientsForRendering({')==1
-          assert clients.count('renderClientsArea({')==1
-          employees=block('        function renderizarFuncionarios() {')
-          assert employees.count('prepareEmployeesForRendering({')==1
-          assert employees.count('renderEmployeesArea({')==1
-          managers=block('        function renderizarEncarregados() {')
-          assert managers.count('selectManagersForUser({')==1
-          assert managers.count('renderManagersArea({')==1
-          requisitions=block('        function renderizarRequisicoes() {')
-          assert requisitions.count('selectRequisitionsForUser(')==1
-          assert requisitions.count('renderRequisitionsArea({')==1
-          articles=block('        function renderizarArtigos() {')
-          suppliers=block('        function renderizarFornecedores() {')
-          assert articles.count('renderArticlesArea({')==1
-          assert suppliers.count('renderSuppliersArea({')==1
-          works=block('        function renderizarObras() {')
-          assert works.count('renderWorksArea({')==1
-          tools=block('        function renderizarFerramentas() {')
-          assert tools.count('renderToolsArea({')==1
-          for item in ["document.getElementById('tabelaFerramentas')","abrirModalFerramenta('","imprimirQRFerramenta('",'tabelaHistoricoLevantamentos','emptyHistoricoLevantamentos']:
-              assert item not in tools,item
-          tv=Path('assets/js/app-tools-view.js').read_text(encoding='utf-8')
-          for item in ['function toolsViewElements(','function selectToolsForTenant(','function selectToolHistoryForTenant(','function formatToolDate(','function toolAvailabilityBadge(','function toolRowHtml(','function historyStatusBadge(','function toolHistoryRowHtml(','function applyToolsState(','function applyToolHistoryState(','function renderToolsArea(','window.TotalGestToolsView={']:
-              assert tv.count(item)==1,(item,tv.count(item))
-          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
-          assert shell.count("inventoryView: './assets/js/app-inventory-view.js'")==1
-          assert shell.count("worksView: './assets/js/app-works-view.js'")==1
-          assert shell.count("toolsView: './assets/js/app-tools-view.js'")==1
-          assert shell.count('if (options.toolsView === true) pedidos.push(MODULOS.toolsView);')==1
-          assert text.count('toolsView: true,')==1
-          assert 'bootstrapSupabase()' in text
-          assert "const CACHE = 'totalgest-v179';" in Path('sw.js').read_text(encoding='utf-8')
-          print('TOOLS_CHARS=',len(tools)); print('TOOLS_LINES=',tools.count('\n')+1); print('APP_MIGRATION_BOUNDARY=OK')
+          for name in ['index.html','app.html','login.html','registar.html','redefinir-password.html','confirmar-trial.html']:
+              p=Path(name)
+              if not p.exists(): continue
+              text=p.read_text(encoding='utf-8')
+              print('---',name,'---')
+              for line in text.splitlines():
+                  if 'stylesheet' in line or 'theme-color' in line or 'brand-theme' in line:
+                      print(line)
+              print('BRAND_LINK_COUNT=',text.count('assets/css/brand-theme.css'))
           PY
