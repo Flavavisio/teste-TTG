@@ -7421,27 +7421,24 @@
             const _horaEsperada = attendanceViewState.expectedTime;
             const _tolerMin = attendanceViewState.toleranceMinutes;
             const _limiteAtraso = attendanceViewState.lateLimit;
-            // Para o admin/sub-admin: mostra também quem ainda não picou nada, se já passou da
-            // tolerância — só faz sentido aplicar isto a "hoje", nunca a dias passados/futuros.
-            if (window.TotalGestAttendanceView.shouldIncludeMissingAttendancePeople({
+            window.TotalGestAttendanceView.applyMissingAttendancePeople(porPessoa, {
                 selectedDate: _hojeSoP,
                 today: getDataHoje(),
                 role: usuarioLogado?.role || '',
                 nowTime: agoraHM,
-                lateLimit: _limiteAtraso
-            })) {
-                const _todosIds = window.TotalGestAttendanceView.eligibleAttendancePersonIds(
-                    dados.funcionarios || [],
-                    dados.encarregados || [],
-                    _tenantId()
-                );
-                const idsSemPicagem = window.TotalGestAttendanceView.missingAttendancePersonIds(porPessoa, _todosIds);
-                window.TotalGestAttendanceView.addMissingAttendancePeople(porPessoa, idsSemPicagem);
-            }
+                lateLimit: _limiteAtraso,
+                employees: dados.funcionarios || [],
+                managers: dados.encarregados || [],
+                tenantId: _tenantId()
+            });
             const htmlAcc = Object.keys(porPessoa).map(fid => {
-                const nomePessoa = (dados.administradores?.find(a => a.id === fid)?.nome) || obterNomeFuncionario(fid);
+                const nomePessoa = window.TotalGestAttendanceView.attendancePersonName(
+                    fid,
+                    dados.administradores || [],
+                    obterNomeFuncionario
+                );
                 const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);
-                const personCard = window.TotalGestAttendanceView.prepareAttendanceAccordionPerson(porPessoa[fid], {
+                return window.TotalGestAttendanceView.prepareAttendancePersonAccordionItem(fid, porPessoa[fid], {
                     absence: _ausenciaHoje,
                     personName: nomePessoa,
                     nowTime: agoraHM,
@@ -7455,14 +7452,6 @@
                     getWorkDescription: obterDescricaoOS,
                     getClientName: obterNomeCliente,
                     escapeHtml: escapeHtmlSimples
-                });
-                return window.TotalGestAttendanceView.attendanceAccordionItem({
-                    personId: fid,
-                    nameHtml: escapeHtmlSimples(nomePessoa),
-                    summaryHtml: personCard.summaryHtml,
-                    rowsHtml: personCard.rowsHtml,
-                    hasRecords: personCard.hasRecords,
-                    mode: _pontoNavModo
                 });
             }).join('');
             if (!window.TotalGestAttendanceView.applyAttendanceAccordionState(attendanceElements, htmlAcc, Object.keys(porPessoa).length)) return;

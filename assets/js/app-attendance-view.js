@@ -604,6 +604,42 @@
     };
   }
 
+  function prepareMissingAttendanceState(groupedRecords, options) {
+    const o = options || {};
+    if (!shouldIncludeMissingAttendancePeople(o)) return { shouldApply: false, missingIds: [] };
+    const eligibleIds = eligibleAttendancePersonIds(o.employees, o.managers, o.tenantId);
+    return {
+      shouldApply: true,
+      missingIds: missingAttendancePersonIds(groupedRecords, eligibleIds)
+    };
+  }
+
+  function applyMissingAttendancePeople(groupedRecords, options) {
+    const state = prepareMissingAttendanceState(groupedRecords, options);
+    if (state.shouldApply) addMissingAttendancePeople(groupedRecords, state.missingIds);
+    return state;
+  }
+
+  function attendancePersonName(personId, administrators, getEmployeeName) {
+    const admin = (Array.isArray(administrators) ? administrators : []).find(function (item) { return item.id === personId; });
+    if (admin && admin.nome) return admin.nome;
+    return typeof getEmployeeName === 'function' ? getEmployeeName(personId) : '';
+  }
+
+  function prepareAttendancePersonAccordionItem(personId, records, options) {
+    const o = options || {};
+    const card = prepareAttendanceAccordionPerson(records, o);
+    const escapeHtml = typeof o.escapeHtml === 'function' ? o.escapeHtml : function (value) { return String(value == null ? '' : value); };
+    return attendanceAccordionItem({
+      personId,
+      nameHtml: escapeHtml(o.personName || ''),
+      summaryHtml: card.summaryHtml,
+      rowsHtml: card.rowsHtml,
+      hasRecords: card.hasRecords,
+      mode: o.mode
+    });
+  }
+
   window.TotalGestAttendanceView = {
     startOfWeekMonday,
     formatHours,
@@ -658,6 +694,10 @@
     prepareAttendanceVisibleRecords,
     prepareAttendancePeriods,
     prepareAttendanceBaseState,
-    prepareAttendanceViewState
+    prepareAttendanceViewState,
+    prepareMissingAttendanceState,
+    applyMissingAttendancePeople,
+    attendancePersonName,
+    prepareAttendancePersonAccordionItem
   };
 })();
