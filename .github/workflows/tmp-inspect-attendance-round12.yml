@@ -1,7 +1,0 @@
-name: Inspect attendance round 12
-
-on:
-  workflow_dispatch:
-
-permissions:
-  contents: read
