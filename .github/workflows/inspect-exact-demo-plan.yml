@@ -1,30 +1,56 @@
-name: Apply Quantum Blue and Ice Glass
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  apply:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
-      - name: Apply brand palette
+      - name: Estado final do refactor e tema
         run: |
-          python3 scripts/tmp-quantum-ice-brand.py
+          node --check assets/js/app-alerts-view.js
+          node --check assets/js/app-attendance-view.js
+          node --check assets/js/app-clients-view.js
+          node --check assets/js/app-team-view.js
+          node --check assets/js/app-requisitions-view.js
+          node --check assets/js/app-inventory-view.js
+          node --check assets/js/app-works-view.js
+          node --check assets/js/app-tools-view.js
+          node --check assets/js/app-shell.js
           node --check sw.js
           git diff --check
-      - name: Commit palette
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html app.html login.html registar.html redefinir-password.html confirmar-trial.html assets/css/brand-theme.css assets/css/login.css assets/css/registar.css assets/css/redefinir-password.css sw.js
-          git commit -m "Trocar identidade para Quantum Blue e Ice Glass"
-          git push origin HEAD:main
+          grep -q 'assets/css/brand-theme.css' index.html
+          grep -q 'assets/css/brand-theme.css' app.html
+          grep -q '#2457FF' assets/css/brand-theme.css
+          grep -q '#DFF7FF' assets/css/brand-theme.css
+          grep -q '#2457FF' assets/css/login.css
+          grep -q '#2457FF' assets/css/registar.css
+          grep -q '#2457FF' assets/css/redefinir-password.css
+          grep -q "const CACHE = 'totalgest-v181';" sw.js
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('app.html').read_text(encoding='utf-8')
+          assert 'bootstrapSupabase()' in text
+          for marker,delegate in [
+            ('function renderizarServicos() {','createServicesAreaRendererFromDocument({'),
+            ('function renderizarPonto() {','prepareAttendanceViewState({'),
+            ('function renderizarAlertas() {','applyAlertsState('),
+            ('function renderizarClientes() {','renderClientsArea({'),
+            ('function renderizarFuncionarios() {','renderEmployeesArea({'),
+            ('function renderizarEncarregados() {','renderManagersArea({'),
+            ('function renderizarRequisicoes() {','renderRequisitionsArea({'),
+            ('function renderizarArtigos() {','renderArticlesArea({'),
+            ('function renderizarFornecedores() {','renderSuppliersArea({'),
+            ('function renderizarObras() {','renderWorksArea({'),
+            ('function renderizarFerramentas() {','renderToolsArea({')]:
+              s=text.index(marker)
+              assert delegate in text[s:s+9000], (marker,delegate)
+          print('FINAL_REFACTOR_AND_QUANTUM_ICE=OK')
+          PY
