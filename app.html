@@ -7400,34 +7400,27 @@
 
             if (window.TotalGestAttendanceView.applyAttendanceEmptyState(attendanceElements, registros.length === 0)) return;
 
-            const totalHoras = window.TotalGestAttendanceView.calculateWeeklyAttendanceTotal(_registrosSemana, {
-                today: getDataHoje(),
-                nowTime: new Date().toTimeString().slice(0, 5),
-                calculateHours: calcularHoras
-            });
-            const _alvoSem = window.TotalGestAttendanceView.attendanceWeeklyTarget(
-                usuarioLogado,
-                dados.funcionarios || [],
-                dados.encarregados || []
-            );
-            document.getElementById('saldoHoras').textContent = window.TotalGestAttendanceView.attendanceWeeklyBalanceLabel(totalHoras, _alvoSem);
-
-            // A partir daqui, mostra o dia (ou semana) selecionado nos filtros, organizado por
-            // pessoa (acordeão) — antes era sempre fixo no dia de hoje.
-            const navigationState = window.TotalGestAttendanceView.prepareAttendanceNavigation(registros, {
+            const attendanceViewState = window.TotalGestAttendanceView.prepareAttendanceViewState({
+                weekRecords: _registrosSemana,
+                recentRecords: registros,
+                user: usuarioLogado,
+                employees: dados.funcionarios || [],
+                managers: dados.encarregados || [],
                 selectedDate: _pontoNavData,
                 today: getDataHoje(),
-                mode: _pontoNavModo
+                mode: _pontoNavModo,
+                nowTime: new Date().toTimeString().slice(0, 5),
+                admin: adminAtual(),
+                calculateHours: calcularHoras
             });
-            _pontoNavData = navigationState.selectedDate;
-            const _hojeSoP = navigationState.selectedDate;
-            const contAcc = attendanceElements.accordion;
-            const porPessoa = navigationState.groupedRecords;
-            const agoraHM = new Date().toTimeString().slice(0, 5);
-            const timingConfig = window.TotalGestAttendanceView.attendanceTimingConfig(adminAtual());
-            const _horaEsperada = timingConfig.expectedTime;
-            const _tolerMin = timingConfig.toleranceMinutes;
-            const _limiteAtraso = timingConfig.lateLimit;
+            document.getElementById('saldoHoras').textContent = attendanceViewState.weeklyBalanceLabel;
+            _pontoNavData = attendanceViewState.selectedDate;
+            const _hojeSoP = attendanceViewState.selectedDate;
+            const porPessoa = attendanceViewState.groupedRecords;
+            const agoraHM = attendanceViewState.nowTime;
+            const _horaEsperada = attendanceViewState.expectedTime;
+            const _tolerMin = attendanceViewState.toleranceMinutes;
+            const _limiteAtraso = attendanceViewState.lateLimit;
             // Para o admin/sub-admin: mostra também quem ainda não picou nada, se já passou da
             // tolerância — só faz sentido aplicar isto a "hoje", nunca a dias passados/futuros.
             if (window.TotalGestAttendanceView.shouldIncludeMissingAttendancePeople({

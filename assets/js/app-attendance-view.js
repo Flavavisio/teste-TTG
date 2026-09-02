@@ -578,6 +578,32 @@
     };
   }
 
+  function prepareAttendanceViewState(options) {
+    const o = options || {};
+    const nowTime = o.nowTime || new Date().toTimeString().slice(0, 5);
+    const totalHours = calculateWeeklyAttendanceTotal(o.weekRecords, {
+      today: o.today,
+      nowTime,
+      calculateHours: o.calculateHours
+    });
+    const weeklyTarget = attendanceWeeklyTarget(o.user, o.employees, o.managers);
+    const navigation = prepareAttendanceNavigation(o.recentRecords, {
+      selectedDate: o.selectedDate,
+      today: o.today,
+      mode: o.mode
+    });
+    const timing = attendanceTimingConfig(o.admin);
+    return {
+      weeklyBalanceLabel: attendanceWeeklyBalanceLabel(totalHours, weeklyTarget),
+      selectedDate: navigation.selectedDate,
+      groupedRecords: navigation.groupedRecords,
+      nowTime,
+      expectedTime: timing.expectedTime,
+      toleranceMinutes: timing.toleranceMinutes,
+      lateLimit: timing.lateLimit
+    };
+  }
+
   window.TotalGestAttendanceView = {
     startOfWeekMonday,
     formatHours,
@@ -631,6 +657,7 @@
     mergeAttendanceRecords,
     prepareAttendanceVisibleRecords,
     prepareAttendancePeriods,
-    prepareAttendanceBaseState
+    prepareAttendanceBaseState,
+    prepareAttendanceViewState
   };
 })();
