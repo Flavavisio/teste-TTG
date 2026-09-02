@@ -1,34 +1,7 @@
 name: Inspect attendance round 12
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
   contents: read
-
-jobs:
-  inspect:
-    if: github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: refactor/separar-index-app
-      - name: Inspecionar alertas e resumo visual de ponto
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8')
-          marker='        function renderizarPonto() {'
-          s=text.index(marker); e=text.index('\n        function ',s+len(marker)); block=text[s:e]
-          tokens=['const alertaHtml =','let resumoGeral;','const foiEditado =','const tituloEdicao =','const entradaTxt =','const saidaTxtBase =']
-          for token in tokens:
-              pos=block.find(token)
-              if pos>=0:
-                  print('\nTOKEN',token)
-                  print(block[max(0,pos-900):min(len(block),pos+4300)])
-          print('CHARS',len(block),'LINES',block.count('\n')+1)
-          PY
