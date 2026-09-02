@@ -1,4 +1,4 @@
-name: Inspect team domain boundary
+name: Apply team domain batch 32
 
 on:
   push:
@@ -7,30 +7,66 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspect employees and managers exact
+      - name: Separate team domain and validate
         run: |
+          python3 scripts/tmp-migrate-team-domain-batch-32.py
+          node --check assets/js/app-team-view.js
+          node --check assets/js/app-shell.js
+          node --check sw.js
+          git diff --check
+          node - <<'NODE'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert');
+          const c={window:{}}; vm.createContext(c); vm.runInContext(fs.readFileSync('assets/js/app-team-view.js','utf8'),c); const v=c.window.TotalGestTeamView;
+          const employees=[{id:'f1',adminId:'a1',nome:'Ana',role:'funcionario'},{id:'f2',adminId:'a1',nome:'Bruno',role:'funcionario'},{id:'x',adminId:'a2',nome:'X'}];
+          const managers=[{id:'e1',adminId:'a1',nome:'Chefe',funcionariosIds:['f1']}];
+          let s=v.selectEmployeesForUser({employees,managers,user:{role:'admin',id:'a1'},tenantId:'a1',getEmployeesByAdmin:()=>employees.filter(x=>x.adminId==='a1')}); assert.strictEqual(s.length,3); assert.strictEqual(s.filter(x=>x._tipo==='encarregado').length,1);
+          s=v.selectEmployeesForUser({employees,managers,user:{role:'encarregado',id:'e1'},tenantId:'a1'}); assert.deepStrictEqual(s.map(x=>x.id),['f1']);
+          assert.strictEqual(v.selectEmployeesForUser({employees,managers,user:{role:'funcionario',id:'f1'},tenantId:'a1'}).length,0);
+          const ms=v.selectManagersForUser({managers,user:{role:'admin',id:'a1'},tenantId:'a1'}); assert.strictEqual(ms.allowed,true); assert.strictEqual(ms.list.length,1);
+          assert.strictEqual(v.selectManagersForUser({managers,user:{role:'funcionario'},tenantId:'a1'}).allowed,false);
+          const html=v.employeeRowHtml({id:'f1',nome:'Ana Silva',role:'subadmin',cargo:'T',telefone:'1',email:'a@b.pt',horasSemanais:40},{mobile:false,userRole:'admin',escapeHtml:String,getAvailableVacation:()=>10,getTotalVacation:()=>22});
+          for (const x of ["abrirModalPermissoes('f1')","toggleSuspensaoPessoa('funcionario','f1')","definirPin('funcionario','f1')","repararContaAcesso('funcionario','f1')","abrirModal('funcionario','f1')","excluirEntidade('funcionario','f1')"]) assert.ok(html.includes(x),x);
+          const mh=v.managerRowHtml({id:'e1',nome:'Chefe',email:'c@b.pt',funcionariosIds:['f1']},{escapeHtml:String,getEmployeeNames:()=> 'Ana'});
+          for (const x of ["definirPin('encarregado','e1')","repararContaAcesso('encarregado','e1')","abrirModalEditarEncarregado('e1')","excluirEncarregado('e1')"]) assert.ok(mh.includes(x),x);
+          console.log('TEAM_DOMAIN_BATCH_32_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8')
+          t=Path('app.html').read_text(encoding='utf-8')
           def block(marker):
-              s=text.index(marker)
-              e=text.index('\n        function ',s+len(marker))
-              return text[s:e]
-          for marker,label in [('        function renderizarFuncionarios() {','EMPLOYEES'),('        function renderizarEncarregados() {','MANAGERS')]:
-              b=block(marker)
-              print(label+'_CHARS=',len(b))
-              print(label+'_LINES=',b.count('\n')+1)
-              print('---'+label+'_START---')
-              print(b)
-              print('---'+label+'_END---')
+              s=t.index(marker); e=t.index('\n        function ',s+len(marker)); return t[s:e]
+          emp=block('        function renderizarFuncionarios() {'); man=block('        function renderizarEncarregados() {')
+          assert emp.count('prepareEmployeesForRendering({')==1
+          assert emp.count('renderEmployeesArea({')==1
+          assert man.count('selectManagersForUser({')==1
+          assert man.count('renderManagersArea({')==1
+          for x in ['toggleSuspensaoPessoa(','definirPin(','repararContaAcesso(','abrirModalEditarEncarregado(','excluirEncarregado(']: assert x not in emp and x not in man,x
+          tv=Path('assets/js/app-team-view.js').read_text(encoding='utf-8')
+          for x in ['function selectEmployeesForUser(','function prepareEmployeesForRendering(','function employeeAvatarHtml(','function employeeNameCellHtml(','function vacationBalanceHtml(','function employeeActionsHtml(','function employeeRowHtml(','function renderEmployeesArea(','function selectManagersForUser(','function managerRowHtml(','function renderManagersArea(','window.TotalGestTeamView = {']:
+              assert tv.count(x)==1,(x,tv.count(x))
+          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
+          assert shell.count("teamView: './assets/js/app-team-view.js'")==1
+          assert shell.count('if (options.teamView === true) pedidos.push(MODULOS.teamView);')==1
+          assert t.count('teamView: true,')==1
+          assert "const CACHE = 'totalgest-v175';" in Path('sw.js').read_text(encoding='utf-8')
+          print('TEAM_DOMAIN_BATCH_32_VERIFY=OK')
           PY
+      - name: Commit functional team separation
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-team-view.js assets/js/app-shell.js sw.js
+          git diff --cached --check
+          test "$(git diff --cached --name-only | wc -l)" -eq 4
+          git commit -m "Separar apresentação do domínio equipa"
+          git push origin HEAD:refactor/separar-index-app
