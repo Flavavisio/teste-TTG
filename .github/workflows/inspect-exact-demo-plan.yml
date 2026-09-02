@@ -27,21 +27,22 @@ jobs:
           node - <<'NODE'
           const fs=require('fs'),vm=require('vm'),assert=require('assert');
           const c={window:{}}; vm.createContext(c); vm.runInContext(fs.readFileSync('assets/js/app-inventory-view.js','utf8'),c); const v=c.window.TotalGestInventoryView;
+          const eq=(actual,expected)=>assert.strictEqual(JSON.stringify(actual),JSON.stringify(expected));
           const arts=[
             {id:'a1',adminId:'t1',nome:'Cabo UTP',marca:'Hik',categoria:'Cabo',referencia:'R1',stockMinimo:5,alertaStock:true,unidade:'un'},
             {id:'a2',adminId:'t1',nome:'Camara',marca:'Uni',categoria:'CCTV',referencia:'R2',stockMinimo:1,alertaStock:false,unidade:'un'},
             {id:'a3',adminId:'t2',nome:'Outro',marca:'X',categoria:'Y',referencia:'R3'}
           ];
-          assert.deepStrictEqual(v.selectArticlesForTenant(arts,'t1').map(x=>x.id),['a1','a2']);
-          assert.deepStrictEqual(v.uniqueSortedValues(arts.slice(0,2),'marca'),['Hik','Uni']);
-          assert.deepStrictEqual(v.filterArticles(arts.slice(0,2),{text:'cabo',brand:'',category:'',reference:''}).map(x=>x.id),['a1']);
-          assert.deepStrictEqual(v.filterArticles(arts.slice(0,2),{text:'',brand:'Uni',category:'',reference:''}).map(x=>x.id),['a2']);
+          eq(v.selectArticlesForTenant(arts,'t1').map(x=>x.id),['a1','a2']);
+          eq(v.uniqueSortedValues(arts.slice(0,2),'marca'),['Hik','Uni']);
+          eq(v.filterArticles(arts.slice(0,2),{text:'cabo',brand:'',category:'',reference:''}).map(x=>x.id),['a1']);
+          eq(v.filterArticles(arts.slice(0,2),{text:'',brand:'Uni',category:'',reference:''}).map(x=>x.id),['a2']);
           const st=v.articleStockState(arts[0],4); assert.strictEqual(st.low,true); assert.strictEqual(st.monitored,true); assert.ok(st.badge.includes('Repor'));
           const row=v.articleRowHtml(arts[0],{escapeHtml:String,getCurrentStock:()=>4,getUnitLabel:()=> 'un'}); assert.strictEqual(row.lowStockAlert,true);
           for (const x of ["abrirModal('artigo','a1')","abrirAjusteStock('a1')","eliminarRegisto('artigos','a1')"]) assert.ok(row.html.includes(x),x);
           const sup=v.supplierRowHtml({id:'f1',nome:'Fornecedor',nif:'1',contacto:'2',email:'x@y.pt'},String);
           for (const x of ["abrirModal('fornecedor','f1')","eliminarRegisto('fornecedores','f1')"]) assert.ok(sup.includes(x),x);
-          assert.deepStrictEqual(v.selectSuppliersForTenant([{id:'f1',adminId:'t1'},{id:'f2',adminId:'t2'}],'t1').map(x=>x.id),['f1']);
+          eq(v.selectSuppliersForTenant([{id:'f1',adminId:'t1'},{id:'f2',adminId:'t2'}],'t1').map(x=>x.id),['f1']);
           console.log('INVENTORY_DOMAIN_BATCH_34_UNIT=OK');
           NODE
           python3 - <<'PY'
