@@ -1,40 +1,47 @@
-name: Inspect app migration boundary
+name: Apply attendance safe batch 22
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [refactor/separar-index-app]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos extraídos
+      - name: Migrate and validate round 22
         run: |
+          python3 scripts/tmp-migrate-attendance-safe-batch-22.py
           node --check assets/js/app-attendance-view.js
           node --check sw.js
           git diff --check
+          node - <<'NODE'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert'); const c={window:{}}; vm.createContext(c); vm.runInContext(fs.readFileSync('assets/js/app-attendance-view.js','utf8'),c); const v=c.window.TotalGestAttendanceView;
+          const state=v.prepareAttendanceViewState({weekRecords:[],recentRecords:[],user:{role:'admin'},role:'admin',employees:[{id:'f1',adminId:'t1'}],managers:[],tenantId:'t1',selectedDate:'2026-09-02',today:'2026-09-02',mode:'dia',nowTime:'10:00',admin:{horaEntrada:'09:00',toleranciaAtraso:15},calculateHours:()=>0});
+          assert.strictEqual(state.selectedDate,'2026-09-02'); assert.ok(state.groupedRecords.f1); assert.ok(state.missingAttendanceState.shouldApply); console.log('SAFE_BATCH_22_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8')
-          def block(marker):
-              s=text.index(marker); e=text.index('\n        function ',s+len(marker)); return text[s:e]
-          services=block('        function renderizarServicos() {')
-          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
-              assert services.count(item)==1
-          point=block('        function renderizarPonto() {')
-          for item in ['prepareAttendanceBaseState({','prepareAttendanceViewState({','applyMissingAttendancePeople(porPessoa, {','attendancePersonName(','prepareAttendancePersonAccordionItem(fid, porPessoa[fid], {','applyAttendanceAccordionState(attendanceElements, htmlAcc, Object.keys(porPessoa).length)']:
-              assert point.count(item)==1,(item,point.count(item))
-          for old in ['shouldIncludeMissingAttendancePeople({','eligibleAttendancePersonIds(','missingAttendancePersonIds(porPessoa, _todosIds)','addMissingAttendancePeople(porPessoa, idsSemPicagem)','prepareAttendanceAccordionPerson(porPessoa[fid], {','attendanceAccordionItem({','guardarDados(dados)']:
-              assert old not in point,old
-          assert point.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
-          attendance=Path('assets/js/app-attendance-view.js').read_text(encoding='utf-8')
-          for item in ['function prepareAttendanceBaseState(','function prepareAttendanceViewState(','function prepareMissingAttendanceState(','function applyMissingAttendancePeople(','function attendancePersonName(','function prepareAttendancePersonAccordionItem(','window.TotalGestAttendanceView = {']:
-              assert attendance.count(item)==1
-          assert "const CACHE = 'totalgest-v164';" in Path('sw.js').read_text(encoding='utf-8')
-          print('RENDER_PONTO_CHARS=',len(point)); print('RENDER_PONTO_LINES=',point.count('\n')+1); print('APP_MIGRATION_BOUNDARY=OK')
+          t=Path('app.html').read_text(); s=t.index('        function renderizarPonto() {'); e=t.index('\n        function ',s+10); p=t[s:e]
+          assert p.count('prepareAttendanceViewState({')==1
+          assert 'applyMissingAttendancePeople(porPessoa, {' not in p
+          assert p.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
+          assert 'guardarDados(dados)' not in p
+          assert "const CACHE = 'totalgest-v165';" in Path('sw.js').read_text()
+          print('SAFE_BATCH_22_VERIFY=OK')
           PY
+      - name: Commit functional round 22
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-attendance-view.js sw.js
+          git diff --cached --check
+          test "$(git diff --cached --name-only | wc -l)" -eq 3
+          git commit -m "Integrar faltas no estado seguro do registo de ponto"
+          git push origin HEAD:refactor/separar-index-app
