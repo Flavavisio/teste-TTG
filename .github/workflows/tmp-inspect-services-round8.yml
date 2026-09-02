@@ -17,18 +17,21 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Mostrar renderizarServicos
+      - name: Mapear funções vizinhas das OS
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           text = Path('app.html').read_text(encoding='utf-8')
           marker = '        function renderizarServicos() {'
-          start = text.index(marker)
-          end = text.index('\n        function ', start + len(marker))
-          block = text[start:end]
-          print('BEGIN_RENDERIZAR_SERVICOS')
-          print(block)
-          print('END_RENDERIZAR_SERVICOS')
-          print('CHARS=', len(block))
-          print('LINES=', len(block.splitlines()))
+          base = text.index(marker)
+          window = text[base:base+50000]
+          matches = list(re.finditer(r'^        function\s+([A-Za-z0-9_$]+)\s*\(', window, re.M))
+          print('BEGIN_FUNCTION_INVENTORY')
+          for i, m in enumerate(matches[:35]):
+              start = m.start()
+              end = matches[i+1].start() if i+1 < len(matches) else min(len(window), start+5000)
+              block = window[start:end]
+              print(f'{i:02d}|{m.group(1)}|chars={len(block)}|lines={len(block.splitlines())}')
+          print('END_FUNCTION_INVENTORY')
           PY
