@@ -6634,8 +6634,9 @@
 
         _registarTabela('servicos', renderizarServicos);
         function renderizarServicos() {
-            const tbody = document.getElementById('tabelaServicos');
-            const empty = document.getElementById('emptyServ');
+            const viewElements = window.TotalGestServicesView.servicesViewElements(document);
+            const tbody = viewElements.tbody;
+            const empty = viewElements.emptyElement;
             let servicos = window.TotalGestServicesSelection.selectVisibleServicesFromData({
                 data: dados,
                 user: usuarioLogado
@@ -6643,16 +6644,15 @@
 
             const totalGeralOS = servicos.length;
 
-            const avisoDiv = document.getElementById('servicosAvisoEspecialidade');
+            const avisoDiv = viewElements.noticeElement;
             if (avisoDiv) {
-                const _pendingSpecialty = window.TotalGestServicesSelection.selectPendingSpecialtyServicesForUser({
-                    services: servicos,
+                const selectPendingSpecialty = window.TotalGestServicesSelection.createPendingSpecialtySelector({
                     user: usuarioLogado,
                     getPendingTypes: serviceId => _tiposEspecialidadePendentes(serviceId)
                 });
                 window.TotalGestServicesView.applySpecialtyAndHistoryNotice({
                     element: avisoDiv,
-                    pendingState: _pendingSpecialty,
+                    pendingState: selectPendingSpecialty(servicos),
                     loadedSince: _servicosCarregadoDesde
                 });
             }
@@ -6667,7 +6667,7 @@
                 totalCount: totalGeralOS,
                 visibleCount: servicos.length,
                 renderToolbar: _toolbarHtml,
-                toolbarElement: document.getElementById('servicosToolbar'),
+                toolbarElement: viewElements.toolbarElement,
                 tbody,
                 emptyElement: empty
             });
@@ -6687,9 +6687,12 @@
                 escapeDescription: escapeHtmlSimples,
                 getWorkTypesHtml: _tiposTrabalhoBadgesHTML
             });
-            tbody.innerHTML = servicos.map(s => {
-                const rowData = prepareRow(s);
-                return renderRow(s, rowData, {
+            window.TotalGestServicesView.renderServiceRowsToTable({
+                tbody,
+                services: servicos,
+                renderItem: s => {
+                    const rowData = prepareRow(s);
+                    return renderRow(s, rowData, {
                         serviceId: s.id,
                         status: s.status,
                         role: usuarioLogado?.role || '',
@@ -6708,8 +6711,9 @@
                         guideMoloniUrl: s.guiaMoloniUrl || '',
                         creditNoteMoloniId: s.notaCreditoMoloniId || '',
                         creditNoteMoloniUrl: s.notaCreditoMoloniUrl || ''
-                });
-            }).join('');
+                    });
+                }
+            });
         }
 
         function finalizarEGerarReportOS(osId) {

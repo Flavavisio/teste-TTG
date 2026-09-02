@@ -88,6 +88,17 @@
     });
   }
 
+  function createPendingSpecialtySelector(options) {
+    options = options || {};
+    return function (services) {
+      return selectPendingSpecialtyServicesForUser({
+        services: services || [],
+        user: options.user || null,
+        getPendingTypes: options.getPendingTypes
+      });
+    };
+  }
+
   function prepareServiceRow(options) {
     options = options || {};
     const service = options.service || {};
@@ -160,6 +171,7 @@
     selectVisibleServicesFromData: selectVisibleServicesFromData,
     selectPendingSpecialtyServices: selectPendingSpecialtyServices,
     selectPendingSpecialtyServicesForUser: selectPendingSpecialtyServicesForUser,
+    createPendingSpecialtySelector: createPendingSpecialtySelector,
     prepareServiceRow: prepareServiceRow,
     createServiceRowPreparer: createServiceRowPreparer,
     createServiceFilterSorter: createServiceFilterSorter,

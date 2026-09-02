@@ -2,6 +2,16 @@
 (function () {
   'use strict';
 
+  function servicesViewElements(doc) {
+    const source = doc || document;
+    return {
+      tbody: source.getElementById('tabelaServicos'),
+      emptyElement: source.getElementById('emptyServ'),
+      noticeElement: source.getElementById('servicosAvisoEspecialidade'),
+      toolbarElement: source.getElementById('servicosToolbar')
+    };
+  }
+
   function serviceHistoryLoadedSinceLabel(value) {
     if (!value) return '—';
     return new Date(value + 'T00:00:00').toLocaleDateString('pt-PT');
@@ -200,10 +210,19 @@
     };
   }
 
+  function renderServiceRowsToTable(options) {
+    const opts = options || {};
+    const services = Array.isArray(opts.services) ? opts.services : [];
+    const renderItem = typeof opts.renderItem === 'function' ? opts.renderItem : function () { return ''; };
+    if (!opts.tbody) return false;
+    opts.tbody.innerHTML = services.map(renderItem).join('');
+    return true;
+  }
+
   function serviceRow(options) {
     const opts = options || {};
     return `<tr>${rowLeadingCells(opts.leadingCells || {})}${rowActions(opts.actions || {})}</tr>`;
   }
 
-  window.TotalGestServicesView = { serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, specialtyAndHistoryNoticeFromState, applySpecialtyAndHistoryNotice, servicesTableState, applyServicesTableState, renderServicesTableState, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRowFromData, createServiceRowRenderer, serviceRow };
+  window.TotalGestServicesView = { servicesViewElements, serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, specialtyAndHistoryNoticeFromState, applySpecialtyAndHistoryNotice, servicesTableState, applyServicesTableState, renderServicesTableState, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRowFromData, createServiceRowRenderer, renderServiceRowsToTable, serviceRow };
 })();
