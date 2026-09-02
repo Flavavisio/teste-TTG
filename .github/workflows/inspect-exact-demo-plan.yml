@@ -1,31 +1,57 @@
-name: Inspect alerts exact boundary
+name: Apply alerts safe batch 29
 
 on:
   push:
     branches: [refactor/separar-index-app]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspect renderizarAlertas exact
+      - name: Migrate and validate alerts orchestration
         run: |
+          python3 scripts/tmp-migrate-alerts-safe-batch-29.py
+          node --check assets/js/app-alerts-view.js
+          node --check sw.js
+          git diff --check
+          node - <<'NODE'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert');
+          const c={window:{}}; vm.createContext(c); vm.runInContext(fs.readFileSync('assets/js/app-alerts-view.js','utf8'),c); const v=c.window.TotalGestAlertsView;
+          assert.strictEqual(v.needsEmployeePushNotification('default',true),true);
+          assert.strictEqual(v.needsEmployeePushNotification('granted',true),false);
+          assert.strictEqual(v.isAdminAlertsRole('admin'),true); assert.strictEqual(v.isAdminAlertsRole('funcionario'),false);
+          assert.strictEqual(v.resolveAlertsAdminId({role:'admin',id:'a1'}),'a1'); assert.strictEqual(v.resolveAlertsAdminId({role:'subadmin',adminId:'a1'}),'a1');
+          const initial=v.prepareInitialAdminAlerts({employees:[],managers:[],services:[{adminId:'a1',status:'pendente'},{adminId:'a1',status:'por aprovar'}],adminId:'a1',now:new Date('2026-09-02')}); assert.strictEqual(initial.length,2);
+          const requests=v.preparePendingAdminRequestsAlerts({requisitions:[{adminId:'a1',status:'pendente'}],requests:[{adminId:'a1',status:'pendente'}],adminId:'a1'}); assert.strictEqual(requests.length,2);
+          const el={style:{},innerHTML:''}; assert.strictEqual(v.applyAlertsState(el,[],false),false); assert.strictEqual(el.style.display,'none');
+          console.log('SAFE_BATCH_29_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8')
-          s=text.index('        function renderizarAlertas() {')
-          e=text.index('\n        function ', s+10)
-          block=text[s:e]
-          print('ALERTS_CHARS=',len(block))
-          print('ALERTS_LINES=',block.count('\n')+1)
-          print('---ALERTS_START---')
-          print(block)
-          print('---ALERTS_END---')
+          t=Path('app.html').read_text()
+          def block(marker):
+              s=t.index(marker); e=t.index('\n        function ',s+len(marker)); return t[s:e]
+          a=block('        function renderizarAlertas() {')
+          for x in ['alertsViewElements(document)','needsEmployeePushNotification(','prepareInitialAdminAlerts({','preparePendingAdminRequestsAlerts({','applyAlertsState(cont, alertas, _ehPerfilMobile())']:
+              assert a.count(x)==1,(x,a.count(x))
+          for x in ["_notificarPorFaseVencimento('contrato_vencer_", "_notificarPorFaseVencimento('frota_vencer_", "_notificarPorFaseVencimento('licenca_", "_notificarPorFaseVencimento('registo_previo_", "_notificarPorFaseVencimento('anepc_", "_notificarPorFaseVencimento('shst_"]:
+              assert a.count(x)==1,(x,a.count(x))
+          assert "const CACHE = 'totalgest-v172';" in Path('sw.js').read_text()
+          print('SAFE_BATCH_29_VERIFY=OK')
           PY
+      - name: Commit functional alerts orchestration
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-alerts-view.js sw.js
+          git diff --cached --check
+          test "$(git diff --cached --name-only | wc -l)" -eq 3
+          git commit -m "Extrair orquestração segura dos alertas"
+          git push origin HEAD:refactor/separar-index-app
