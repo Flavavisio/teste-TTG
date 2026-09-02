@@ -12783,51 +12783,20 @@
         }
         _registarTabela('obras', renderizarObras);
         function renderizarObras() {
-            const tb = document.getElementById('tabelaObras'); if (!tb) return;
-            const isAdminView = usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin';
-            const isEncarregadoView = usuarioLogado?.role === 'encarregado';
-            const adminId = _tenantArmazem();
-            let lista = (dados.obras || []).filter(o => o.adminId === adminId && !o.longaDuracao);
-            if (!isAdminView) lista = lista.filter(o => o.estado !== 'concluida');
-            const totalGeralObras = lista.length;
-            lista = _aplicarFiltroOrdenacao('obras', lista,
-                ['nome', 'morada', 'cidade', o => obterNomeCliente(o.clienteId)],
-                { nome: (a, b) => (a.nome || '').localeCompare(b.nome || ''), estado: (a, b) => (a.estado || '').localeCompare(b.estado || '') });
-            const tbToolbar = document.getElementById('obrasToolbar');
-            if (tbToolbar) tbToolbar.innerHTML = totalGeralObras ? _toolbarHtml('obras', 'Pesquisar por nome, cliente, morada…', lista.length, totalGeralObras) : '';
-
-            if (!isAdminView) {
-                tb.innerHTML = lista.length ? lista.map(o => {
-                    let acoes = `<button class="btn btn-sm" style="background:#334155;color:#fff;" onclick="abrirObraLongaDetalhe('${o.id}')" title="Ver Obra"><i class="fas fa-eye"></i> Ver Obra</button> <button class="btn btn-sm" style="background:#0f766e;color:#fff;" onclick="_obraEscolherRelatorio('${o.id}')" title="Relatório da obra"><i class="fas fa-file-lines"></i></button>`;
-                    if (isEncarregadoView && o.estado !== 'concluida') acoes += ` <button class="btn btn-sm" style="background:#0f766e;color:#fff;" onclick="finalizarObraLonga('${o.id}')" title="Finalizar obra"><i class="fas fa-flag-checkered"></i> Finalizar</button>`;
-                    return `<tr>
-                        <td><strong>${escapeHtmlSimples(o.nome)}</strong></td><td>${o.clienteId ? obterNomeCliente(o.clienteId) : '—'}</td>
-                        <td>${_moradaCompletaObra(o)}</td><td>${_estadoSelectObra(o)}</td>
-                        <td>${acoes}</td>
-                    </tr>`;
-                }).join('') : `<tr><td colspan="5" style="text-align:center;color:#94a3b8;">${totalGeralObras ? 'Sem resultados para essa pesquisa.' : 'Sem obras.'}</td></tr>`;
-                return;
-            }
-
-            tb.innerHTML = lista.length ? lista.map(o => {
-                const nMat = (dados.obraMateriais || []).filter(m => m.obraId === o.id).length;
-                return `<tr>
-<td>${escapeHtmlSimples(o.nome)}</td><td>${o.clienteId ? obterNomeCliente(o.clienteId) : '—'}</td><td>${_moradaCompletaObra(o)}</td><td>${_estadoSelectObra(o)}</td>
-                <td><button class="btn btn-sm" style="background:#334155;color:#fff;" onclick="abrirObraLongaDetalhe('${o.id}')" title="Ver Obra"><i class="fas fa-eye"></i> Ver Obra</button>
-                    <button class="btn btn-sm btn-primary" onclick="abrirPlanoMateriais('${o.id}')" title="Plano de materiais"><i class="fas fa-tasks"></i> Materiais${nMat ? ' (' + nMat + ')' : ''}</button>
-                    <button class="btn btn-sm" style="background:#0f766e;color:#fff;" onclick="_obraEscolherRelatorio('${o.id}')" title="Relatório da obra"><i class="fas fa-file-lines"></i></button>
-                    <button class="btn btn-sm btn-outline" onclick="abrirModal('obra','${o.id}')"><i class="fas fa-pen"></i></button>
-                    <button class="btn btn-sm btn-danger" onclick="eliminarRegisto('obras','${o.id}')"><i class="fas fa-trash"></i></button></td>
-            </tr>`;
-            }).join('') : `<tr><td colspan="5" style="text-align:center;color:#94a3b8;">${totalGeralObras ? 'Sem resultados para essa pesquisa.' : 'Sem obras.'}</td></tr>`;
-            const c = document.getElementById('countObras'); if (c) c.textContent = lista.length;
-            const _setC = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-            _setC('obrasPrep', lista.filter(o => (o.estado || 'preparacao') === 'preparacao').length);
-            _setC('obrasAtivas', lista.filter(o => o.estado === 'ativa').length);
-            _setC('obrasSusp', lista.filter(o => o.estado === 'suspensa').length);
-            _setC('obrasConcl', lista.filter(o => o.estado === 'concluida').length);
+            window.TotalGestWorksView.renderWorksArea({
+                document,
+                works: dados.obras || [],
+                materials: dados.obraMateriais || [],
+                user: usuarioLogado,
+                adminId: _tenantArmazem(),
+                applyFilterSort: _aplicarFiltroOrdenacao,
+                toolbarHtml: _toolbarHtml,
+                escapeHtml: escapeHtmlSimples,
+                getClientName: obterNomeCliente,
+                getFullAddress: _moradaCompletaObra,
+                getStateSelect: _estadoSelectObra
+            });
         }
-
         function _artigosLimparFiltros() {
             const t = document.getElementById('artFiltroTexto'); if (t) t.value = '';
             const m = document.getElementById('artFiltroMarca'); if (m) m.value = '';
@@ -28319,7 +28288,7 @@ window._relPrefill = function(msg){
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
             syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, reportsView: true, alertsView: true,
-            clientsView: true, teamView: true, requisitionsView: true, inventoryView: true, dashboardCounts: true,
+            clientsView: true, teamView: true, requisitionsView: true, inventoryView: true, worksView: true, dashboardCounts: true,
                 dashboardAnalyticsMetrics: true, licenseAddons: true, servicesSelection: true, servicesView: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>

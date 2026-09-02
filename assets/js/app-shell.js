@@ -84,6 +84,7 @@
     teamView: './assets/js/app-team-view.js',
     requisitionsView: './assets/js/app-requisitions-view.js',
     inventoryView: './assets/js/app-inventory-view.js',
+    worksView: './assets/js/app-works-view.js',
     servicesSelection: './assets/js/app-services-selection.js',
     servicesView: './assets/js/app-services-view.js',
     attendanceView: './assets/js/app-attendance-view.js',
@@ -207,6 +208,7 @@
     if (options.teamView === true) pedidos.push(MODULOS.teamView);
     if (options.requisitionsView === true) pedidos.push(MODULOS.requisitionsView);
     if (options.inventoryView === true) pedidos.push(MODULOS.inventoryView);
+    if (options.worksView === true) pedidos.push(MODULOS.worksView);
     if (options.servicesSelection === true) pedidos.push(MODULOS.servicesSelection);
     if (options.servicesView === true) pedidos.push(MODULOS.servicesView);
     if (options.dashboardCounts === true) pedidos.push(MODULOS.dashboardCounts);
