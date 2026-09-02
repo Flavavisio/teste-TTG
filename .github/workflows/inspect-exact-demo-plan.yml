@@ -1,67 +1,51 @@
-name: Apply ninth safe attendance batch
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Migrar e validar nono lote seguro
+      - name: Estado dos módulos extraídos
         run: |
-          python3 scripts/tmp-migrate-attendance-safe-batch-9.py
-          node --check assets/js/app-attendance-view.js
-          node --check sw.js
-          git diff --check
-          node - <<'NODE'
-          const fs = require('fs');
-          const vm = require('vm');
-          const assert = require('assert');
-          const context = { window: {} };
-          vm.createContext(context);
-          vm.runInContext(fs.readFileSync('assets/js/app-attendance-view.js', 'utf8'), context);
-          const view = context.window.TotalGestAttendanceView;
-          assert.strictEqual(view.moveNavigationDate({ value:'2026-09-02', direction:-1, mode:'dia', today:'2026-09-02' }), '2026-09-01');
-          assert.strictEqual(view.moveNavigationDate({ value:'2026-09-02', direction:1, mode:'dia', today:'2026-09-02' }), null);
-          assert.strictEqual(view.moveNavigationDate({ value:'2026-09-02', direction:-1, mode:'semana', today:'2026-09-02' }), '2026-08-26');
-          assert.strictEqual(view.canNavigateAttendance('admin'), true);
-          assert.strictEqual(view.canNavigateAttendance('vendedor'), true);
-          assert.strictEqual(view.canNavigateAttendance('vigilante'), false);
-          assert.strictEqual(view.attendanceNavigationLabel('2026-09-02', 'semana'), '31/8 a 6/9');
-          assert(view.attendanceNavigationLabel('2026-09-02', 'dia').includes('02/09/2026'));
-          assert.strictEqual(view.isAttendanceNextDisabled('2026-09-02', '2026-09-02'), true);
-          assert.strictEqual(view.isAttendanceNextDisabled('2026-09-01', '2026-09-02'), false);
-          console.log('SAFE_BATCH_9_UNIT=OK');
-          NODE
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
-          for item in ['window.TotalGestAttendanceView.moveNavigationDate({','window.TotalGestAttendanceView.canNavigateAttendance(_rNav)','window.TotalGestAttendanceView.attendanceNavigationLabel(_pontoNavData, _pontoNavModo)','window.TotalGestAttendanceView.isAttendanceNextDisabled(_pontoNavData, getDataHoje())']:
+          marker='        function renderizarServicos() {'
+          s=text.index(marker); e=text.index('\n        function ',s+len(marker)); block=text[s:e]
+          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderDependencies: runtimeState.renderDependencies','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
+              assert block.count(item)==1,(item,block.count(item))
+          for item in ['invoiceTOId:','invoiceMoloniId:','invoiceMoloniUrl:','receiptMoloniUrl:','guideMoloniId:','guideMoloniUrl:','creditNoteMoloniId:','creditNoteMoloniUrl:']:
+              assert block.count(item)==1,(item,block.count(item))
+
+          for item in ['window.TotalGestAttendanceView.startOfWeekMonday()','window.TotalGestAttendanceView.formatHours(h)','window.TotalGestAttendanceView.teamSummaryRow({','window.TotalGestAttendanceView.teamSummaryCard({','window.TotalGestAttendanceView.moveNavigationDate({','window.TotalGestAttendanceView.canNavigateAttendance(_rNav)','window.TotalGestAttendanceView.attendanceNavigationLabel(_pontoNavData, _pontoNavModo)','window.TotalGestAttendanceView.isAttendanceNextDisabled(_pontoNavData, getDataHoje())']:
               assert text.count(item)==1,(item,text.count(item))
+
+          point_marker='        function renderizarResumoPontoAdmin() {'
+          ps=text.index(point_marker); pe=text.index('\n        // ---------- Navegador de picagens',ps); point=text[ps:pe]
+          for item in ['const contaParaTotal = x => x._ehObraLonga || (!x.servicoId && !x.obraId);','if (x.entrada && x.saida) horasHoje += calcularHoras(x.entrada, x.saida);','if (x.entrada && x.saida) horasSemana += calcularHoras(x.entrada, x.saida);','const naApp = p.atividade && (Date.now() - p.atividade) < LIMITE_ONLINE_MS;']:
+              assert point.count(item)==1,(item,point.count(item))
+
+          render_marker='        function renderizarPonto() {'
+          rs=text.index(render_marker); re=text.index('\n        function ',rs+len(render_marker)); render=text[rs:re]
+          for item in ['atualizarEstadoPonto();','renderizarResumoPontoAdmin();','guardarDados(dados)']:
+              if item != 'guardarDados(dados)': assert render.count(item)==1,(item,render.count(item))
+          assert render.count('guardarDados(dados)')==0
+
           attendance=Path('assets/js/app-attendance-view.js').read_text(encoding='utf-8')
-          for item in ['function moveNavigationDate(','function canNavigateAttendance(','function attendanceNavigationLabel(','function isAttendanceNextDisabled(']:
+          for item in ['function startOfWeekMonday(','function formatHours(','function teamSummaryRow(','function teamSummaryCard(','function moveNavigationDate(','function canNavigateAttendance(','function attendanceNavigationLabel(','function isAttendanceNextDisabled(','window.TotalGestAttendanceView = {']:
               assert attendance.count(item)==1,(item,attendance.count(item))
+          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
+          assert shell.count("attendanceView: './assets/js/app-attendance-view.js'")==1
           sw=Path('sw.js').read_text(encoding='utf-8')
+          assert sw.count("'./assets/js/app-attendance-view.js'")==1
           assert "const CACHE = 'totalgest-v152';" in sw
-          print('SAFE_BATCH_9_VERIFY=OK')
+          print('APP_MIGRATION_BOUNDARY=OK')
           PY
-      - name: Commit funcional
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add app.html assets/js/app-attendance-view.js sw.js
-          git diff --cached --check
-          test -n "$(git diff --cached --name-only)"
-          test "$(git diff --cached --name-only | wc -l)" -eq 3
-          git commit -m "Extrair navegação segura do registo de ponto"
-          git push origin HEAD:refactor/separar-index-app
