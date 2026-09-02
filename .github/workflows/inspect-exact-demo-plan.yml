@@ -29,7 +29,7 @@ jobs:
           vm.runInContext(fs.readFileSync('assets/js/app-attendance-view.js','utf8'),context);
           const v=context.window.TotalGestAttendanceView;
           const point=[{adminId:'t1',funcionarioId:'f1',data:'2026-09-02',entrada:'08:00',saida:'12:00'}];
-          const long=[{funcionarioId:'f1',obraId:'o1',data:'2026-09-02',entrada:'13:00',saida:'17:00'}];
+          const long=[{adminId:'t1',funcionarioId:'f1',obraId:'o1',data:'2026-09-02',entrada:'13:00',saida:'17:00'}];
           const works=[{id:'o1',descricao:'Obra 1'}];
           const merged=v.mergeAttendanceRecords(point,long,works);
           assert.strictEqual(merged.length,2);
