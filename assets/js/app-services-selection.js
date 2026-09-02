@@ -157,6 +157,14 @@
     };
   }
 
+  function createServicesRuntimeState(options) {
+    options = options || {};
+    return {
+      selectionState: prepareServicesForRendering(options),
+      renderDependencies: createServiceRenderDependencies(options)
+    };
+  }
+
   function prepareServicesForRendering(options) {
     options = options || {};
     const sourceServices = selectVisibleServicesFromData({
@@ -215,6 +223,7 @@
     createServiceRowPreparer: createServiceRowPreparer,
     createServiceRowPreparerFromData: createServiceRowPreparerFromData,
     createServiceRenderDependencies: createServiceRenderDependencies,
+    createServicesRuntimeState: createServicesRuntimeState,
     prepareServicesForRendering: prepareServicesForRendering,
     createServiceFilterSorter: createServiceFilterSorter,
     filterAndSortServices: filterAndSortServices

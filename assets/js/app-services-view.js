@@ -285,10 +285,10 @@
   }
 
   function createServicesAreaRenderer(options) {
-    const opts = options || {}, elements = opts.elements || {};
-    const renderNotice = createPendingSpecialtyNoticeRenderer({ element: elements.noticeElement, selectPending: opts.selectPending, loadedSince: opts.loadedSince });
+    const opts = options || {}, elements = opts.elements || {}, dependencies = opts.renderDependencies || {};
+    const renderNotice = createPendingSpecialtyNoticeRenderer({ element: elements.noticeElement, selectPending: opts.selectPending || dependencies.selectPendingSpecialty, loadedSince: opts.loadedSince });
     const renderTableState = createServicesTableStateRenderer({ renderToolbar: opts.renderToolbar, elements });
-    const renderRows = createServiceRowsRenderer({ elements, prepareRow: opts.prepareRow, role: opts.role, getBadgeClass: opts.getBadgeClass, escapeDescription: opts.escapeDescription, getWorkTypesHtml: opts.getWorkTypesHtml, buildActions: opts.buildActions });
+    const renderRows = createServiceRowsRenderer({ elements, prepareRow: opts.prepareRow || dependencies.prepareRow, role: opts.role, getBadgeClass: opts.getBadgeClass, escapeDescription: opts.escapeDescription, getWorkTypesHtml: opts.getWorkTypesHtml, buildActions: opts.buildActions });
     return function (selectionState) {
       const state = selectionState || {}, services = Array.isArray(state.services) ? state.services : [];
       renderNotice(state.sourceServices || []);
@@ -298,10 +298,25 @@
     };
   }
 
+  function createServicesAreaRendererFromDocument(options) {
+    const opts = options || {};
+    return createServicesAreaRenderer({
+      elements: servicesViewElements(opts.document || document),
+      renderDependencies: opts.renderDependencies,
+      loadedSince: opts.loadedSince,
+      renderToolbar: opts.renderToolbar,
+      role: opts.role,
+      getBadgeClass: opts.getBadgeClass,
+      escapeDescription: opts.escapeDescription,
+      getWorkTypesHtml: opts.getWorkTypesHtml,
+      buildActions: opts.buildActions
+    });
+  }
+
   function serviceRow(options) {
     const opts = options || {};
     return `<tr>${rowLeadingCells(opts.leadingCells || {})}${rowActions(opts.actions || {})}</tr>`;
   }
 
-  window.TotalGestServicesView = { servicesViewElements, serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, specialtyAndHistoryNoticeFromState, applySpecialtyAndHistoryNotice, renderPendingSpecialtyNotice, createPendingSpecialtyNoticeRenderer, servicesTableState, applyServicesTableState, renderServicesTableState, createServicesTableStateRenderer, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRowFromData, createServiceRowRenderer, renderServiceRowsToTable, createPreparedServiceRowsRenderer, createServiceRowsRenderer, createServicesAreaRenderer, serviceRow };
+  window.TotalGestServicesView = { servicesViewElements, serviceHistoryLoadedSinceLabel, specialtyAndHistoryNotice, specialtyAndHistoryNoticeFromState, applySpecialtyAndHistoryNotice, renderPendingSpecialtyNotice, createPendingSpecialtyNoticeRenderer, servicesTableState, applyServicesTableState, renderServicesTableState, createServicesTableStateRenderer, statusControl, serviceStatusControl, workSheetActions, rowLeadingCells, primaryRowActions, erpRowActions, rowActions, serviceRowFromData, createServiceRowRenderer, renderServiceRowsToTable, createPreparedServiceRowsRenderer, createServiceRowsRenderer, createServicesAreaRenderer, createServicesAreaRendererFromDocument, serviceRow };
 })();

@@ -6634,30 +6634,23 @@
 
         _registarTabela('servicos', renderizarServicos);
         function renderizarServicos() {
-            const viewElements = window.TotalGestServicesView.servicesViewElements(document);
-            const selectionState = window.TotalGestServicesSelection.prepareServicesForRendering({
+            const runtimeState = window.TotalGestServicesSelection.createServicesRuntimeState({
                 data: dados,
                 user: usuarioLogado,
                 applyFilterSort: _aplicarFiltroOrdenacao,
                 getTableState: _getTableState,
-                getClientName: obterNomeCliente
-            });
-            const renderDependencies = window.TotalGestServicesSelection.createServiceRenderDependencies({
-                data: dados,
-                user: usuarioLogado,
+                getClientName: obterNomeCliente,
                 getPendingTypes: serviceId => _tiposEspecialidadePendentes(serviceId),
                 getEmployeeName: obterNomeFuncionario,
-                getClientName: obterNomeCliente,
                 generateNumber: gerarNumeroRegisto,
                 hasMaterials: _osTemMateriais,
                 isErpActive: moduloErpAtivo
             });
-            const renderServicesArea = window.TotalGestServicesView.createServicesAreaRenderer({
-                elements: viewElements,
-                selectPending: renderDependencies.selectPendingSpecialty,
+            const renderServicesArea = window.TotalGestServicesView.createServicesAreaRendererFromDocument({
+                document,
+                renderDependencies: runtimeState.renderDependencies,
                 loadedSince: _servicosCarregadoDesde,
                 renderToolbar: _toolbarHtml,
-                prepareRow: renderDependencies.prepareRow,
                 role: usuarioLogado?.role || '',
                 getBadgeClass: statusBadge,
                 escapeDescription: escapeHtmlSimples,
@@ -6683,7 +6676,7 @@
                         creditNoteMoloniUrl: s.notaCreditoMoloniUrl || ''
                 })
             });
-            renderServicesArea(selectionState);
+            renderServicesArea(runtimeState.selectionState);
         }
 
         function finalizarEGerarReportOS(osId) {
