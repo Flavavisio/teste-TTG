@@ -12724,17 +12724,13 @@
         }
 
         function renderizarFornecedores() {
-            const tb = document.getElementById('tabelaFornecedores'); if (!tb) return;
-            const adminId = _tenantArmazem();
-            const lista = (dados.fornecedores || []).filter(f => f.adminId === adminId);
-            tb.innerHTML = lista.length ? lista.map(f => `<tr>
-                <td>${escapeHtmlSimples(f.nome)}</td><td>${escapeHtmlSimples(f.nif || '—')}</td><td>${escapeHtmlSimples(f.contacto || '—')}</td><td>${escapeHtmlSimples(f.email || '—')}</td>
-                <td><button class="btn btn-sm btn-outline" onclick="abrirModal('fornecedor','${f.id}')"><i class="fas fa-pen"></i></button>
-                    <button class="btn btn-sm btn-danger" onclick="eliminarRegisto('fornecedores','${f.id}')"><i class="fas fa-trash"></i></button></td>
-            </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">Sem fornecedores.</td></tr>';
-            const c = document.getElementById('countFornecedores'); if (c) c.textContent = lista.length;
+            window.TotalGestInventoryView.renderSuppliersArea({
+                document,
+                suppliers: dados.fornecedores || [],
+                adminId: _tenantArmazem(),
+                escapeHtml: escapeHtmlSimples
+            });
         }
-
         function _moradaCompletaObra(o) {
             const partes = [o.morada, [o.codigoPostal, o.cidade].filter(Boolean).join(' ')].filter(Boolean);
             return partes.length ? escapeHtmlSimples(partes.join(', ')) : '—';
@@ -12840,70 +12836,15 @@
             renderizarArtigos();
         }
         function renderizarArtigos() {
-            const tb = document.getElementById('tabelaArtigos'); if (!tb) return;
-            const adminId = _tenantArmazem();
-            let lista = (dados.artigos || []).filter(a => a.adminId === adminId);
-
-            // Preenche os dropdowns de Marca/Categoria/Referência com os valores que existem
-            // mesmo nos artigos desta empresa — refeito sempre que a lista de artigos muda, para
-            // acompanhar novos artigos/marcas/categorias sem precisar de mexer em mais nada.
-            const selMarca = document.getElementById('artFiltroMarca');
-            const selCategoria = document.getElementById('artFiltroCategoria');
-            const selReferencia = document.getElementById('artFiltroReferencia');
-            if (selMarca && selCategoria && selReferencia) {
-                const _preencherSelect = (sel, valores, placeholder) => {
-                    const atual = sel.value;
-                    sel.innerHTML = `<option value="">${placeholder}</option>` + valores.map(v => `<option value="${escapeHtmlSimples(v)}">${escapeHtmlSimples(v)}</option>`).join('');
-                    if (valores.includes(atual)) sel.value = atual;
-                };
-                const marcas = [...new Set(lista.map(a => (a.marca || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt'));
-                const categorias = [...new Set(lista.map(a => (a.categoria || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt'));
-                const referencias = [...new Set(lista.map(a => (a.referencia || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt'));
-                _preencherSelect(selMarca, marcas, 'Todas as marcas');
-                _preencherSelect(selCategoria, categorias, 'Todas as categorias');
-                _preencherSelect(selReferencia, referencias, 'Todas as referências');
-            }
-
-            // Aplica os filtros — o texto livre procura em nome, marca, categoria e referência
-            // ao mesmo tempo, à medida que se escreve.
-            const filtroTexto = (document.getElementById('artFiltroTexto')?.value || '').trim().toLowerCase();
-            const filtroMarca = document.getElementById('artFiltroMarca')?.value || '';
-            const filtroCategoria = document.getElementById('artFiltroCategoria')?.value || '';
-            const filtroReferencia = document.getElementById('artFiltroReferencia')?.value || '';
-            if (filtroTexto) {
-                lista = lista.filter(a =>
-                    (a.nome || '').toLowerCase().includes(filtroTexto) ||
-                    (a.marca || '').toLowerCase().includes(filtroTexto) ||
-                    (a.categoria || '').toLowerCase().includes(filtroTexto) ||
-                    (a.referencia || '').toLowerCase().includes(filtroTexto)
-                );
-            }
-            if (filtroMarca) lista = lista.filter(a => (a.marca || '').trim() === filtroMarca);
-            if (filtroCategoria) lista = lista.filter(a => (a.categoria || '').trim() === filtroCategoria);
-            if (filtroReferencia) lista = lista.filter(a => (a.referencia || '').trim() === filtroReferencia);
-
-            let baixo = 0;
-            tb.innerHTML = lista.length ? lista.map(a => {
-                const st = stockAtualArtigo(a.id);
-                const min = a.stockMinimo;
-                const emFalta = (min != null && st <= min);
-                const monit = a.alertaStock === true;
-                if (emFalta && monit) baixo++;
-                const badge = emFalta
-                    ? `<span style="color:#dc2626;font-weight:700;"><i class="fas fa-exclamation-triangle"></i> Repor${monit ? ' <i class="fas fa-bell" title="Alerta ativo"></i>' : ''}</span>`
-                    : `<span style="color:#16a34a;font-weight:600;">OK${monit ? ' <i class="fas fa-bell" title="Alerta ativo" style="color:#94a3b8;"></i>' : ''}</span>`;
-                return `<tr>
-                    <td>${escapeHtmlSimples(a.nome)}</td><td>${escapeHtmlSimples(a.marca || '—')}</td><td>${escapeHtmlSimples(a.categoria || '—')}</td><td>${escapeHtmlSimples(a.referencia || '—')}</td><td>${_unidadeLabel(a.unidade)}</td>
-                    <td style="font-weight:700;">${st} ${_unidadeLabel(a.unidade)}</td><td>${min != null ? min : '—'}</td><td>${badge}</td>
-                    <td><button class="btn btn-sm btn-outline" onclick="abrirModal('artigo','${a.id}')" title="Editar"><i class="fas fa-pen"></i></button>
-                        <button class="btn btn-sm btn-outline" onclick="abrirAjusteStock('${a.id}')" title="Ajustar stock"><i class="fas fa-sliders-h"></i></button>
-                        <button class="btn btn-sm btn-danger" onclick="eliminarRegisto('artigos','${a.id}')"><i class="fas fa-trash"></i></button></td>
-                </tr>`;
-            }).join('') : `<tr><td colspan="9" style="text-align:center;color:#94a3b8;">${(filtroTexto || filtroMarca || filtroCategoria || filtroReferencia) ? 'Nenhum artigo corresponde ao filtro.' : 'Sem artigos.'}</td></tr>`;
-            const c = document.getElementById('countArtigos'); if (c) c.textContent = lista.length;
-            const cb = document.getElementById('countStockBaixo'); if (cb) cb.textContent = baixo;
+            window.TotalGestInventoryView.renderArticlesArea({
+                document,
+                articles: dados.artigos || [],
+                adminId: _tenantArmazem(),
+                escapeHtml: escapeHtmlSimples,
+                getCurrentStock: stockAtualArtigo,
+                getUnitLabel: _unidadeLabel
+            });
         }
-
         function renderizarEncomendas() {
             const tb = document.getElementById('tabelaEncomendas'); if (!tb) return;
             const adminId = _tenantArmazem();
@@ -28378,7 +28319,7 @@ window._relPrefill = function(msg){
   <script>window.TotalGestApp.init({ pwa: true, toast: true, ui: true, dialogs: true, connectivity: true, syncStatus: true, cache: true, syncHelpers: true, syncDiff: true,
                 syncSnapshots: true,
             syncPending: true, periodLoading: true, loadContext: true, loadQueries: true, loadTransform: true, loadOrchestrator: true, modalFuncionario: true, modalCliente: true, modalFornecedor: true, modalRequisicao: true, modalArtigo: true, modalFolha: true, modalServico: true, modalObra: true, saveFormFornecedor: true, saveFormArtigo: true, saveFormRequisicao: true, saveFormObra: true, saveFormFolhaContext: true, saveFormFolhaSignature: true, saveFormFolhaObject: true, saveFormFolhaAssist: true, saveFormFolhaConsumos: true, saveFormFolhaManutencao: true, saveFormFolhaPonto: true, saveFormFolha: true, saveFormCliente: true, saveFormFuncionario: true, saveFormFuncionarioEncarregado: true, saveFormFuncionarioOrchestrator: true, saveFormServicoValidation: true, saveFormServicoContext: true, saveFormServicoObject: true, saveFormServicoConflicts: true, saveFormServicoRegistration: true, saveFormServico: true, saveFormPersist: true, saveFormServicoNotifications: true, saveFormFolhaUsage: true, saveFormFolhaOsPending: true, saveFormFolhaObraPending: true, saveFormFinalize: true, saveFormAuth: true, saveFormContactValidation: true, saveFormDispatch: true, saveFormPostPersist: true, profileModalSuperadmin: true, profileModalDistributor: true, profileModalAdmin: true, profileModalWorker: true, profileModal: true, profileHelpers: true, profileSaveSuperadmin: true, profileSaveDistributor: true, profileSaveAdmin: true, profileSaveWorker: true, profileSave: true, cardVisibility: true, homeDashboard: true, myDay: true, reportsSuperadminMetrics: true, reportsModuleMetrics: true, reportsDistributorMetrics: true, reportsView: true, alertsView: true,
-            clientsView: true, teamView: true, requisitionsView: true, dashboardCounts: true,
+            clientsView: true, teamView: true, requisitionsView: true, inventoryView: true, dashboardCounts: true,
                 dashboardAnalyticsMetrics: true, licenseAddons: true, servicesSelection: true, servicesView: true, syncPrepare: true, syncFiles: true, syncCollections: true, syncOrchestrator: true, syncFinalize: true, syncUpsert: true, syncLicenses: true, syncEncarregados: true, syncDelete: true, saveQueue: true, bootstrap: true });</script>
 </body>
 </html>
