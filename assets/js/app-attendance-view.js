@@ -488,6 +488,61 @@
       : `Horas esta semana: ${hours}h ${minutes}m`;
   }
 
+  function attendanceViewElements(doc) {
+    const d = doc || document;
+    return {
+      empty: d.getElementById('emptyPonto'),
+      accordion: d.getElementById('pontoAcordeao'),
+      weeklyBalance: d.getElementById('saldoHoras')
+    };
+  }
+
+  function applyAttendanceEmptyState(elements, isEmpty) {
+    const e = elements || {};
+    if (isEmpty) {
+      if (e.accordion) e.accordion.innerHTML = '';
+      if (e.empty) e.empty.style.display = 'block';
+      if (e.weeklyBalance) e.weeklyBalance.textContent = 'Horas esta semana: 0h 0m';
+      return true;
+    }
+    if (e.empty) e.empty.style.display = 'none';
+    return false;
+  }
+
+  function prepareAttendanceNavigation(records, options) {
+    const o = options || {};
+    const selectedDate = o.selectedDate || o.today;
+    const selectedRecords = selectAttendanceNavigationRecords(records, selectedDate, o.mode);
+    return {
+      selectedDate,
+      selectedRecords,
+      groupedRecords: groupAttendanceByPerson(selectedRecords)
+    };
+  }
+
+  function attendanceTimingConfig(adminConfig) {
+    const cfg = adminConfig || {};
+    const expectedTime = cfg.horaEntradaHabitual || '09:00';
+    const toleranceMinutes = cfg.toleranciaAtrasoMin != null ? cfg.toleranciaAtrasoMin : 15;
+    return {
+      expectedTime,
+      toleranceMinutes,
+      lateLimit: attendanceLateLimit(expectedTime, toleranceMinutes)
+    };
+  }
+
+  function applyAttendanceAccordionState(elements, html, peopleCount) {
+    const e = elements || {};
+    if (!Number(peopleCount || 0)) {
+      if (e.accordion) e.accordion.innerHTML = '';
+      if (e.empty) e.empty.style.display = 'block';
+      return false;
+    }
+    if (e.accordion) e.accordion.innerHTML = html || '';
+    if (e.empty) e.empty.style.display = 'none';
+    return true;
+  }
+
   window.TotalGestAttendanceView = {
     startOfWeekMonday,
     formatHours,
@@ -532,6 +587,11 @@
     attendanceRecentStart,
     calculateWeeklyAttendanceTotal,
     attendanceWeeklyTarget,
-    attendanceWeeklyBalanceLabel
+    attendanceWeeklyBalanceLabel,
+    attendanceViewElements,
+    applyAttendanceEmptyState,
+    prepareAttendanceNavigation,
+    attendanceTimingConfig,
+    applyAttendanceAccordionState
   };
 })();

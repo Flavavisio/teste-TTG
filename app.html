@@ -7384,7 +7384,8 @@
         function renderizarPonto() {
             atualizarEstadoPonto();
             renderizarResumoPontoAdmin();
-            const empty = document.getElementById('emptyPonto');
+            const attendanceElements = window.TotalGestAttendanceView.attendanceViewElements(document);
+            const empty = attendanceElements.empty;
             // _ehObraLonga: true marca estes registos como vindos do timer de obra (obraPontoLonga),
             // que corre em PARALELO ao ponto geral (não é um turno à parte) — por isso continuam a
             // aparecer na listagem (para se ver em que obra a pessoa esteve), mas não podem somar
@@ -7410,13 +7411,7 @@
             const _registrosSemana = _periodRecords.weekRecords;
             registros = _periodRecords.recentRecords;
 
-            if (registros.length === 0) {
-                const contAccVazio = document.getElementById('pontoAcordeao'); if (contAccVazio) contAccVazio.innerHTML = '';
-                empty.style.display = 'block';
-                document.getElementById('saldoHoras').textContent = 'Horas esta semana: 0h 0m';
-                return;
-            }
-            empty.style.display = 'none';
+            if (window.TotalGestAttendanceView.applyAttendanceEmptyState(attendanceElements, registros.length === 0)) return;
 
             const totalHoras = window.TotalGestAttendanceView.calculateWeeklyAttendanceTotal(_registrosSemana, {
                 today: getDataHoje(),
@@ -7432,21 +7427,20 @@
 
             // A partir daqui, mostra o dia (ou semana) selecionado nos filtros, organizado por
             // pessoa (acordeão) — antes era sempre fixo no dia de hoje.
-            if (!_pontoNavData) _pontoNavData = getDataHoje();
-            const _hojeSoP = _pontoNavData;
-            const registrosHoje = window.TotalGestAttendanceView.selectAttendanceNavigationRecords(
-                registros,
-                _hojeSoP,
-                _pontoNavModo
-            );
-            const contAcc = document.getElementById('pontoAcordeao');
-            empty.style.display = 'none';
-            const porPessoa = window.TotalGestAttendanceView.groupAttendanceByPerson(registrosHoje);
+            const navigationState = window.TotalGestAttendanceView.prepareAttendanceNavigation(registros, {
+                selectedDate: _pontoNavData,
+                today: getDataHoje(),
+                mode: _pontoNavModo
+            });
+            _pontoNavData = navigationState.selectedDate;
+            const _hojeSoP = navigationState.selectedDate;
+            const contAcc = attendanceElements.accordion;
+            const porPessoa = navigationState.groupedRecords;
             const agoraHM = new Date().toTimeString().slice(0, 5);
-            const _adminCfg = adminAtual();
-            const _horaEsperada = _adminCfg?.horaEntradaHabitual || '09:00';
-            const _tolerMin = _adminCfg?.toleranciaAtrasoMin != null ? _adminCfg.toleranciaAtrasoMin : 15;
-            const _limiteAtraso = window.TotalGestAttendanceView.attendanceLateLimit(_horaEsperada, _tolerMin);
+            const timingConfig = window.TotalGestAttendanceView.attendanceTimingConfig(adminAtual());
+            const _horaEsperada = timingConfig.expectedTime;
+            const _tolerMin = timingConfig.toleranceMinutes;
+            const _limiteAtraso = timingConfig.lateLimit;
             // Para o admin/sub-admin: mostra também quem ainda não picou nada, se já passou da
             // tolerância — só faz sentido aplicar isto a "hoje", nunca a dias passados/futuros.
             if (window.TotalGestAttendanceView.shouldIncludeMissingAttendancePeople({
@@ -7491,8 +7485,7 @@
                     mode: _pontoNavModo
                 });
             }).join('');
-            if (!Object.keys(porPessoa).length) { if (contAcc) contAcc.innerHTML = ''; empty.style.display = 'block'; return; }
-            if (contAcc) contAcc.innerHTML = htmlAcc;
+            if (!window.TotalGestAttendanceView.applyAttendanceAccordionState(attendanceElements, htmlAcc, Object.keys(porPessoa).length)) return;
         }
 
         // ===== Edição de picagens pelo admin (com motivo obrigatório e histórico) =====
