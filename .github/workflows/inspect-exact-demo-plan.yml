@@ -1,73 +1,67 @@
-name: Apply requisitions domain batch 33
+name: Inspect app migration boundary
 
 on:
-  push:
-    branches:
-      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  migrate:
-    if: github.actor != 'github-actions[bot]'
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Separate requisitions domain and validate
+      - name: Estado dos módulos extraídos
         run: |
-          python3 scripts/tmp-migrate-requisitions-domain-batch-33.py
+          node --check assets/js/app-alerts-view.js
+          node --check assets/js/app-attendance-view.js
+          node --check assets/js/app-clients-view.js
+          node --check assets/js/app-team-view.js
           node --check assets/js/app-requisitions-view.js
           node --check assets/js/app-shell.js
           node --check sw.js
           git diff --check
-          node - <<'NODE'
-          const fs=require('fs'),vm=require('vm'),assert=require('assert');
-          const c={window:{}}; vm.createContext(c); vm.runInContext(fs.readFileSync('assets/js/app-requisitions-view.js','utf8'),c); const v=c.window.TotalGestRequisitionsView;
-          const reqs=[{id:'r1',adminId:'a1',funcionarioId:'f1',status:'pendente_aprov'},{id:'r2',adminId:'a2',funcionarioId:'f2',status:'aguarda_validacao'}];
-          assert.deepStrictEqual(v.selectRequisitionsForUser(reqs,{role:'admin',id:'a1'},'a1').map(x=>x.id),['r1']);
-          assert.deepStrictEqual(v.selectRequisitionsForUser(reqs,{role:'funcionario',id:'f2'},'a2').map(x=>x.id),['r2']);
-          assert.deepStrictEqual(v.selectRequisitionsForUser(reqs,{role:'encarregado',id:'f1'},'a1').map(x=>x.id),['r1']);
-          assert.strictEqual(v.selectRequisitionsForUser(reqs,{role:'superadmin'},'a1').length,0);
-          assert.strictEqual(v.selectRequisitionsForUser(reqs,{role:'subadmin',adminId:'a1'},'a1').length,2);
-          assert.strictEqual(v.requisitionStatusLabel('pendente_aprov'),'Pendente');
-          assert.strictEqual(v.requisitionStatusLabel('aguarda_validacao'),'Aguarda Validação');
-          assert.strictEqual(v.canApproveRequisition(reqs[0],{role:'admin'},'a1'),true);
-          const html=v.requisitionRowHtml({id:'r1',adminId:'a1',status:'pendente_aprov',itens:[{nome:'Cabo',quantidade:2}],descricao:'Teste',data:'2026-09-02',anexo:'x.pdf'},{user:{role:'admin'},tenantId:'a1',escapeHtml:String,getServiceDescription:()=> 'OS 1',getStatusBadge:()=> 'badge'});
-          for (const x of ["aprovarRequisicao('r1')","rejeitarRequisicao('r1')","abrirModal('requisicao','r1')",'Cabo (2)','x.pdf']) assert.ok(html.includes(x),x);
-          const html2=v.requisitionRowHtml({id:'r2',adminId:'a1',status:'aguarda_validacao',itens:[]},{user:{role:'subadmin'},tenantId:'a1',escapeHtml:String,getServiceDescription:()=> '-',getStatusBadge:()=> 'badge'});
-          assert.ok(html2.includes("validarRequisicao('r2')"));
-          console.log('REQUISITIONS_DOMAIN_BATCH_33_UNIT=OK');
-          NODE
           python3 - <<'PY'
           from pathlib import Path
-          t=Path('app.html').read_text(encoding='utf-8')
+          text=Path('app.html').read_text(encoding='utf-8')
           def block(marker):
-              s=t.index(marker); e=t.index('\n        function ',s+len(marker)); return t[s:e]
-          req=block('        function renderizarRequisicoes() {')
-          assert req.count('selectRequisitionsForUser(')==1
-          assert req.count('renderRequisitionsArea({')==1
-          for x in ['aprovarRequisicao(','rejeitarRequisicao(','validarRequisicao(',"abrirModal('requisicao'","document.getElementById('tabelaRequisicoes')"]: assert x not in req,x
+              s=text.index(marker); e=text.index('\n        function ',s+len(marker)); return text[s:e]
+          services=block('        function renderizarServicos() {')
+          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
+              assert services.count(item)==1
+          point=block('        function renderizarPonto() {')
+          for item in ['prepareAttendanceBaseState({','prepareAttendanceViewState({','createAttendancePersonEntryRenderer({','renderAttendancePersonEntry(fid, porPessoa[fid], _ausenciaHoje)','applyAttendanceAccordionState(attendanceElements, htmlAcc, Object.keys(porPessoa).length)']:
+              assert point.count(item)==1
+          assert point.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
+          alerts=block('        function renderizarAlertas() {')
+          for item in ['alertsViewElements(document)','prepareInitialAdminAlerts({','runMaintenanceContractAlertFlow({','runFleetAlertFlow({','preparePendingAdminRequestsAlerts({','runLicenseAlertFlow({','runRegulatoryAlertFlow({','runShstAlertFlow({','runWarehouseAlertFlow({','applyAlertsState(cont, alertas, _ehPerfilMobile())']:
+              assert alerts.count(item)==1,(item,alerts.count(item))
+          clients=block('        function renderizarClientes() {')
+          assert clients.count('prepareClientsForRendering({')==1
+          assert clients.count('renderClientsArea({')==1
+          employees=block('        function renderizarFuncionarios() {')
+          assert employees.count('prepareEmployeesForRendering({')==1
+          assert employees.count('renderEmployeesArea({')==1
+          managers=block('        function renderizarEncarregados() {')
+          assert managers.count('selectManagersForUser({')==1
+          assert managers.count('renderManagersArea({')==1
+          requisitions=block('        function renderizarRequisicoes() {')
+          assert requisitions.count('selectRequisitionsForUser(')==1
+          assert requisitions.count('renderRequisitionsArea({')==1
+          for item in ['aprovarRequisicao(','rejeitarRequisicao(','validarRequisicao(',"abrirModal('requisicao'","document.getElementById('tabelaRequisicoes')"]:
+              assert item not in requisitions,item
           rv=Path('assets/js/app-requisitions-view.js').read_text(encoding='utf-8')
-          for x in ['function selectRequisitionsForUser(','function requisitionStatusLabel(','function canApproveRequisition(','function requisitionActionsHtml(','function requisitionRowHtml(','function requisitionsViewElements(','function renderRequisitionsArea(','window.TotalGestRequisitionsView = {']:
-              assert rv.count(x)==1,(x,rv.count(x))
+          for item in ['function selectRequisitionsForUser(','function requisitionStatusLabel(','function canApproveRequisition(','function requisitionActionsHtml(','function requisitionRowHtml(','function requisitionsViewElements(','function renderRequisitionsArea(','window.TotalGestRequisitionsView = {']:
+              assert rv.count(item)==1,(item,rv.count(item))
           shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
+          assert shell.count("clientsView: './assets/js/app-clients-view.js'")==1
+          assert shell.count("teamView: './assets/js/app-team-view.js'")==1
           assert shell.count("requisitionsView: './assets/js/app-requisitions-view.js'")==1
           assert shell.count('if (options.requisitionsView === true) pedidos.push(MODULOS.requisitionsView);')==1
-          assert t.count('requisitionsView: true,')==1
-          assert 'bootstrapSupabase()' in t
+          assert text.count('requisitionsView: true,')==1
+          assert 'bootstrapSupabase()' in text
           assert "const CACHE = 'totalgest-v176';" in Path('sw.js').read_text(encoding='utf-8')
-          print('REQUISITIONS_DOMAIN_BATCH_33_VERIFY=OK')
+          print('REQUISITIONS_CHARS=',len(requisitions)); print('REQUISITIONS_LINES=',requisitions.count('\n')+1); print('APP_MIGRATION_BOUNDARY=OK')
           PY
-      - name: Commit functional requisitions separation
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add app.html assets/js/app-requisitions-view.js assets/js/app-shell.js sw.js
-          git diff --cached --check
-          test "$(git diff --cached --name-only | wc -l)" -eq 4
-          git commit -m "Separar apresentação do domínio requisições"
-          git push origin HEAD:refactor/separar-index-app
