@@ -1,4 +1,4 @@
-name: Inspect requisitions domain boundary
+name: Locate stock requisitions renderer
 
 on:
   push:
@@ -17,20 +17,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspect requisitions exact
+      - name: Locate requisitions stock functions
         run: |
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
-          def block(marker):
-              s=text.index(marker)
-              e=text.index('\n        function ',s+len(marker))
-              return text[s:e]
-          for marker,label in [('        function renderizarRequisicoes() {','REQUISITIONS'),('        function renderizarRequisicoesStock() {','STOCK_REQUISITIONS')]:
-              b=block(marker)
-              print(label+'_CHARS=',len(b))
-              print(label+'_LINES=',b.count('\n')+1)
-              print('---'+label+'_START---')
-              print(b)
-              print('---'+label+'_END---')
+          for i,line in enumerate(text.splitlines(),1):
+              low=line.lower()
+              if ('function ' in line or 'renderizar' in low) and ('requis' in low or ('stock' in low and 'render' in low)):
+                  print(f'{i}: {line}')
+          for needle in ['tabelaRequisicoesStock','emptyRequisicoesStock','requisicoesStock','requisicoes_stock','stockRequisicoes']:
+              print('---',needle,'---')
+              for i,line in enumerate(text.splitlines(),1):
+                  if needle in line:
+                      print(f'{i}: {line}')
           PY
