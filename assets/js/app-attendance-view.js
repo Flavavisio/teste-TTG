@@ -439,6 +439,55 @@
     };
   }
 
+  function filterAttendanceRecordsForViewer(records, user, tenantId) {
+    const list = Array.isArray(records) ? records : [];
+    if (user && user.role === 'admin') {
+      return list.filter(function (record) { return record.adminId === tenantId; });
+    }
+    if (user && ['encarregado', 'funcionario', 'vendedor', 'vigilante', 'supervisor_vigilantes'].includes(user.role)) {
+      return list.filter(function (record) { return record.funcionarioId === user.id; });
+    }
+    return [];
+  }
+
+  function attendanceRecentStart(value) {
+    const date = value instanceof Date ? value : new Date(value);
+    return new Date(date.getFullYear(), date.getMonth() - 1, 1);
+  }
+
+  function calculateWeeklyAttendanceTotal(records, options) {
+    const o = options || {};
+    const calculate = typeof o.calculateHours === 'function' ? o.calculateHours : function () { return 0; };
+    return (Array.isArray(records) ? records : []).reduce(function (total, record) {
+      if (!(record && (record._ehObraLonga || (!record.servicoId && !record.obraId)))) return total;
+      if (record.entrada && record.saida) return total + calculate(record.entrada, record.saida);
+      if (record.data === o.today && record.entrada && !record.saida) return total + calculate(record.entrada, o.nowTime);
+      return total;
+    }, 0);
+  }
+
+  function attendanceWeeklyTarget(user, employees, managers) {
+    if (!user) return null;
+    if (user.role === 'funcionario' || user.role === 'vendedor') {
+      const person = (Array.isArray(employees) ? employees : []).find(function (item) { return item.id === user.id; });
+      return (person && person.horasSemanais) || 40;
+    }
+    if (user.role === 'encarregado') {
+      const person = (Array.isArray(managers) ? managers : []).find(function (item) { return item.id === user.id; });
+      return (person && person.horasSemanais) || 40;
+    }
+    return null;
+  }
+
+  function attendanceWeeklyBalanceLabel(totalHours, weeklyTarget) {
+    const total = Number(totalHours || 0);
+    const hours = Math.floor(total);
+    const minutes = Math.round((total - hours) * 60);
+    return weeklyTarget != null
+      ? `Horas esta semana: ${hours}h ${minutes}m / ${weeklyTarget}h`
+      : `Horas esta semana: ${hours}h ${minutes}m`;
+  }
+
   window.TotalGestAttendanceView = {
     startOfWeekMonday,
     formatHours,
@@ -478,6 +527,11 @@
     prepareAttendancePersonState,
     attendancePersonPresentation,
     attendancePersonRows,
-    prepareAttendanceAccordionPerson
+    prepareAttendanceAccordionPerson,
+    filterAttendanceRecordsForViewer,
+    attendanceRecentStart,
+    calculateWeeklyAttendanceTotal,
+    attendanceWeeklyTarget,
+    attendanceWeeklyBalanceLabel
   };
 })();

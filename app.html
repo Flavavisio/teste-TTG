@@ -7395,17 +7395,14 @@
             );
             let registros = [...(dados.ponto || []), ..._longosComoRegistro];
 
-            if (usuarioLogado && usuarioLogado.role === 'admin') {
-                registros = registros.filter(p => p.adminId === _tenantId());
-            } else if (usuarioLogado && (usuarioLogado.role === 'encarregado' || usuarioLogado.role === 'funcionario' || usuarioLogado.role === 'vendedor' || usuarioLogado.role === 'vigilante' || usuarioLogado.role === 'supervisor_vigilantes')) {
-                registros = registros.filter(p => p.funcionarioId === usuarioLogado.id);
-            } else {
-                registros = [];
-            }
+            registros = window.TotalGestAttendanceView.filterAttendanceRecordsForViewer(
+                registros,
+                usuarioLogado,
+                _tenantId()
+            );
 
             const _wsP = _inicioSemana();
-            const _hojeMes = new Date();
-            const _msP = new Date(_hojeMes.getFullYear(), _hojeMes.getMonth() - 1, 1); // início do mês ANTERIOR — mostra o mês corrente + o mês anterior (antes só mostrava o corrente, e picar uma data de outro mês no calendário ficava sempre vazio)
+            const _msP = window.TotalGestAttendanceView.attendanceRecentStart(new Date()); // início do mês ANTERIOR — mostra o mês corrente + o mês anterior
             const _periodRecords = window.TotalGestAttendanceView.selectRecentAttendanceRecords(registros, {
                 weekStart: _wsP,
                 recentStart: _msP
@@ -7421,32 +7418,17 @@
             }
             empty.style.display = 'none';
 
-            let totalHoras = 0;
-            const _hojeP = getDataHoje();
-            const _agoraP = new Date().toTimeString().slice(0, 5);
-            // As picagens "geral" (sem OS/obra associada) e as de obra de longa duração (_ehObraLonga)
-            // contam para o total de horas. As picagens de OS dentro de dados.ponto (com servicoId)
-            // são visitas pontuais registadas DENTRO do mesmo período da picagem geral (nested) —
-            // somá-las também duplicava o tempo já contado na geral, tal como já estava corrigido
-            // no relatório de Assiduidade.
-            _registrosSemana.forEach(p => {
-                // NOTA: "pausaAlmoco: true" não significa "não contar" — marca que a SAÍDA deste
-                // registo foi para ir almoçar. O intervalo entrada→saída continua a ser trabalho
-                // real (ex: a manhã toda, 08:02→12:00) e tem de ser contado, tal como já é feito
-                // no resumo do admin. Excluí-lo aqui estava a descontar a manhã inteira a quem já
-                // tinha ido almoçar — só neste ecrã do próprio funcionário, nunca no do admin.
-                if (!(p._ehObraLonga || (!p.servicoId && !p.obraId))) return;
-                if (p.entrada && p.saida) totalHoras += calcularHoras(p.entrada, p.saida);
-                else if (p.data === _hojeP && p.entrada && !p.saida) totalHoras += calcularHoras(p.entrada, _agoraP);
+            const totalHoras = window.TotalGestAttendanceView.calculateWeeklyAttendanceTotal(_registrosSemana, {
+                today: getDataHoje(),
+                nowTime: new Date().toTimeString().slice(0, 5),
+                calculateHours: calcularHoras
             });
-            const horasInt = Math.floor(totalHoras);
-            const minutos = Math.round((totalHoras - horasInt) * 60);
-            let _alvoSem = null;
-            if (usuarioLogado?.role === 'funcionario' || usuarioLogado?.role === 'vendedor') { const _f = dados.funcionarios?.find(x => x.id === usuarioLogado.id); _alvoSem = (_f?.horasSemanais) || 40; }
-            else if (usuarioLogado?.role === 'encarregado') { const _e = dados.encarregados?.find(x => x.id === usuarioLogado.id); _alvoSem = (_e?.horasSemanais) || 40; }
-            document.getElementById('saldoHoras').textContent = _alvoSem != null
-                ? `Horas esta semana: ${horasInt}h ${minutos}m / ${_alvoSem}h`
-                : `Horas esta semana: ${horasInt}h ${minutos}m`;
+            const _alvoSem = window.TotalGestAttendanceView.attendanceWeeklyTarget(
+                usuarioLogado,
+                dados.funcionarios || [],
+                dados.encarregados || []
+            );
+            document.getElementById('saldoHoras').textContent = window.TotalGestAttendanceView.attendanceWeeklyBalanceLabel(totalHoras, _alvoSem);
 
             // A partir daqui, mostra o dia (ou semana) selecionado nos filtros, organizado por
             // pessoa (acordeão) — antes era sempre fixo no dia de hoje.
