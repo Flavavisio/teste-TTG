@@ -1,6 +1,9 @@
-name: Inspect app migration boundary
+name: Inspect collaborators domain boundary
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,45 +11,24 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos extraídos
+      - name: Inspect renderizarColaboradores exact
         run: |
-          node --check assets/js/app-alerts-view.js
-          node --check assets/js/app-attendance-view.js
-          node --check assets/js/app-clients-view.js
-          node --check assets/js/app-shell.js
-          node --check sw.js
-          git diff --check
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
-          def block(marker):
-              s=text.index(marker); e=text.index('\n        function ',s+len(marker)); return text[s:e]
-          services=block('        function renderizarServicos() {')
-          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
-              assert services.count(item)==1
-          point=block('        function renderizarPonto() {')
-          for item in ['prepareAttendanceBaseState({','prepareAttendanceViewState({','createAttendancePersonEntryRenderer({','renderAttendancePersonEntry(fid, porPessoa[fid], _ausenciaHoje)','applyAttendanceAccordionState(attendanceElements, htmlAcc, Object.keys(porPessoa).length)']:
-              assert point.count(item)==1
-          assert point.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
-          alerts=block('        function renderizarAlertas() {')
-          for item in ['alertsViewElements(document)','prepareInitialAdminAlerts({','runMaintenanceContractAlertFlow({','runFleetAlertFlow({','preparePendingAdminRequestsAlerts({','runLicenseAlertFlow({','runRegulatoryAlertFlow({','runShstAlertFlow({','runWarehouseAlertFlow({','applyAlertsState(cont, alertas, _ehPerfilMobile())']:
-              assert alerts.count(item)==1,(item,alerts.count(item))
-          clients=block('        function renderizarClientes() {')
-          assert clients.count('prepareClientsForRendering({')==1
-          assert clients.count('renderClientsArea({')==1
-          assert '_toggleAcordeaoCliente' not in clients
-          cv=Path('assets/js/app-clients-view.js').read_text(encoding='utf-8')
-          for item in ['function selectClientsForUser(','function prepareClientsForRendering(','function clientsViewElements(','function clientInstallationsCount(','function clientRowsHtml(','function renderClientsArea(','window.TotalGestClientsView = {']:
-              assert cv.count(item)==1,(item,cv.count(item))
-          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
-          assert shell.count("clientsView: './assets/js/app-clients-view.js'")==1
-          assert shell.count('if (options.clientsView === true) pedidos.push(MODULOS.clientsView);')==1
-          assert text.count('clientsView: true,')==1
-          assert "const CACHE = 'totalgest-v174';" in Path('sw.js').read_text(encoding='utf-8')
-          print('CLIENTS_CHARS=',len(clients)); print('CLIENTS_LINES=',clients.count('\n')+1); print('APP_MIGRATION_BOUNDARY=OK')
+          marker='        function renderizarColaboradores() {'
+          s=text.index(marker)
+          e=text.index('\n        function ',s+len(marker))
+          block=text[s:e]
+          print('COLLABORATORS_CHARS=',len(block))
+          print('COLLABORATORS_LINES=',block.count('\n')+1)
+          print('---COLLABORATORS_START---')
+          print(block)
+          print('---COLLABORATORS_END---')
           PY
