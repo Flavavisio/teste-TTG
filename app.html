@@ -6679,16 +6679,16 @@
             });
             if (!hasRows) return;
 
+            const prepareRow = window.TotalGestServicesSelection.createServiceRowPreparer({
+                administrators: dados.administradores || [],
+                getEmployeeName: obterNomeFuncionario,
+                getClientName: obterNomeCliente,
+                generateNumber: gerarNumeroRegisto,
+                hasMaterials: _osTemMateriais,
+                isErpActive: moduloErpAtivo
+            });
             tbody.innerHTML = servicos.map(s => {
-                const rowData = window.TotalGestServicesSelection.prepareServiceRow({
-                    service: s,
-                    administrators: dados.administradores || [],
-                    getEmployeeName: obterNomeFuncionario,
-                    getClientName: obterNomeCliente,
-                    generateNumber: gerarNumeroRegisto,
-                    hasMaterials: _osTemMateriais,
-                    isErpActive: moduloErpAtivo
-                });
+                const rowData = prepareRow(s);
                 return window.TotalGestServicesView.serviceRowFromData({
                     service: s,
                     rowData,

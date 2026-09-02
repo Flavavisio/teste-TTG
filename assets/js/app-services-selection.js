@@ -90,6 +90,21 @@
     };
   }
 
+  function createServiceRowPreparer(options) {
+    options = options || {};
+    return function (service) {
+      return prepareServiceRow({
+        service: service || {},
+        administrators: options.administrators,
+        getEmployeeName: options.getEmployeeName,
+        getClientName: options.getClientName,
+        generateNumber: options.generateNumber,
+        hasMaterials: options.hasMaterials,
+        isErpActive: options.isErpActive
+      });
+    };
+  }
+
   function filterAndSortServices(options) {
     options = options || {};
     const services = Array.isArray(options.services) ? options.services : [];
@@ -112,6 +127,7 @@
     selectVisibleServices: selectVisibleServices,
     selectPendingSpecialtyServices: selectPendingSpecialtyServices,
     prepareServiceRow: prepareServiceRow,
+    createServiceRowPreparer: createServiceRowPreparer,
     filterAndSortServices: filterAndSortServices
   };
 })();
