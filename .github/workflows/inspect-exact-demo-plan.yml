@@ -1,27 +1,56 @@
-name: Inspect alerts migration boundary
+name: Apply alerts safe batch 25
 
 on:
   push:
     branches: [refactor/separar-index-app]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspect renderizarAlertas
+      - name: Migrate and validate alerts
         run: |
+          python3 scripts/tmp-migrate-alerts-safe-batch-25.py
+          node --check assets/js/app-alerts-view.js
+          node --check sw.js
+          git diff --check
+          node - <<'NODE'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert');
+          const c={window:{}}; vm.createContext(c); vm.runInContext(fs.readFileSync('assets/js/app-alerts-view.js','utf8'),c); const v=c.window.TotalGestAlertsView;
+          assert.strictEqual(v.isEmployeeAlertsRole('funcionario'),true); assert.strictEqual(v.isEmployeeAlertsRole('admin'),false);
+          const s=v.employeeAlertState({points:[],userId:'f1',today:'2026-09-02',needsPush:false}); assert.strictEqual(s.punched,false); assert.strictEqual(s.show,true);
+          const s2=v.employeeAlertState({points:[{funcionarioId:'f1',data:'2026-09-02',entrada:'08:00'}],userId:'f1',today:'2026-09-02',needsPush:false}); assert.strictEqual(s2.show,false);
+          assert.ok(v.employeeAlertCardHtml(s).includes('Ainda não picaste'));
+          assert.ok(v.employeeGlobalAlertHtml({punched:true,needsPush:true,show:true}).includes('Ativa as notificações'));
+          const b=v.birthdayAlert({employees:[{adminId:'a1',nome:'João',dataNascimento:'1990-09-02'}],managers:[],adminId:'a1',now:new Date('2026-09-02T12:00:00')}); assert.ok(b && b.titulo.includes('João'));
+          console.log('SAFE_BATCH_25_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8')
-          s=text.index('        function renderizarAlertas() {')
-          e=text.index('\n        function ',s+10)
-          block=text[s:e]
-          print('CHARS=',len(block)); print('LINES=',block.count('\n')+1); print(block)
+          t=Path('app.html').read_text();
+          def block(marker):
+              s=t.index(marker); e=t.index('\n        function ',s+len(marker)); return t[s:e]
+          a=block('        function renderizarAlertas() {')
+          assert a.count('employeeAlertState({')==1
+          assert a.count('birthdayAlert({')==1
+          for x in ["_notificarPorFaseVencimento('contrato_vencer_", "_notificarPorFaseVencimento('frota_vencer_", "_notificarPorFaseVencimento('licenca_", "_notificarPorFaseVencimento('registo_previo_", "_notificarPorFaseVencimento('anepc_", "_notificarPorFaseVencimento('shst_"]:
+              assert a.count(x)==1,(x,a.count(x))
+          assert "const CACHE = 'totalgest-v168';" in Path('sw.js').read_text()
+          print('SAFE_BATCH_25_VERIFY=OK')
           PY
+      - name: Commit functional alerts
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-alerts-view.js sw.js
+          git diff --cached --check
+          test "$(git diff --cached --name-only | wc -l)" -eq 3
+          git commit -m "Extrair primeira ronda segura dos alertas"
+          git push origin HEAD:refactor/separar-index-app
