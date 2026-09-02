@@ -7483,74 +7483,29 @@
                 window.TotalGestAttendanceView.addMissingAttendancePeople(porPessoa, idsSemPicagem);
             }
             const htmlAcc = Object.keys(porPessoa).map(fid => {
-                const personAttendance = window.TotalGestAttendanceView.preparePersonAttendanceRecords(porPessoa[fid]);
-                const regsPessoa = personAttendance.personRecords;
                 const nomePessoa = (dados.administradores?.find(a => a.id === fid)?.nome) || obterNomeFuncionario(fid);
-                // Só o registo GERAL (sem OS/obra ligada) conta para os alertas de horas/atraso — as entradas em OS/obra não.
-                // Um dia pode ter vários segmentos gerais (ex: entrada → pausa almoço, depois retorno → saída).
-                const regsGeral = personAttendance.generalRecords;
-                const generalAttendance = window.TotalGestAttendanceView.calculateGeneralAttendanceState(regsGeral, agoraHM, calcularHoras);
-                const geral = generalAttendance.generalRecord;
-                let horasGeral = generalAttendance.generalHours;
-                const geralAberto = generalAttendance.generalOpen;
-                // Se o dia passou das 6h seguidas e não há pausa de almoço registada, desconta 1h
-                // automaticamente (assume-se que almoçou sem picar) e assinala com um aviso.
-                // A pausa pode ter sido marcada num registo geral OU dentro de uma OS/obra (o botão
-                // "Vou para almoço" que aparece ao picar a saída de uma OS) — conta em qualquer um
-                // dos dois, senão o sistema acusava "não picou almoço" mesmo quando picou, só que
-                // ligado a uma OS em vez de ao registo geral.
-                const lunchState = window.TotalGestAttendanceView.applyAttendanceLunchDeduction(regsPessoa, {
-                    generalOpen: geralAberto,
-                    generalHours: horasGeral
-                });
-                horasGeral = lunchState.generalHours;
-                const almocoDescontado = lunchState.lunchDeducted;
-                const menosDe8h = window.TotalGestAttendanceView.isAttendanceBelowEightHours(geral, geralAberto, horasGeral);
                 const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);
-                const atrasado = window.TotalGestAttendanceView.isAttendanceLate({
+                const personCard = window.TotalGestAttendanceView.prepareAttendanceAccordionPerson(porPessoa[fid], {
                     absence: _ausenciaHoje,
-                    generalRecord: geral,
-                    selectedDateIsToday: _hojeSoP === getDataHoje(),
-                    recordsCount: regsPessoa.length,
+                    personName: nomePessoa,
                     nowTime: agoraHM,
-                    lateLimit: _limiteAtraso
-                });
-                const alertaHtml = window.TotalGestAttendanceView.attendanceAlertsHtml({
-                    lessThanEightHours: menosDe8h,
-                    late: atrasado,
-                    hasGeneralRecord: !!geral,
+                    selectedDateIsToday: _hojeSoP === getDataHoje(),
                     lateLimit: _limiteAtraso,
                     expectedTime: _horaEsperada,
                     toleranceMinutes: _tolerMin,
-                    lunchDeducted: almocoDescontado
+                    mode: _pontoNavModo,
+                    calculateHours: calcularHoras,
+                    formatHours: _fmtH,
+                    getWorkDescription: obterDescricaoOS,
+                    getClientName: obterNomeCliente,
+                    escapeHtml: escapeHtmlSimples
                 });
-                const resumoGeral = window.TotalGestAttendanceView.attendancePersonSummaryHtml({
-                    absence: _ausenciaHoje,
-                    personName: nomePessoa,
-                    generalRecord: geral,
-                    generalRecords: regsGeral,
-                    generalOpen: geralAberto,
-                    generalHoursText: _fmtH(horasGeral),
-                    alertsHtml: alertaHtml,
-                    recordsCount: regsPessoa.length,
-                    isToday: _hojeSoP === getDataHoje()
-                });
-                const corpo = regsPessoa.map(r => window.TotalGestAttendanceView.attendanceRecordRow(
-                    window.TotalGestAttendanceView.prepareAttendanceRecordRow(r, {
-                        mode: _pontoNavModo,
-                        calculateHours: calcularHoras,
-                        formatHours: _fmtH,
-                        getWorkDescription: obterDescricaoOS,
-                        getClientName: obterNomeCliente,
-                        escapeHtml: escapeHtmlSimples
-                    })
-                )).join('');
                 return window.TotalGestAttendanceView.attendanceAccordionItem({
                     personId: fid,
                     nameHtml: escapeHtmlSimples(nomePessoa),
-                    summaryHtml: resumoGeral,
-                    rowsHtml: corpo,
-                    hasRecords: regsPessoa.length > 0,
+                    summaryHtml: personCard.summaryHtml,
+                    rowsHtml: personCard.rowsHtml,
+                    hasRecords: personCard.hasRecords,
                     mode: _pontoNavModo
                 });
             }).join('');

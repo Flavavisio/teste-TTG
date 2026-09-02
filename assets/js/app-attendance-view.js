@@ -367,6 +367,78 @@
     return grouped;
   }
 
+  function prepareAttendancePersonState(records, options) {
+    const o = options || {};
+    const prepared = preparePersonAttendanceRecords(records);
+    const personRecords = prepared.personRecords;
+    const generalRecords = prepared.generalRecords;
+    const general = calculateGeneralAttendanceState(generalRecords, o.nowTime, o.calculateHours);
+    const lunch = applyAttendanceLunchDeduction(personRecords, {
+      generalOpen: general.generalOpen,
+      generalHours: general.generalHours
+    });
+    const generalHours = lunch.generalHours;
+    return {
+      personRecords,
+      generalRecords,
+      generalRecord: general.generalRecord,
+      generalOpen: general.generalOpen,
+      generalHours,
+      lunchDeducted: lunch.lunchDeducted,
+      lessThanEightHours: isAttendanceBelowEightHours(general.generalRecord, general.generalOpen, generalHours),
+      late: isAttendanceLate({
+        absence: o.absence,
+        generalRecord: general.generalRecord,
+        selectedDateIsToday: o.selectedDateIsToday,
+        recordsCount: personRecords.length,
+        nowTime: o.nowTime,
+        lateLimit: o.lateLimit
+      })
+    };
+  }
+
+  function attendancePersonPresentation(state, options) {
+    const s = state || {}, o = options || {};
+    const alertsHtml = attendanceAlertsHtml({
+      lessThanEightHours: s.lessThanEightHours,
+      late: s.late,
+      hasGeneralRecord: !!s.generalRecord,
+      lateLimit: o.lateLimit,
+      expectedTime: o.expectedTime,
+      toleranceMinutes: o.toleranceMinutes,
+      lunchDeducted: s.lunchDeducted
+    });
+    return attendancePersonSummaryHtml({
+      absence: o.absence,
+      personName: o.personName,
+      generalRecord: s.generalRecord,
+      generalRecords: s.generalRecords,
+      generalOpen: s.generalOpen,
+      generalHoursText: (typeof o.formatHours === 'function' ? o.formatHours : formatHours)(s.generalHours),
+      alertsHtml,
+      recordsCount: s.personRecords.length,
+      isToday: o.selectedDateIsToday
+    });
+  }
+
+  function attendancePersonRows(records, options) {
+    const o = options || {};
+    return (Array.isArray(records) ? records : []).map(function (record) {
+      return attendanceRecordRow(prepareAttendanceRecordRow(record, o));
+    }).join('');
+  }
+
+  function prepareAttendanceAccordionPerson(records, options) {
+    const o = options || {};
+    const state = prepareAttendancePersonState(records, o);
+    return {
+      summaryHtml: attendancePersonPresentation(state, o),
+      rowsHtml: attendancePersonRows(state.personRecords, o),
+      hasRecords: state.personRecords.length > 0,
+      state
+    };
+  }
+
   window.TotalGestAttendanceView = {
     startOfWeekMonday,
     formatHours,
@@ -402,6 +474,10 @@
     shouldIncludeMissingAttendancePeople,
     eligibleAttendancePersonIds,
     missingAttendancePersonIds,
-    addMissingAttendancePeople
+    addMissingAttendancePeople,
+    prepareAttendancePersonState,
+    attendancePersonPresentation,
+    attendancePersonRows,
+    prepareAttendanceAccordionPerson
   };
 })();
