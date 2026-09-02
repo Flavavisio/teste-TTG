@@ -7467,14 +7467,20 @@
             const _limiteAtraso = window.TotalGestAttendanceView.attendanceLateLimit(_horaEsperada, _tolerMin);
             // Para o admin/sub-admin: mostra também quem ainda não picou nada, se já passou da
             // tolerância — só faz sentido aplicar isto a "hoje", nunca a dias passados/futuros.
-            let idsSemPicagem = [];
-            if (_hojeSoP === getDataHoje() && (usuarioLogado?.role === 'admin' || usuarioLogado?.role === 'subadmin') && agoraHM > _limiteAtraso) {
-                const _todosIds = [
-                    ...(dados.funcionarios || []).filter(f => f.adminId === _tenantId() && f.role !== 'admin' && f.role !== 'superadmin' && !f.suspenso).map(f => f.id),
-                    ...(dados.encarregados || []).filter(e => e.adminId === _tenantId() && !e.suspenso).map(e => e.id)
-                ];
-                idsSemPicagem = _todosIds.filter(id => !porPessoa[id]);
-                idsSemPicagem.forEach(id => { porPessoa[id] = []; });
+            if (window.TotalGestAttendanceView.shouldIncludeMissingAttendancePeople({
+                selectedDate: _hojeSoP,
+                today: getDataHoje(),
+                role: usuarioLogado?.role || '',
+                nowTime: agoraHM,
+                lateLimit: _limiteAtraso
+            })) {
+                const _todosIds = window.TotalGestAttendanceView.eligibleAttendancePersonIds(
+                    dados.funcionarios || [],
+                    dados.encarregados || [],
+                    _tenantId()
+                );
+                const idsSemPicagem = window.TotalGestAttendanceView.missingAttendancePersonIds(porPessoa, _todosIds);
+                window.TotalGestAttendanceView.addMissingAttendancePeople(porPessoa, idsSemPicagem);
             }
             const htmlAcc = Object.keys(porPessoa).map(fid => {
                 const personAttendance = window.TotalGestAttendanceView.preparePersonAttendanceRecords(porPessoa[fid]);

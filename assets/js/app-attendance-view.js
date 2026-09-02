@@ -334,6 +334,39 @@
     };
   }
 
+  function shouldIncludeMissingAttendancePeople(options) {
+    const o = options || {};
+    return o.selectedDate === o.today
+      && (o.role === 'admin' || o.role === 'subadmin')
+      && o.nowTime > o.lateLimit;
+  }
+
+  function eligibleAttendancePersonIds(employees, managers, tenantId) {
+    const employeeIds = (Array.isArray(employees) ? employees : [])
+      .filter(function (person) {
+        return person.adminId === tenantId
+          && person.role !== 'admin'
+          && person.role !== 'superadmin'
+          && !person.suspenso;
+      })
+      .map(function (person) { return person.id; });
+    const managerIds = (Array.isArray(managers) ? managers : [])
+      .filter(function (person) { return person.adminId === tenantId && !person.suspenso; })
+      .map(function (person) { return person.id; });
+    return employeeIds.concat(managerIds);
+  }
+
+  function missingAttendancePersonIds(groupedRecords, candidateIds) {
+    const grouped = groupedRecords || {};
+    return (Array.isArray(candidateIds) ? candidateIds : []).filter(function (id) { return !grouped[id]; });
+  }
+
+  function addMissingAttendancePeople(groupedRecords, missingIds) {
+    const grouped = groupedRecords || {};
+    (Array.isArray(missingIds) ? missingIds : []).forEach(function (id) { grouped[id] = []; });
+    return grouped;
+  }
+
   window.TotalGestAttendanceView = {
     startOfWeekMonday,
     formatHours,
@@ -365,6 +398,10 @@
     attendanceRecordHours,
     attendanceRecordWorkplace,
     attendanceRecordMedia,
-    prepareAttendanceRecordRow
+    prepareAttendanceRecordRow,
+    shouldIncludeMissingAttendancePeople,
+    eligibleAttendancePersonIds,
+    missingAttendancePersonIds,
+    addMissingAttendancePeople
   };
 })();
