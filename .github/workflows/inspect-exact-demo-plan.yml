@@ -1,49 +1,73 @@
-name: Inspect app migration boundary
+name: Apply fifteenth safe attendance batch
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos extraídos
+      - name: Migrar e validar décimo quinto lote seguro
         run: |
+          python3 scripts/tmp-migrate-attendance-safe-batch-15.py
+          node --check assets/js/app-attendance-view.js
+          node --check sw.js
+          git diff --check
+          node - <<'NODE'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert');
+          const context={window:{}}; vm.createContext(context);
+          vm.runInContext(fs.readFileSync('assets/js/app-attendance-view.js','utf8'),context);
+          const v=context.window.TotalGestAttendanceView;
+          assert.strictEqual(v.shouldIncludeMissingAttendancePeople({selectedDate:'2026-09-02',today:'2026-09-02',role:'admin',nowTime:'09:30',lateLimit:'09:15'}),true);
+          assert.strictEqual(v.shouldIncludeMissingAttendancePeople({selectedDate:'2026-09-01',today:'2026-09-02',role:'admin',nowTime:'09:30',lateLimit:'09:15'}),false);
+          assert.strictEqual(v.shouldIncludeMissingAttendancePeople({selectedDate:'2026-09-02',today:'2026-09-02',role:'funcionario',nowTime:'09:30',lateLimit:'09:15'}),false);
+          const ids=v.eligibleAttendancePersonIds([
+            {id:'f1',adminId:'t1',role:'funcionario',suspenso:false},
+            {id:'f2',adminId:'t1',role:'admin',suspenso:false},
+            {id:'f3',adminId:'t1',role:'funcionario',suspenso:true},
+            {id:'f4',adminId:'t2',role:'funcionario',suspenso:false}
+          ],[
+            {id:'e1',adminId:'t1',suspenso:false},
+            {id:'e2',adminId:'t1',suspenso:true}
+          ],'t1');
+          assert.deepStrictEqual(Array.from(ids),['f1','e1']);
+          const grouped={f1:[{id:'r1'}]};
+          const missing=v.missingAttendancePersonIds(grouped,['f1','e1']);
+          assert.deepStrictEqual(Array.from(missing),['e1']);
+          const same=v.addMissingAttendancePeople(grouped,missing);
+          assert.strictEqual(same,grouped); assert.deepStrictEqual(Array.from(grouped.e1),[]);
+          console.log('SAFE_BATCH_15_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
-
-          marker='        function renderizarServicos() {'
-          s=text.index(marker); e=text.index('\n        function ',s+len(marker)); services=text[s:e]
-          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
-              assert services.count(item)==1,(item,services.count(item))
-          for item in ['invoiceTOId:','invoiceMoloniId:','invoiceMoloniUrl:','receiptMoloniUrl:','guideMoloniId:','guideMoloniUrl:','creditNoteMoloniId:','creditNoteMoloniUrl:']:
-              assert services.count(item)==1,(item,services.count(item))
-
-          render_marker='        function renderizarPonto() {'
-          rs=text.index(render_marker); re=text.index('\n        function ',rs+len(render_marker)); render=text[rs:re]
-          for item in ['buildLongWorkAttendanceRecords(','selectRecentAttendanceRecords(registros, {','selectAttendanceNavigationRecords(','groupAttendanceByPerson(registrosHoje)','attendanceLateLimit(_horaEsperada, _tolerMin)','attendanceAccordionItem({','attendanceAlertsHtml({','attendancePersonSummaryHtml({','preparePersonAttendanceRecords(porPessoa[fid])','calculateGeneralAttendanceState(regsGeral, agoraHM, calcularHoras)','applyAttendanceLunchDeduction(regsPessoa, {','isAttendanceBelowEightHours(geral, geralAberto, horasGeral)','isAttendanceLate({','prepareAttendanceRecordRow(r, {','attendanceRecordRow(']:
-              assert render.count(item)==1,(item,render.count(item))
-          for item in ['const horas = r.saida ? calcularHoras(r.entrada, r.saida) : null;','const obra = escapeHtmlSimples(','const clienteNome = r.clienteId ?','attendanceEditTitle(r, escapeHtmlSimples)','attendancePhotoHtml(r.foto)','attendanceGpsHtml(r.lat, r.lng)','attendanceDateCell(r.data, _pontoNavModo)','guardarDados(dados)']:
-              assert render.count(item)==0,(item,render.count(item))
-          assert render.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
-          assert render.index('isAttendanceBelowEightHours(') < render.index('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);') < render.index('isAttendanceLate({')
-          assert render.count('atualizarEstadoPonto();')==1
-          assert render.count('renderizarResumoPontoAdmin();')==1
-
+          marker='        function renderizarPonto() {'
+          s=text.index(marker); e=text.index('\n        function ',s+len(marker)); block=text[s:e]
+          for item in ['shouldIncludeMissingAttendancePeople({','eligibleAttendancePersonIds(','missingAttendancePersonIds(porPessoa, _todosIds)','addMissingAttendancePeople(porPessoa, idsSemPicagem)']:
+              assert block.count(item)==1,(item,block.count(item))
           attendance=Path('assets/js/app-attendance-view.js').read_text(encoding='utf-8')
-          for item in ['function preparePersonAttendanceRecords(','function calculateGeneralAttendanceState(','function applyAttendanceLunchDeduction(','function isAttendanceBelowEightHours(','function isAttendanceLate(','function attendanceRecordHours(','function attendanceRecordWorkplace(','function attendanceRecordMedia(','function prepareAttendanceRecordRow(','window.TotalGestAttendanceView = {']:
+          for item in ['function shouldIncludeMissingAttendancePeople(','function eligibleAttendancePersonIds(','function missingAttendancePersonIds(','function addMissingAttendancePeople(']:
               assert attendance.count(item)==1,(item,attendance.count(item))
-          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
-          assert shell.count("attendanceView: './assets/js/app-attendance-view.js'")==1
-          sw=Path('sw.js').read_text(encoding='utf-8')
-          assert sw.count("'./assets/js/app-attendance-view.js'")==1
-          assert "const CACHE = 'totalgest-v157';" in sw
-          print('APP_MIGRATION_BOUNDARY=OK')
+          assert "const CACHE = 'totalgest-v158';" in Path('sw.js').read_text(encoding='utf-8')
+          print('SAFE_BATCH_15_VERIFY=OK')
           PY
+      - name: Commit funcional
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-attendance-view.js sw.js
+          git diff --cached --check
+          test -n "$(git diff --cached --name-only)"
+          test "$(git diff --cached --name-only | wc -l)" -eq 3
+          git commit -m "Extrair seleção segura de faltas de picagem"
+          git push origin HEAD:refactor/separar-index-app
