@@ -1,28 +1,46 @@
-name: Inspect attendance round 20
+name: Apply twentieth safe attendance batch
 
 on:
   push:
     branches: [refactor/separar-index-app]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspect exact point block
+      - name: Migrate and validate
         run: |
+          python3 scripts/tmp-migrate-attendance-safe-batch-20.py
+          node --check assets/js/app-attendance-view.js
+          node --check sw.js
+          git diff --check
+          node - <<'NODE'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert'); const c={window:{}}; vm.createContext(c); vm.runInContext(fs.readFileSync('assets/js/app-attendance-view.js','utf8'),c); const v=c.window.TotalGestAttendanceView;
+          const state=v.prepareAttendanceViewState({weekRecords:[{data:'2026-09-02',entrada:'08:00',saida:'16:00'}],recentRecords:[{funcionarioId:'f1',data:'2026-09-02',entrada:'08:00',saida:'16:00'}],user:{id:'f1'},employees:[{id:'f1',horasSemanais:40}],managers:[],selectedDate:'2026-09-02',today:'2026-09-02',mode:'dia',nowTime:'17:00',admin:{horaEntrada:'08:00',toleranciaAtraso:10},calculateHours:()=>8});
+          assert.strictEqual(state.selectedDate,'2026-09-02'); assert.ok(state.groupedRecords.f1); assert.strictEqual(state.nowTime,'17:00'); assert.ok(state.weeklyBalanceLabel); assert.ok(state.lateLimit); console.log('SAFE_BATCH_20_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8')
-          s=text.index('        function renderizarPonto() {')
-          e=text.index('\n        function ',s+10)
-          block=text[s:e]
-          print('CHARS=',len(block)); print('LINES=',block.count('\n')+1)
-          print(block)
+          t=Path('app.html').read_text(); s=t.index('        function renderizarPonto() {'); e=t.index('\n        function ',s+10); p=t[s:e]
+          assert p.count('prepareAttendanceViewState({')==1
+          assert 'guardarDados(dados)' not in p
+          a=Path('assets/js/app-attendance-view.js').read_text(); assert a.count('function prepareAttendanceViewState(')==1
+          assert "const CACHE = 'totalgest-v163';" in Path('sw.js').read_text()
+          print('SAFE_BATCH_20_VERIFY=OK')
           PY
+      - name: Commit functional
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-attendance-view.js sw.js
+          git diff --cached --check
+          test "$(git diff --cached --name-only | wc -l)" -eq 3
+          git commit -m "Extrair estado visual seguro do registo de ponto"
+          git push origin HEAD:refactor/separar-index-app
