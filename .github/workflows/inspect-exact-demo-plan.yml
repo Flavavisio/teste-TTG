@@ -1,44 +1,31 @@
-name: Inspect app migration boundary
+name: Inspect alerts domain separation
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [refactor/separar-index-app]
 
 permissions:
   contents: read
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos extraídos
+      - name: Inspect current alerts orchestration
         run: |
-          node --check assets/js/app-alerts-view.js
-          node --check assets/js/app-attendance-view.js
-          node --check sw.js
-          git diff --check
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
-          def block(marker):
-              s=text.index(marker); e=text.index('\n        function ',s+len(marker)); return text[s:e]
-          services=block('        function renderizarServicos() {')
-          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
-              assert services.count(item)==1
-          point=block('        function renderizarPonto() {')
-          for item in ['prepareAttendanceBaseState({','prepareAttendanceViewState({','createAttendancePersonEntryRenderer({','renderAttendancePersonEntry(fid, porPessoa[fid], _ausenciaHoje)','applyAttendanceAccordionState(attendanceElements, htmlAcc, Object.keys(porPessoa).length)']:
-              assert point.count(item)==1
-          assert point.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
-          alerts=block('        function renderizarAlertas() {')
-          for item in ['alertsViewElements(document)','needsEmployeePushNotification(','prepareInitialAdminAlerts({','prepareMaintenanceContractAlerts({','prepareFleetAttention({','preparePendingAdminRequestsAlerts({','licenseExpiryState(','prepareRegulatoryRenewals({','prepareShstRenewals({','prepareWarehouseAlerts({','applyAlertsState(cont, alertas, _ehPerfilMobile())']:
-              assert alerts.count(item)==1,(item,alerts.count(item))
-          for item in ["_notificarPorFaseVencimento('contrato_vencer_", "_notificarPorFaseVencimento('frota_vencer_", "_notificarPorFaseVencimento('licenca_", "_notificarPorFaseVencimento('registo_previo_", "_notificarPorFaseVencimento('anepc_", "_notificarPorFaseVencimento('shst_"]:
-              assert alerts.count(item)==1,(item,alerts.count(item))
-          av=Path('assets/js/app-alerts-view.js').read_text(encoding='utf-8')
-          for item in ['function alertsViewElements(','function needsEmployeePushNotification(','function clearGlobalAlert(','function isAdminAlertsRole(','function resolveAlertsAdminId(','function prepareInitialAdminAlerts(','function preparePendingAdminRequestsAlerts(','function applyAlertsState(','window.TotalGestAlertsView = {']:
-              assert av.count(item)==1,(item,av.count(item))
-          assert "const CACHE = 'totalgest-v172';" in Path('sw.js').read_text(encoding='utf-8')
-          print('RENDER_PONTO_CHARS=',len(point)); print('ALERTS_CHARS=',len(alerts)); print('ALERTS_LINES=',alerts.count('\n')+1); print('APP_MIGRATION_BOUNDARY=OK')
+          s=text.index('        function renderizarAlertas() {')
+          e=text.index('\n        function ', s+10)
+          block=text[s:e]
+          print('ALERTS_CHARS=',len(block))
+          print('ALERTS_LINES=',block.count('\n')+1)
+          print('---ALERTS_START---')
+          print(block)
+          print('---ALERTS_END---')
           PY
