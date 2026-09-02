@@ -1,6 +1,9 @@
-name: Inspect app migration boundary
+name: Inspect requisitions domain boundary
 
 on:
+  push:
+    branches:
+      - refactor/separar-index-app
   workflow_dispatch:
 
 permissions:
@@ -8,54 +11,26 @@ permissions:
 
 jobs:
   inspect:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Estado dos módulos extraídos
+      - name: Inspect requisitions exact
         run: |
-          node --check assets/js/app-alerts-view.js
-          node --check assets/js/app-attendance-view.js
-          node --check assets/js/app-clients-view.js
-          node --check assets/js/app-team-view.js
-          node --check assets/js/app-shell.js
-          node --check sw.js
-          git diff --check
           python3 - <<'PY'
           from pathlib import Path
           text=Path('app.html').read_text(encoding='utf-8')
           def block(marker):
-              s=text.index(marker); e=text.index('\n        function ',s+len(marker)); return text[s:e]
-          services=block('        function renderizarServicos() {')
-          for item in ['createServicesRuntimeState({','createServicesAreaRendererFromDocument({','renderServicesArea(runtimeState.selectionState)','buildActions: (s, rowData) => ({']:
-              assert services.count(item)==1
-          point=block('        function renderizarPonto() {')
-          for item in ['prepareAttendanceBaseState({','prepareAttendanceViewState({','createAttendancePersonEntryRenderer({','renderAttendancePersonEntry(fid, porPessoa[fid], _ausenciaHoje)','applyAttendanceAccordionState(attendanceElements, htmlAcc, Object.keys(porPessoa).length)']:
-              assert point.count(item)==1
-          assert point.count('const _ausenciaHoje = _funcionarioAusenteEm(fid, _hojeSoP);')==1
-          alerts=block('        function renderizarAlertas() {')
-          for item in ['alertsViewElements(document)','prepareInitialAdminAlerts({','runMaintenanceContractAlertFlow({','runFleetAlertFlow({','preparePendingAdminRequestsAlerts({','runLicenseAlertFlow({','runRegulatoryAlertFlow({','runShstAlertFlow({','runWarehouseAlertFlow({','applyAlertsState(cont, alertas, _ehPerfilMobile())']:
-              assert alerts.count(item)==1,(item,alerts.count(item))
-          clients=block('        function renderizarClientes() {')
-          assert clients.count('prepareClientsForRendering({')==1
-          assert clients.count('renderClientsArea({')==1
-          employees=block('        function renderizarFuncionarios() {')
-          assert employees.count('prepareEmployeesForRendering({')==1
-          assert employees.count('renderEmployeesArea({')==1
-          managers=block('        function renderizarEncarregados() {')
-          assert managers.count('selectManagersForUser({')==1
-          assert managers.count('renderManagersArea({')==1
-          tv=Path('assets/js/app-team-view.js').read_text(encoding='utf-8')
-          for item in ['function selectEmployeesForUser(','function prepareEmployeesForRendering(','function employeeAvatarHtml(','function employeeNameCellHtml(','function vacationBalanceHtml(','function employeeActionsHtml(','function employeeRowHtml(','function renderEmployeesArea(','function selectManagersForUser(','function managerRowHtml(','function renderManagersArea(','window.TotalGestTeamView = {']:
-              assert tv.count(item)==1,(item,tv.count(item))
-          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
-          assert shell.count("clientsView: './assets/js/app-clients-view.js'")==1
-          assert shell.count("teamView: './assets/js/app-team-view.js'")==1
-          assert shell.count('if (options.clientsView === true) pedidos.push(MODULOS.clientsView);')==1
-          assert shell.count('if (options.teamView === true) pedidos.push(MODULOS.teamView);')==1
-          assert text.count('clientsView: true,')==1
-          assert text.count('teamView: true,')==1
-          assert "const CACHE = 'totalgest-v175';" in Path('sw.js').read_text(encoding='utf-8')
-          print('EMPLOYEES_CHARS=',len(employees)); print('MANAGERS_CHARS=',len(managers)); print('APP_MIGRATION_BOUNDARY=OK')
+              s=text.index(marker)
+              e=text.index('\n        function ',s+len(marker))
+              return text[s:e]
+          for marker,label in [('        function renderizarRequisicoes() {','REQUISITIONS'),('        function renderizarRequisicoesStock() {','STOCK_REQUISITIONS')]:
+              b=block(marker)
+              print(label+'_CHARS=',len(b))
+              print(label+'_LINES=',b.count('\n')+1)
+              print('---'+label+'_START---')
+              print(b)
+              print('---'+label+'_END---')
           PY
