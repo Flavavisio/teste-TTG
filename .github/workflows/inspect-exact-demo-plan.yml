@@ -1,4 +1,4 @@
-name: Inspect brand deployment boundary
+name: Apply brand and prepare deploy
 
 on:
   push:
@@ -6,27 +6,31 @@ on:
       - refactor/separar-index-app
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  apply:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspect brand stylesheet loading
+      - name: Apply brand theme everywhere
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          for name in ['index.html','app.html','login.html','registar.html','redefinir-password.html','confirmar-trial.html']:
-              p=Path(name)
-              if not p.exists(): continue
-              text=p.read_text(encoding='utf-8')
-              print('---',name,'---')
-              for line in text.splitlines():
-                  if 'stylesheet' in line or 'theme-color' in line or 'brand-theme' in line:
-                      print(line)
-              print('BRAND_LINK_COUNT=',text.count('assets/css/brand-theme.css'))
-          PY
+          python3 scripts/tmp-apply-brand-deploy.py
+          git diff --check
+          grep -q 'assets/css/brand-theme.css' index.html
+          grep -q 'assets/css/brand-theme.css' app.html
+          grep -q '#243B8F' assets/css/login.css
+          grep -q '#243B8F' assets/css/registar.css
+          grep -q '#243B8F' assets/css/redefinir-password.css
+          grep -q "const CACHE = 'totalgest-v180';" sw.js
+      - name: Commit brand application
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add index.html app.html login.html registar.html redefinir-password.html confirmar-trial.html assets/css/login.css assets/css/registar.css assets/css/redefinir-password.css sw.js
+          git diff --cached --check
+          git commit -m "Aplicar cores de marca em todo o acesso"
+          git push origin HEAD:refactor/separar-index-app
