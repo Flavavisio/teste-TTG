@@ -1,34 +1,81 @@
-name: Inspect works domain boundary
+name: Apply works domain batch 35
 
 on:
   push:
     branches:
       - refactor/separar-index-app
-  workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  migrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: refactor/separar-index-app
-      - name: Inspect works exact
+      - name: Separate works domain and validate
         run: |
+          python3 scripts/tmp-migrate-works-domain-batch-35.py
+          node --check assets/js/app-works-view.js
+          node --check assets/js/app-shell.js
+          node --check sw.js
+          git diff --check
+          node - <<'NODE'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert');
+          const c={window:{}}; vm.createContext(c); vm.runInContext(fs.readFileSync('assets/js/app-works-view.js','utf8'),c); const v=c.window.TotalGestWorksView;
+          const eq=(a,b)=>assert.strictEqual(JSON.stringify(a),JSON.stringify(b));
+          const works=[
+            {id:'o1',adminId:'t1',nome:'Obra A',estado:'preparacao',longaDuracao:false,clienteId:'c1'},
+            {id:'o2',adminId:'t1',nome:'Obra B',estado:'concluida',longaDuracao:false,clienteId:'c2'},
+            {id:'o3',adminId:'t2',nome:'Obra C',estado:'ativa',longaDuracao:false},
+            {id:'o4',adminId:'t1',nome:'Obra D',estado:'ativa',longaDuracao:true}
+          ];
+          assert.strictEqual(v.worksRoleState({role:'admin'}).isAdminView,true);
+          assert.strictEqual(v.worksRoleState({role:'encarregado'}).isManagerView,true);
+          eq(v.selectWorksForView(works,'t1',true).map(x=>x.id),['o1','o2']);
+          eq(v.selectWorksForView(works,'t1',false).map(x=>x.id),['o1']);
+          assert.strictEqual(v.workMaterialsCount([{obraId:'o1'},{obraId:'o1'},{obraId:'o2'}],'o1'),2);
+          const wa=v.workerWorkActionsHtml(works[0],{isManagerView:true});
+          for (const x of ["abrirObraLongaDetalhe('o1')","_obraEscolherRelatorio('o1')","finalizarObraLonga('o1')"]) assert.ok(wa.includes(x),x);
+          const ar=v.adminWorkRowHtml(works[0],{materials:[{obraId:'o1'}],escapeHtml:String,getClientName:()=> 'Cliente',getFullAddress:()=> 'Morada',getStateSelect:()=> 'Estado'});
+          for (const x of ["abrirObraLongaDetalhe('o1')","abrirPlanoMateriais('o1')","_obraEscolherRelatorio('o1')","abrirModal('obra','o1')","eliminarRegisto('obras','o1')",'Materiais (1)']) assert.ok(ar.includes(x),x);
+          const counts=v.worksStatusCounts([{estado:'preparacao'},{estado:'ativa'},{estado:'suspensa'},{estado:'concluida'},{}]);
+          assert.strictEqual(counts.preparation,2); assert.strictEqual(counts.active,1); assert.strictEqual(counts.suspended,1); assert.strictEqual(counts.completed,1);
+          console.log('WORKS_DOMAIN_BATCH_35_UNIT=OK');
+          NODE
           python3 - <<'PY'
           from pathlib import Path
-          text=Path('app.html').read_text(encoding='utf-8')
-          marker='        function renderizarObras() {'
-          s=text.index(marker)
-          starts=[]
-          for pat in ['\n        function ','\n        async function ']:
-              p=text.find(pat,s+len(marker))
-              if p!=-1: starts.append(p)
-          b=text[s:min(starts)]
-          print('WORKS_CHARS=',len(b)); print('WORKS_LINES=',b.count('\n')+1)
-          print('---WORKS_START---'); print(b); print('---WORKS_END---')
+          t=Path('app.html').read_text(encoding='utf-8')
+          def block(marker):
+              s=t.index(marker); starts=[]
+              for pat in ['\n        function ','\n        async function ']:
+                  p=t.find(pat,s+len(marker))
+                  if p!=-1: starts.append(p)
+              return t[s:min(starts)]
+          works=block('        function renderizarObras() {')
+          assert works.count('renderWorksArea({')==1
+          for x in ["document.getElementById('tabelaObras')","abrirObraLongaDetalhe('","abrirPlanoMateriais('","finalizarObraLonga('","abrirModal('obra'","eliminarRegisto('obras'",'obrasPrep']:
+              assert x not in works,x
+          wv=Path('assets/js/app-works-view.js').read_text(encoding='utf-8')
+          for x in ['function worksViewElements(','function worksRoleState(','function selectWorksForView(','function filterAndSortWorks(','function renderWorksToolbar(','function workerWorkActionsHtml(','function workerWorkRowHtml(','function workMaterialsCount(','function adminWorkRowHtml(','function worksStatusCounts(','function applyAdminWorksCounters(','function emptyWorksRow(','function renderWorksArea(','window.TotalGestWorksView={']:
+              assert wv.count(x)==1,(x,wv.count(x))
+          shell=Path('assets/js/app-shell.js').read_text(encoding='utf-8')
+          assert shell.count("worksView: './assets/js/app-works-view.js'")==1
+          assert shell.count('if (options.worksView === true) pedidos.push(MODULOS.worksView);')==1
+          assert t.count('worksView: true,')==1
+          assert 'bootstrapSupabase()' in t
+          assert "const CACHE = 'totalgest-v178';" in Path('sw.js').read_text(encoding='utf-8')
+          print('WORKS_DOMAIN_BATCH_35_VERIFY=OK')
           PY
+      - name: Commit functional works separation
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app.html assets/js/app-works-view.js assets/js/app-shell.js sw.js
+          git diff --cached --check
+          test "$(git diff --cached --name-only | wc -l)" -eq 4
+          git commit -m "Separar apresentação do domínio obras"
+          git push origin HEAD:refactor/separar-index-app
