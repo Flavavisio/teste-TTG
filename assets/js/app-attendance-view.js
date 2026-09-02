@@ -78,6 +78,57 @@
     return String(value || '') >= String(today || '');
   }
 
+  function buildLongWorkAttendanceRecords(longRecords, works) {
+    const workList = Array.isArray(works) ? works : [];
+    return (Array.isArray(longRecords) ? longRecords : []).map(function (record) {
+      const work = workList.find(function (item) { return item && item.id === record.obraId; });
+      return Object.assign({}, record, {
+        obraDescricao: work && work.nome ? work.nome : 'Obra',
+        clienteId: work && work.clienteId ? work.clienteId : null,
+        _ehObraLonga: true
+      });
+    });
+  }
+
+  function selectRecentAttendanceRecords(records, options) {
+    const list = Array.isArray(records) ? records : [];
+    const o = options || {};
+    const asDate = function (record) { return record && record.data ? new Date(record.data + 'T00:00:00') : null; };
+    return {
+      weekRecords: list.filter(function (record) { const date = asDate(record); return date && date >= o.weekStart; }),
+      recentRecords: list.filter(function (record) { const date = asDate(record); return date && date >= o.recentStart; })
+    };
+  }
+
+  function selectAttendanceNavigationRecords(records, selectedDate, mode) {
+    const list = Array.isArray(records) ? records : [];
+    if (mode !== 'semana') return list.filter(function (record) { return record && record.data === selectedDate; });
+    const selected = new Date(String(selectedDate || '') + 'T00:00:00');
+    const start = new Date(selected);
+    start.setDate(selected.getDate() - selected.getDay() + (selected.getDay() === 0 ? -6 : 1));
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return list.filter(function (record) {
+      const date = record && record.data ? new Date(record.data + 'T00:00:00') : null;
+      return date && date >= start && date <= end;
+    });
+  }
+
+  function groupAttendanceByPerson(records) {
+    const grouped = {};
+    (Array.isArray(records) ? records : []).forEach(function (record) {
+      const id = record && record.funcionarioId;
+      (grouped[id] = grouped[id] || []).push(record);
+    });
+    return grouped;
+  }
+
+  function attendanceLateLimit(expectedTime, toleranceMinutes) {
+    const parts = String(expectedTime || '09:00').split(':').map(Number);
+    const total = parts[0] * 60 + parts[1] + Number(toleranceMinutes || 0);
+    return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
+  }
+
   window.TotalGestAttendanceView = {
     startOfWeekMonday,
     formatHours,
@@ -86,6 +137,11 @@
     moveNavigationDate,
     canNavigateAttendance,
     attendanceNavigationLabel,
-    isAttendanceNextDisabled
+    isAttendanceNextDisabled,
+    buildLongWorkAttendanceRecords,
+    selectRecentAttendanceRecords,
+    selectAttendanceNavigationRecords,
+    groupAttendanceByPerson,
+    attendanceLateLimit
   };
 })();

@@ -7389,10 +7389,10 @@
             // que corre em PARALELO ao ponto geral (não é um turno à parte) — por isso continuam a
             // aparecer na listagem (para se ver em que obra a pessoa esteve), mas não podem somar
             // por cima das horas do ponto geral, senão o mesmo período fica contado a dobrar.
-            const _longosComoRegistro = (dados.obraPontoLonga || []).map(x => {
-                const _obraRec = dados.obras?.find(o => o.id === x.obraId);
-                return { ...x, obraDescricao: _obraRec?.nome || 'Obra', clienteId: _obraRec?.clienteId || null, _ehObraLonga: true };
-            });
+            const _longosComoRegistro = window.TotalGestAttendanceView.buildLongWorkAttendanceRecords(
+                dados.obraPontoLonga || [],
+                dados.obras || []
+            );
             let registros = [...(dados.ponto || []), ..._longosComoRegistro];
 
             if (usuarioLogado && usuarioLogado.role === 'admin') {
@@ -7406,8 +7406,12 @@
             const _wsP = _inicioSemana();
             const _hojeMes = new Date();
             const _msP = new Date(_hojeMes.getFullYear(), _hojeMes.getMonth() - 1, 1); // início do mês ANTERIOR — mostra o mês corrente + o mês anterior (antes só mostrava o corrente, e picar uma data de outro mês no calendário ficava sempre vazio)
-            const _registrosSemana = registros.filter(p => { const d = p.data ? new Date(p.data + 'T00:00:00') : null; return d && d >= _wsP; });
-            registros = registros.filter(p => { const d = p.data ? new Date(p.data + 'T00:00:00') : null; return d && d >= _msP; });
+            const _periodRecords = window.TotalGestAttendanceView.selectRecentAttendanceRecords(registros, {
+                weekStart: _wsP,
+                recentStart: _msP
+            });
+            const _registrosSemana = _periodRecords.weekRecords;
+            registros = _periodRecords.recentRecords;
 
             if (registros.length === 0) {
                 const contAccVazio = document.getElementById('pontoAcordeao'); if (contAccVazio) contAccVazio.innerHTML = '';
@@ -7448,18 +7452,19 @@
             // pessoa (acordeão) — antes era sempre fixo no dia de hoje.
             if (!_pontoNavData) _pontoNavData = getDataHoje();
             const _hojeSoP = _pontoNavData;
-            const registrosHoje = _pontoNavModo === 'semana'
-                ? registros.filter(p => { const d = p.data ? new Date(p.data + 'T00:00:00') : null; const dp = new Date(_hojeSoP + 'T00:00:00'); const inicioSem = new Date(dp); inicioSem.setDate(dp.getDate() - dp.getDay() + (dp.getDay() === 0 ? -6 : 1)); const fimSem = new Date(inicioSem); fimSem.setDate(inicioSem.getDate() + 6); return d && d >= inicioSem && d <= fimSem; })
-                : registros.filter(p => p.data === _hojeSoP);
+            const registrosHoje = window.TotalGestAttendanceView.selectAttendanceNavigationRecords(
+                registros,
+                _hojeSoP,
+                _pontoNavModo
+            );
             const contAcc = document.getElementById('pontoAcordeao');
             empty.style.display = 'none';
-            const porPessoa = {};
-            registrosHoje.forEach(p => { (porPessoa[p.funcionarioId] = porPessoa[p.funcionarioId] || []).push(p); });
+            const porPessoa = window.TotalGestAttendanceView.groupAttendanceByPerson(registrosHoje);
             const agoraHM = new Date().toTimeString().slice(0, 5);
             const _adminCfg = adminAtual();
             const _horaEsperada = _adminCfg?.horaEntradaHabitual || '09:00';
             const _tolerMin = _adminCfg?.toleranciaAtrasoMin != null ? _adminCfg.toleranciaAtrasoMin : 15;
-            const _limiteAtraso = (() => { const [h, m] = _horaEsperada.split(':').map(Number); const total = h * 60 + m + _tolerMin; return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0'); })();
+            const _limiteAtraso = window.TotalGestAttendanceView.attendanceLateLimit(_horaEsperada, _tolerMin);
             // Para o admin/sub-admin: mostra também quem ainda não picou nada, se já passou da
             // tolerância — só faz sentido aplicar isto a "hoje", nunca a dias passados/futuros.
             let idsSemPicagem = [];
