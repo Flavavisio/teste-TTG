@@ -1,0 +1,33 @@
+name: Inspect attendance round 15
+
+on:
+  push:
+    branches:
+      - refactor/separar-index-app
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/separar-index-app
+      - name: Inspecionar ausência de picagem e acordeão
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('app.html').read_text(encoding='utf-8')
+          marker='        function renderizarPonto() {'
+          s=text.index(marker); e=text.index('\n        function ',s+len(marker)); block=text[s:e]
+          for token in ['let idsSemPicagem = [];','const _todosIds = [','idsSemPicagem = _todosIds.filter','const htmlAcc = Object.keys(porPessoa).map','attendanceAccordionItem({','if (!Object.keys(porPessoa).length)']:
+              p=block.find(token)
+              if p>=0:
+                  print('\nTOKEN',token)
+                  print(block[max(0,p-1200):min(len(block),p+4200)])
+          print('CHARS',len(block),'LINES',block.count('\n')+1)
+          PY
